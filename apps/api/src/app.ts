@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import testRoutes from "./routes/test.route";
 
 const app = express();
 
@@ -9,5 +10,7 @@ app.use(express.json());
 app.get("/health", (_, res) => {
   res.status(200).json({ status: "OK" });
 });
+
+app.use("/test", testRoutes);
 
 export default app;
