@@ -16,14 +16,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders    Order[]
-  uploads   Upload[]
+  orders        Order[]
+  uploads       Upload[]
+  cart          Cart?
+  customDesigns CustomDesign[]
 }
 
 model Product {
   id          String   @id @default(uuid())
   name        String
-  description String
+  description String   @db.Text
   price       Decimal
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -31,6 +33,7 @@ model Product {
 
   images      ProductImage[]
   orderItems  OrderItem[]
+  cartItems   CartItem[]
   category    Category? @relation(fields: [categoryId], references: [id])
   categoryId  String?
 }
@@ -38,14 +41,20 @@ model Product {
 model ProductImage {
   id        String   @id @default(uuid())
   url       String
-  product   Product @relation(fields: [productId], references: [id])
+  alt       String?
+  order     Int      @default(0)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
+  createdAt DateTime @default(now())
 }
 
 model Category {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id          String       @id @default(uuid())
+  name        String       @unique
+  type        CategoryType @default(DEFAULT)
+  slug        String?      @unique
+  description String?      @db.Text
+  createdAt   DateTime     @default(now())
 
   products  Product[]
 }
@@ -59,6 +68,7 @@ model Order {
   createdAt DateTime    @default(now())
 
   items     OrderItem[]
+  payment   Payment?
 }
 
 model OrderItem {
@@ -71,6 +81,19 @@ model OrderItem {
   price     Decimal
 }
 
+model Payment {
+  id            String        @id @default(uuid())
+  order         Order         @relation(fields: [orderId], references: [id])
+  orderId       String        @unique
+  amount        Decimal
+  method        PaymentMethod @default(UPI)
+  status        PaymentStatus @default(PENDING)
+  upiId         String?
+  transactionId String?       @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
 model Upload {
   id        String   @id @default(uuid())
   user      User     @relation(fields: [userId], references: [id])
@@ -78,6 +101,46 @@ model Upload {
   fileUrl   String
   status    UploadStatus @default(PENDING)
   createdAt DateTime @default(now())
+}
+
+model CustomDesign {
+  id             String              @id @default(uuid())
+  user           User                @relation(fields: [userId], references: [id])
+  userId         String
+  name           String
+  description    String?             @db.Text
+  material       String?
+  color          String?
+  size           String?
+  quantity       Int                 @default(1)
+  fileUrl        String?
+  status         CustomDesignStatus  @default(PENDING)
+  estimatedPrice Decimal?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  user      User       @relation(fields: [userId], references: [id])
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartId    String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
 }
 
 enum Role {
@@ -93,8 +156,32 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentMethod {
+  UPI
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 enum UploadStatus {
   PENDING
   APPROVED
+  REJECTED
+}
+
+enum CategoryType {
+  DEFAULT
+  CUSTOM
+}
+
+enum CustomDesignStatus {
+  PENDING
+  QUOTED
+  APPROVED
+  IN_PRODUCTION
+  COMPLETED
   REJECTED
 }

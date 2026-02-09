@@ -1,0 +1,182 @@
+import React from 'react';
+import Link from 'next/link';
+import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+
+export const Footer: React.FC = () => {
+  const currentYear = new Date().getFullYear();
+
+  const footerLinks = {
+    shop: [
+      { name: 'All Products', href: '/products' },
+      { name: 'Keychains', href: '/products?category=keychains' },
+      { name: 'Figurines', href: '/products?category=figurines' },
+      { name: 'Anime Figures', href: '/products?category=anime-figures' },
+      { name: 'Home Décor', href: '/products?category=home-decor' },
+      { name: 'Lamps', href: '/products?category=lamps' },
+    ],
+    company: [
+      { name: 'About Us', href: '/about' },
+      { name: 'Contact', href: '/contact' },
+      { name: 'Custom Orders', href: '/products?category=custom-designs' },
+      { name: 'Bulk Orders', href: '/bulk' },
+    ],
+    support: [
+      { name: 'FAQ', href: '/faq' },
+      { name: 'Shipping Info', href: '/shipping' },
+      { name: 'Returns', href: '/returns' },
+      { name: 'Track Order', href: '/track' },
+    ],
+    legal: [
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Terms of Service', href: '/terms' },
+      { name: 'Refund Policy', href: '/refund' },
+    ],
+  };
+
+  return (
+    <footer className="bg-dark-espresso text-secondary-peach">
+      <div className="container-custom py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+          {/* Brand Section */}
+          <div className="lg:col-span-1">
+            <Link href="/" className="flex items-center space-x-2 mb-4">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xl">R</span>
+              </div>
+              <span className="text-xl font-bold text-white">
+                Robo<span className="text-primary">hatch</span>
+              </span>
+            </Link>
+            <p className="text-sm mb-4">
+              Premium 3D printed products crafted with precision and creativity.
+              Transform your imagination into reality.
+            </p>
+            <div className="flex space-x-4">
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+                aria-label="Facebook"
+              >
+                <Facebook size={20} />
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+                aria-label="Twitter"
+              >
+                <Twitter size={20} />
+              </a>
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram size={20} />
+              </a>
+            </div>
+          </div>
+
+          {/* Shop Links */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Shop</h3>
+            <ul className="space-y-2">
+              {footerLinks.shop.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm hover:text-primary transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Company Links */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Company</h3>
+            <ul className="space-y-2">
+              {footerLinks.company.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm hover:text-primary transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Support Links */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Support</h3>
+            <ul className="space-y-2">
+              {footerLinks.support.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm hover:text-primary transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact Info */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Contact</h3>
+            <ul className="space-y-3">
+              <li className="flex items-start space-x-2">
+                <MapPin size={18} className="mt-0.5 flex-shrink-0" />
+                <span className="text-sm">
+                  123 Tech Park, Bangalore
+                  <br />
+                  Karnataka 560001, India
+                </span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <Phone size={18} className="flex-shrink-0" />
+                <span className="text-sm">+91 98765 43210</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <Mail size={18} className="flex-shrink-0" />
+                <span className="text-sm">hello@robohatch.com</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="mt-12 pt-8 border-t border-dark-brown">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="text-sm">
+              © {currentYear} Robohatch. All rights reserved.
+            </p>
+            <div className="flex space-x-6">
+              {footerLinks.legal.map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="text-sm hover:text-primary transition-colors"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};

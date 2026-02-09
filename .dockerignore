@@ -1,0 +1,76 @@
+# Dependencies
+node_modules
+**/node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.docker.example
+*.local
+
+# Build output
+.next
+dist
+build
+out
+**/.next
+**/dist
+**/build
+
+# Logs
+*.log
+logs
+**/*.log
+
+# Testing
+coverage
+.nyc_output
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation (keep lightweight)
+*.md
+!README.md
+!DOCKER_DEPLOYMENT.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Docker
+**/.dockerignore
+**/Dockerfile
+docker-compose*.yml
+!docker-compose.yml
+
+# Misc
+.editorconfig
+.eslintrc*
+.prettierrc*
+tsconfig.json
+turbo.json

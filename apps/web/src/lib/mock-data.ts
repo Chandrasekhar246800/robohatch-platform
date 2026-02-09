@@ -1,0 +1,1100 @@
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  category: Category;
+  images: string[];
+  rating: number;
+  reviews: number;
+  inStock: boolean;
+  featured: boolean;
+  customizable: boolean;
+  material?: string;
+  dimensions?: string;
+  weight?: string;
+  tags: string[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  image: string;
+  description: string;
+}
+
+export interface CartItem {
+  productId: string;
+  quantity: number;
+  product: Product;
+}
+
+export interface Order {
+  id: string;
+  date: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  items: CartItem[];
+  total: number;
+  shippingAddress: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  createdAt: string;
+}
+
+// Categories (Updated to match new structure)
+export const categories: Category[] = [
+  // Custom Categories
+  {
+    id: 'keychains-custom',
+    name: 'Keychains (Custom)',
+    slug: 'keychains-custom',
+    image: 'https://placehold.co/300x300/F27405/white?text=Custom+Keys',
+    description: 'Personalized keychains with your design',
+  },
+  {
+    id: 'logo-keychains',
+    name: 'Logo Keychains',
+    slug: 'logo-keychains',
+    image: 'https://placehold.co/300x300/F25C05/white?text=Logo+Keys',
+    description: 'Business and brand logo keychains',
+  },
+  {
+    id: 'moon-lamps',
+    name: 'Moon Lamps',
+    slug: 'moon-lamps',
+    image: 'https://placehold.co/300x300/8C3503/white?text=Moon+Lamps',
+    description: 'Photo-embedded moon lamps',
+  },
+  {
+    id: 'photo-frames',
+    name: 'Photo Frames',
+    slug: 'photo-frames',
+    image: 'https://placehold.co/300x300/F2935C/white?text=Frames',
+    description: 'Custom 3D printed photo frames',
+  },
+  {
+    id: 'self-miniatures',
+    name: 'Self Miniatures',
+    slug: 'self-miniatures',
+    image: 'https://placehold.co/300x300/260A03/white?text=Miniatures',
+    description: 'Personal figurines and miniatures',
+  },
+  // Default Categories
+  {
+    id: 'keychains',
+    name: 'Keychains',
+    slug: 'keychains',
+    image: 'https://placehold.co/300x300/F27405/white?text=Keychains',
+    description: 'Ready-made 3D printed keychains',
+  },
+  {
+    id: 'lamps',
+    name: 'Lamps',
+    slug: 'lamps',
+    image: 'https://placehold.co/300x300/F25C05/white?text=Lamps',
+    description: 'Decorative lighting solutions',
+  },
+  {
+    id: 'flower-pots',
+    name: 'Flower Pots & Vases',
+    slug: 'flower-pots',
+    image: 'https://placehold.co/300x300/8C3503/white?text=Planters',
+    description: '3D printed planters and vases',
+  },
+  {
+    id: 'devotional-idols',
+    name: 'Devotional Idols',
+    slug: 'devotional-idols',
+    image: 'https://placehold.co/300x300/F2935C/white?text=Idols',
+    description: 'Religious statues and idols',
+  },
+  {
+    id: 'temple-models',
+    name: 'Temple Models',
+    slug: 'temple-models',
+    image: 'https://placehold.co/300x300/260A03/white?text=Temples',
+    description: 'Miniature temple replicas',
+  },
+  {
+    id: 'anime-things',
+    name: 'Anime Things',
+    slug: 'anime-things',
+    image: 'https://placehold.co/300x300/F27405/white?text=Anime',
+    description: 'Anime character figures and accessories',
+  },
+  {
+    id: 'mobile-accessories',
+    name: 'Mobile Accessories',
+    slug: 'mobile-accessories',
+    image: 'https://placehold.co/300x300/F25C05/white?text=Mobile',
+    description: 'Phone stands and accessories',
+  },
+  {
+    id: 'desk-accessories',
+    name: 'Desk Accessories',
+    slug: 'desk-accessories',
+    image: 'https://placehold.co/300x300/8C3503/white?text=Desk',
+    description: 'Office and desk organization',
+  },
+  {
+    id: 'fidget-toys',
+    name: 'Fidget Toys',
+    slug: 'fidget-toys',
+    image: 'https://placehold.co/300x300/F2935C/white?text=Fidget',
+    description: 'Stress relief fidget toys',
+  },
+];
+
+// Products
+export const products: Product[] = [
+  // Keychains (Default Category)
+  {
+    id: 'dragon-keychain',
+    name: 'Dragon Keychain',
+    description: 'Detailed 3D printed dragon keychain in vibrant colors',
+    price: 299,
+    category: categories[5], // keychains default
+    images: ['https://placehold.co/400x400/F27405/white?text=Dragon+Keychain'],
+    rating: 4.8,
+    reviews: 24,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'PLA Plastic',
+    dimensions: '5cm x 4cm x 1cm',
+    weight: '10g',
+    tags: ['keychain', 'dragon', 'fantasy'],
+  },
+  {
+    id: 'geometric-keychain',
+    name: 'Geometric Keychain - Hexagon',
+    description: 'Modern geometric hexagon keychain made from premium PLA plastic',
+    price: 149,
+    originalPrice: 199,
+    category: categories[5],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Hexagon'],
+    rating: 4.5,
+    reviews: 128,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'PLA Plastic',
+    dimensions: '4cm x 4cm x 0.5cm',
+    weight: '8g',
+    tags: ['keychain', 'geometric', 'minimalist'],
+  },
+  {
+    id: 'skull-keychain',
+    name: 'Skull Keychain',
+    description: 'Gothic style skull keychain with intricate details',
+    price: 249,
+    category: categories[5],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Skull'],
+    rating: 4.6,
+    reviews: 45,
+    inStock: true,
+    featured: false,
+    customizable: false,
+    material: 'PLA Plastic',
+    dimensions: '4.5cm x 3cm x 2cm',
+    weight: '12g',
+    tags: ['keychain', 'skull', 'gothic'],
+  },
+
+  // Lamps (Default Category)
+  {
+    id: 'moon-lamp',
+    name: 'Moon Lamp',
+    description: 'Beautiful 3D printed moon lamp with LED lighting',
+    price: 1299,
+    category: categories[6], // lamps default
+    images: ['https://placehold.co/400x400/260A03/white?text=Moon+Lamp'],
+    rating: 4.9,
+    reviews: 42,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'PLA with LED',
+    dimensions: '15cm diameter',
+    weight: '280g',
+    tags: ['lamp', 'moon', 'lighting', 'led'],
+  },
+  {
+    id: 'galaxy-night-light',
+    name: 'Galaxy Night Light',
+    description: '3D printed galaxy-themed decorative night light',
+    price: 1599,
+    category: categories[6],
+    images: ['https://placehold.co/400x400/F27405/white?text=Galaxy+Light'],
+    rating: 4.8,
+    reviews: 25,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'PLA with LED',
+    dimensions: '18cm diameter',
+    weight: '320g',
+    tags: ['lamp', 'galaxy', 'lighting', 'ambient'],
+  },
+  {
+    id: 'hexagonal-led-lamp',
+    name: 'Hexagonal LED Lamp',
+    description: 'Modular hexagonal LED panels with RGB colors',
+    price: 3499,
+    originalPrice: 4299,
+    category: categories[6],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Hex+Lamp'],
+    rating: 4.8,
+    reviews: 289,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'ABS with LED',
+    dimensions: '10cm x 10cm per panel',
+    weight: '120g per panel',
+    tags: ['lamp', 'led', 'modular', 'smart'],
+  },
+  {
+    id: 'desk-lamp-minimalist',
+    name: 'Minimalist Desk Lamp',
+    description: 'Sleek minimalist desk lamp with adjustable brightness',
+    price: 1899,
+    category: categories[6],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Desk+Lamp'],
+    rating: 4.7,
+    reviews: 67,
+    inStock: true,
+    featured: false,
+    customizable: false,
+    material: 'PLA with LED',
+    dimensions: '25cm height',
+    weight: '280g',
+    tags: ['lamp', 'desk', 'minimalist', 'adjustable'],
+  },
+
+  // Flower Pots & Vases
+  {
+    id: 'geometric-vase',
+    name: 'Geometric Vase',
+    description: 'Modern geometric vase for home decoration',
+    price: 799,
+    category: categories[7], // flower-pots
+    images: ['https://placehold.co/400x400/F2935C/white?text=Vase'],
+    rating: 4.6,
+    reviews: 15,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '15cm x 10cm x 10cm',
+    weight: '120g',
+    tags: ['vase', 'decor', 'modern', 'geometric'],
+  },
+  {
+    id: 'plant-pot-set',
+    name: 'Succulent Planter Set',
+    description: 'Set of 3 modern geometric planters with drainage holes',
+    price: 699,
+    originalPrice: 999,
+    category: categories[7],
+    images: ['https://placehold.co/400x400/F27405/white?text=Planters'],
+    rating: 4.5,
+    reviews: 154,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: 'Various (8-12cm)',
+    weight: '180g total',
+    tags: ['planter', 'succulent', 'set', 'decor'],
+  },
+  {
+    id: 'hanging-planter',
+    name: 'Hanging Wall Planter',
+    description: 'Geometric wall-mounted planter for small plants',
+    price: 549,
+    category: categories[7],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Wall+Planter'],
+    rating: 4.4,
+    reviews: 89,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '12cm x 8cm x 6cm',
+    weight: '85g',
+    tags: ['planter', 'wall', 'hanging', 'decor'],
+  },
+
+  // Devotional Idols
+  {
+    id: 'ganesha-idol',
+    name: 'Lord Ganesha Idol',
+    description: 'Beautifully detailed Ganesha idol for home worship',
+    price: 899,
+    category: categories[8], // devotional-idols
+    images: ['https://placehold.co/400x400/8C3503/white?text=Ganesha'],
+    rating: 4.9,
+    reviews: 156,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium PLA',
+    dimensions: '15cm x 10cm x 8cm',
+    weight: '200g',
+    tags: ['idol', 'ganesha', 'hindu', 'devotional'],
+  },
+  {
+    id: 'krishna-idol',
+    name: 'Lord Krishna Idol',
+    description: 'Krishna with flute - traditional design',
+    price: 849,
+    category: categories[8],
+    images: ['https://placehold.co/400x400/F2935C/white?text=Krishna'],
+    rating: 4.8,
+    reviews: 123,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium PLA',
+    dimensions: '18cm x 8cm x 6cm',
+    weight: '180g',
+    tags: ['idol', 'krishna', 'hindu', 'devotional'],
+  },
+  {
+    id: 'buddha-statue',
+    name: 'Buddha Meditation Statue',
+    description: 'Serene Buddha in meditation pose',
+    price: 999,
+    category: categories[8],
+    images: ['https://placehold.co/400x400/260A03/white?text=Buddha'],
+    rating: 5.0,
+    reviews: 201,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium PLA',
+    dimensions: '20cm x 12cm x 10cm',
+    weight: '250g',
+    tags: ['idol', 'buddha', 'meditation', 'peaceful'],
+  },
+  {
+    id: 'durga-idol',
+    name: 'Goddess Durga Idol',
+    description: 'Powerful Durga Maa with lion - festival special',
+    price: 1299,
+    category: categories[8],
+    images: ['https://placehold.co/400x400/F27405/white?text=Durga'],
+    rating: 4.9,
+    reviews: 178,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium PLA',
+    dimensions: '22cm x 15cm x 12cm',
+    weight: '320g',
+    tags: ['idol', 'durga', 'goddess', 'festival'],
+  },
+
+  // Temple Models
+  {
+    id: 'tirupati-temple',
+    name: 'Tirupati Balaji Temple Model',
+    description: 'Detailed miniature replica of Tirupati temple',
+    price: 1999,
+    category: categories[9], // temple-models
+    images: ['https://placehold.co/400x400/F25C05/white?text=Tirupati'],
+    rating: 4.8,
+    reviews: 89,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'High-Quality PLA',
+    dimensions: '25cm x 20cm x 18cm',
+    weight: '450g',
+    tags: ['temple', 'tirupati', 'model', 'architecture'],
+  },
+  {
+    id: 'taj-mahal-model',
+    name: 'Taj Mahal Miniature',
+    description: 'Iconic Taj Mahal architectural model',
+    price: 2499,
+    category: categories[9],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Taj+Mahal'],
+    rating: 4.9,
+    reviews: 134,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium PLA',
+    dimensions: '30cm x 25cm x 20cm',
+    weight: '580g',
+    tags: ['temple', 'taj-mahal', 'monument', 'architecture'],
+  },
+  {
+    id: 'golden-temple',
+    name: 'Golden Temple Model',
+    description: 'Beautiful replica of Amritsar Golden Temple',
+    price: 1899,
+    category: categories[9],
+    images: ['https://placehold.co/400x400/F2935C/white?text=Golden+Temple'],
+    rating: 4.7,
+    reviews: 76,
+    inStock: true,
+    featured: false,
+    customizable: false,
+    material: 'Premium PLA',
+    dimensions: '22cm x 18cm x 15cm',
+    weight: '380g',
+    tags: ['temple', 'golden-temple', 'sikh', 'architecture'],
+  },
+
+  // Anime Things
+  {
+    id: 'naruto-figure',
+    name: 'Naruto - Uzumaki Naruto Figure',
+    description: 'High-quality Naruto figure in iconic pose',
+    price: 1299,
+    originalPrice: 1599,
+    category: categories[10], // anime-things
+    images: ['https://placehold.co/400x400/F27405/white?text=Naruto'],
+    rating: 4.9,
+    reviews: 512,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'High-Quality Resin',
+    dimensions: '18cm x 12cm x 10cm',
+    weight: '320g',
+    tags: ['anime', 'naruto', 'manga', 'collectible'],
+  },
+  {
+    id: 'eren-aot',
+    name: 'Attack on Titan - Eren Figure',
+    description: 'Eren Yeager in Survey Corps uniform with ODM gear',
+    price: 1399,
+    category: categories[10],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Eren'],
+    rating: 4.9,
+    reviews: 423,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium Resin',
+    dimensions: '20cm x 14cm x 12cm',
+    weight: '380g',
+    tags: ['anime', 'aot', 'eren', 'collectible'],
+  },
+  {
+    id: 'luffy-gear5',
+    name: 'One Piece - Luffy Gear 5',
+    description: 'Monkey D. Luffy in epic Gear 5 transformation',
+    price: 1699,
+    category: categories[10],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Luffy+G5'],
+    rating: 5.0,
+    reviews: 891,
+    inStock: false,
+    featured: true,
+    customizable: false,
+    material: 'Premium Resin',
+    dimensions: '22cm x 16cm x 14cm',
+    weight: '420g',
+    tags: ['anime', 'one-piece', 'luffy', 'limited'],
+  },
+  {
+    id: 'goku-ultra-instinct',
+    name: 'Dragon Ball - Goku Ultra Instinct',
+    description: 'Goku in Ultra Instinct form with aura effects',
+    price: 1599,
+    category: categories[10],
+    images: ['https://placehold.co/400x400/F2935C/white?text=Goku+UI'],
+    rating: 4.9,
+    reviews: 678,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium Resin',
+    dimensions: '21cm x 13cm x 11cm',
+    weight: '390g',
+    tags: ['anime', 'dragon-ball', 'goku', 'collectible'],
+  },
+  {
+    id: 'demon-slayer-tanjiro',
+    name: 'Demon Slayer - Tanjiro Kamado',
+    description: 'Tanjiro with Nichirin sword in battle stance',
+    price: 1349,
+    category: categories[10],
+    images: ['https://placehold.co/400x400/260A03/white?text=Tanjiro'],
+    rating: 4.8,
+    reviews: 445,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Premium Resin',
+    dimensions: '19cm x 13cm x 10cm',
+    weight: '340g',
+    tags: ['anime', 'demon-slayer', 'tanjiro', 'collectible'],
+  },
+
+  // Mobile Accessories
+  {
+    id: 'phone-stand-minimal',
+    name: 'Phone Stand - Minimal',
+    description: 'Sleek minimalist phone stand with adjustable angle',
+    price: 299,
+    category: categories[11], // mobile-accessories
+    images: ['https://placehold.co/400x400/F27405/white?text=Phone+Stand'],
+    rating: 4.3,
+    reviews: 267,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '8cm x 10cm x 5cm',
+    weight: '45g',
+    tags: ['phone-stand', 'desk', 'minimalist', 'mobile'],
+  },
+  {
+    id: 'phone-holder-car',
+    name: 'Car Phone Holder',
+    description: 'Secure car mount for all phone sizes',
+    price: 449,
+    category: categories[11],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Car+Holder'],
+    rating: 4.5,
+    reviews: 189,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'ABS Plastic',
+    dimensions: '12cm x 8cm x 6cm',
+    weight: '85g',
+    tags: ['car', 'phone-holder', 'mobile', 'mount'],
+  },
+  {
+    id: 'cable-organizer',
+    name: 'Cable Organizer Set',
+    description: 'Set of 5 cable management clips',
+    price: 199,
+    category: categories[11],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Cable+Org'],
+    rating: 4.4,
+    reviews: 312,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '3cm x 2cm each',
+    weight: '25g total',
+    tags: ['cable', 'organizer', 'desk', 'mobile'],
+  },
+  {
+    id: 'phone-grip-holder',
+    name: 'PopSocket Style Grip',
+    description: 'Collapsible phone grip and stand',
+    price: 249,
+    category: categories[11],
+    images: ['https://placehold.co/400x400/F2935C/white?text=Grip'],
+    rating: 4.2,
+    reviews: 423,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'ABS Plastic',
+    dimensions: '4cm diameter',
+    weight: '15g',
+    tags: ['grip', 'popsocket', 'mobile', 'stand'],
+  },
+
+  // Desk Accessories
+  {
+    id: 'pen-holder-hexagon',
+    name: 'Hexagonal Pen Holder',
+    description: 'Modern geometric pen and pencil holder',
+    price: 349,
+    category: categories[12], // desk-accessories
+    images: ['https://placehold.co/400x400/260A03/white?text=Pen+Holder'],
+    rating: 4.6,
+    reviews: 156,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '10cm x 8cm x 10cm',
+    weight: '120g',
+    tags: ['pen-holder', 'desk', 'geometric', 'office'],
+  },
+  {
+    id: 'desk-organizer-multi',
+    name: 'Multi-Compartment Desk Organizer',
+    description: 'Complete desk organization solution with 6 compartments',
+    price: 699,
+    category: categories[12],
+    images: ['https://placehold.co/400x400/F27405/white?text=Organizer'],
+    rating: 4.7,
+    reviews: 234,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '25cm x 15cm x 8cm',
+    weight: '280g',
+    tags: ['organizer', 'desk', 'office', 'storage'],
+  },
+  {
+    id: 'business-card-holder',
+    name: 'Business Card Holder',
+    description: 'Professional business card stand',
+    price: 249,
+    category: categories[12],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Card+Holder'],
+    rating: 4.4,
+    reviews: 98,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '10cm x 6cm x 3cm',
+    weight: '45g',
+    tags: ['card-holder', 'business', 'desk', 'professional'],
+  },
+  {
+    id: 'monitor-stand-riser',
+    name: 'Monitor Stand Riser',
+    description: 'Ergonomic monitor stand with storage space',
+    price: 899,
+    category: categories[12],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Monitor+Stand'],
+    rating: 4.8,
+    reviews: 167,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'Strong PLA',
+    dimensions: '40cm x 20cm x 8cm',
+    weight: '520g',
+    tags: ['monitor', 'stand', 'desk', 'ergonomic'],
+  },
+  {
+    id: 'headphone-stand',
+    name: 'Headphone Stand - RGB',
+    description: 'Gaming headphone stand with RGB lighting',
+    price: 799,
+    category: categories[12],
+    images: ['https://placehold.co/400x400/F2935C/white?text=Headphone+Stand'],
+    rating: 4.7,
+    reviews: 298,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'ABS with LED',
+    dimensions: '12cm x 10cm x 25cm',
+    weight: '180g',
+    tags: ['headphone', 'stand', 'gaming', 'rgb'],
+  },
+
+  // Fidget Toys
+  {
+    id: 'fidget-spinner-pro',
+    name: 'Pro Fidget Spinner',
+    description: 'High-speed bearing fidget spinner - 3+ min spin',
+    price: 299,
+    category: categories[13], // fidget-toys
+    images: ['https://placehold.co/400x400/260A03/white?text=Spinner'],
+    rating: 4.5,
+    reviews: 567,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA with bearing',
+    dimensions: '7cm diameter',
+    weight: '45g',
+    tags: ['fidget', 'spinner', 'stress-relief', 'toy'],
+  },
+  {
+    id: 'infinity-cube',
+    name: 'Infinity Cube',
+    description: 'Unlimited flipping cube - perfect fidget toy',
+    price: 349,
+    category: categories[13],
+    images: ['https://placehold.co/400x400/F27405/white?text=Infinity+Cube'],
+    rating: 4.6,
+    reviews: 423,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: '4cm x 4cm x 4cm',
+    weight: '35g',
+    tags: ['fidget', 'cube', 'stress-relief', 'toy'],
+  },
+  {
+    id: 'gear-fidget',
+    name: 'Rotating Gear Fidget',
+    description: 'Interlocking gears fidget mechanism',
+    price: 399,
+    category: categories[13],
+    images: ['https://placehold.co/400x400/F25C05/white?text=Gears'],
+    rating: 4.7,
+    reviews: 289,
+    inStock: true,
+    featured: true,
+    customizable: false,
+    material: 'PLA Plastic',
+    dimensions: '8cm x 6cm x 2cm',
+    weight: '55g',
+    tags: ['fidget', 'gears', 'mechanical', 'toy'],
+  },
+  {
+    id: 'fidget-cube-premium',
+    name: 'Premium Fidget Cube',
+    description: '6-sided fidget cube with different actions',
+    price: 449,
+    category: categories[13],
+    images: ['https://placehold.co/400x400/8C3503/white?text=Fidget+Cube'],
+    rating: 4.8,
+    reviews: 678,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'ABS Plastic',
+    dimensions: '3.5cm cube',
+    weight: '28g',
+    tags: ['fidget', 'cube', 'stress-relief', 'premium'],
+  },
+  {
+    id: 'sensory-rings',
+    name: 'Sensory Spinner Rings',
+    description: 'Set of 3 rotating fidget rings',
+    price: 249,
+    category: categories[13],
+    images: ['https://placehold.co/400x400/F2935C/white?text=Rings'],
+    rating: 4.4,
+    reviews: 234,
+    inStock: true,
+    featured: false,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: 'Various sizes',
+    weight: '18g total',
+    tags: ['fidget', 'rings', 'sensory', 'toy'],
+  },
+
+  // Custom Category Products (examples for testing custom design flow)
+  {
+    id: 'custom-keychain-sample',
+    name: 'Custom Name Keychain',
+    description: 'Personalized keychain with your name (Example)',
+    price: 399,
+    category: categories[0], // keychains-custom
+    images: ['https://placehold.co/400x400/F27405/white?text=Custom+Name'],
+    rating: 4.9,
+    reviews: 234,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: 'Custom size',
+    weight: '10-15g',
+    tags: ['custom', 'keychain', 'personalized', 'name'],
+  },
+  {
+    id: 'custom-logo-keychain-sample',
+    name: 'Business Logo Keychain',
+    description: 'Professional logo keychain for branding (Example)',
+    price: 499,
+    category: categories[1], // logo-keychains
+    images: ['https://placehold.co/400x400/F25C05/white?text=Logo'],
+    rating: 5.0,
+    reviews: 156,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'Premium PLA',
+    dimensions: 'Custom size',
+    weight: '12-18g',
+    tags: ['custom', 'logo', 'business', 'branding'],
+  },
+  {
+    id: 'custom-moon-lamp-sample',
+    name: 'Photo Moon Lamp',
+    description: 'Moon lamp with your photo embedded (Example)',
+    price: 1999,
+    category: categories[2], // moon-lamps
+    images: ['https://placehold.co/400x400/8C3503/white?text=Photo+Moon'],
+    rating: 5.0,
+    reviews: 189,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA with LED',
+    dimensions: '15-20cm diameter',
+    weight: '280-350g',
+    tags: ['custom', 'moon-lamp', 'photo', 'lighting'],
+  },
+  {
+    id: 'custom-photo-frame-sample',
+    name: 'Personalized Photo Frame',
+    description: '3D printed custom photo frame (Example)',
+    price: 799,
+    category: categories[3], // photo-frames
+    images: ['https://placehold.co/400x400/F2935C/white?text=Photo+Frame'],
+    rating: 4.8,
+    reviews: 145,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'PLA Plastic',
+    dimensions: 'Various sizes',
+    weight: '120-200g',
+    tags: ['custom', 'frame', 'photo', 'personalized'],
+  },
+  {
+    id: 'custom-self-miniature-sample',
+    name: 'Personal Miniature Figurine',
+    description: '3D printed miniature of yourself (Example)',
+    price: 2999,
+    category: categories[4], // self-miniatures
+    images: ['https://placehold.co/400x400/260A03/white?text=Miniature'],
+    rating: 5.0,
+    reviews: 89,
+    inStock: true,
+    featured: true,
+    customizable: true,
+    material: 'Premium Resin',
+    dimensions: '10-20cm height',
+    weight: '150-400g',
+    tags: ['custom', 'miniature', 'figurine', 'personal'],
+  },
+];
+
+// Mock user
+export const mockUser: User = {
+  id: 'user-1',
+  name: 'John Doe',
+  email: 'john.doe@example.com',
+  avatar: 'https://placehold.co/100x100/F27405/white?text=JD',
+  createdAt: '2024-01-15',
+};
+
+// Mock orders
+export const mockOrders: Order[] = [
+  {
+    id: 'order-1',
+    date: '2026-02-05',
+    status: 'processing',
+    items: [
+      {
+        productId: 'naruto-figure',
+        quantity: 1,
+        product: products.find((p) => p.id === 'naruto-figure')!,
+      },
+      {
+        productId: 'goku-ultra-instinct',
+        quantity: 1,
+        product: products.find((p) => p.id === 'goku-ultra-instinct')!,
+      },
+    ],
+    total: 2898,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-2',
+    date: '2026-02-01',
+    status: 'shipped',
+    items: [
+      {
+        productId: 'moon-lamp',
+        quantity: 1,
+        product: products.find((p) => p.id === 'moon-lamp')!,
+      },
+      {
+        productId: 'geometric-keychain',
+        quantity: 3,
+        product: products.find((p) => p.id === 'geometric-keychain')!,
+      },
+    ],
+    total: 1746,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-3',
+    date: '2026-01-28',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'ganesha-idol',
+        quantity: 1,
+        product: products.find((p) => p.id === 'ganesha-idol')!,
+      },
+      {
+        productId: 'krishna-idol',
+        quantity: 1,
+        product: products.find((p) => p.id === 'krishna-idol')!,
+      },
+    ],
+    total: 1748,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-4',
+    date: '2026-01-22',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'hexagonal-led-lamp',
+        quantity: 1,
+        product: products.find((p) => p.id === 'hexagonal-led-lamp')!,
+      },
+    ],
+    total: 3499,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-5',
+    date: '2026-01-18',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'fidget-spinner-pro',
+        quantity: 2,
+        product: products.find((p) => p.id === 'fidget-spinner-pro')!,
+      },
+      {
+        productId: 'infinity-cube',
+        quantity: 2,
+        product: products.find((p) => p.id === 'infinity-cube')!,
+      },
+      {
+        productId: 'fidget-cube-premium',
+        quantity: 1,
+        product: products.find((p) => p.id === 'fidget-cube-premium')!,
+      },
+    ],
+    total: 1745,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-6',
+    date: '2026-01-10',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'tirupati-temple',
+        quantity: 1,
+        product: products.find((p) => p.id === 'tirupati-temple')!,
+      },
+    ],
+    total: 1999,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-7',
+    date: '2026-01-05',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'desk-organizer-multi',
+        quantity: 1,
+        product: products.find((p) => p.id === 'desk-organizer-multi')!,
+      },
+      {
+        productId: 'pen-holder-hexagon',
+        quantity: 2,
+        product: products.find((p) => p.id === 'pen-holder-hexagon')!,
+      },
+      {
+        productId: 'headphone-stand',
+        quantity: 1,
+        product: products.find((p) => p.id === 'headphone-stand')!,
+      },
+    ],
+    total: 2496,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-8',
+    date: '2025-12-28',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'demon-slayer-tanjiro',
+        quantity: 1,
+        product: products.find((p) => p.id === 'demon-slayer-tanjiro')!,
+      },
+      {
+        productId: 'eren-aot',
+        quantity: 1,
+        product: products.find((p) => p.id === 'eren-aot')!,
+      },
+    ],
+    total: 2748,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-9',
+    date: '2025-12-20',
+    status: 'cancelled',
+    items: [
+      {
+        productId: 'luffy-gear5',
+        quantity: 1,
+        product: products.find((p) => p.id === 'luffy-gear5')!,
+      },
+    ],
+    total: 1699,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+  {
+    id: 'order-10',
+    date: '2025-12-15',
+    status: 'delivered',
+    items: [
+      {
+        productId: 'plant-pot-set',
+        quantity: 2,
+        product: products.find((p) => p.id === 'plant-pot-set')!,
+      },
+      {
+        productId: 'hanging-planter',
+        quantity: 1,
+        product: products.find((p) => p.id === 'hanging-planter')!,
+      },
+    ],
+    total: 1947,
+    shippingAddress: '123 Main St, Bangalore, Karnataka 560001',
+  },
+];
+
+// Helper function to get product by ID
+export function getProductById(id: string): Product | undefined {
+  return products.find((p) => p.id === id);
+}
+
+// Helper function to get products by category
+export function getProductsByCategory(categorySlug: string): Product[] {
+  return products.filter((p) => p.category.slug === categorySlug);
+}
+
+// Helper function to get featured products
+export function getFeaturedProducts(): Product[] {
+  return products.filter((p) => p.featured);
+}
+
+// Helper function to get related products
+export function getRelatedProducts(productId: string, limit: number = 4): Product[] {
+  const product = getProductById(productId);
+  if (!product) return [];
+  
+  return products
+    .filter((p) => p.id !== productId && p.category.id === product.category.id)
+    .slice(0, limit);
+}

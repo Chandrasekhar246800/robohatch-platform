@@ -1,0 +1,16 @@
+import { S3Client } from "@aws-sdk/client-s3";
+import environment from "./environment";
+
+// Initialize S3 Client with credentials from centralized environment config
+export const s3 = new S3Client({
+  region: environment.AWS_REGION,
+  credentials: {
+    accessKeyId: environment.AWS_ACCESS_KEY_ID,
+    secretAccessKey: environment.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+// Log S3 configuration (without exposing secrets)
+console.log('✓ S3 Client initialized');
+console.log(`  Region: ${environment.AWS_REGION}`);
+console.log(`  Bucket: ${environment.AWS_S3_BUCKET}`);
