@@ -330,9 +330,19 @@ export default function AdminPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold">Product Management</h2>
-                  <Button onClick={() => router.push('/admin/products/add')}>
-                    Add New Product
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => router.push('/admin/categories')}
+                      variant="secondary"
+                      className="border-gray-300"
+                    >
+                      <Package className="w-4 h-4 mr-2" />
+                      Manage Categories
+                    </Button>
+                    <Button onClick={() => router.push('/admin/products/add')}>
+                      Add New Product
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mb-4">

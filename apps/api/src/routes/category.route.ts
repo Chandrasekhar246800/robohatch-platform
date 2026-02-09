@@ -23,4 +23,28 @@ router.post(
   (req, res) => categoryController.createCategory(req, res)
 );
 
+/**
+ * @route   PATCH /api/admin/categories/:id
+ * @desc    Update a category
+ * @access  Private (Admin only)
+ */
+router.patch(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  (req, res) => categoryController.updateCategory(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/categories/:id
+ * @desc    Delete a category
+ * @access  Private (Admin only)
+ */
+router.delete(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  (req, res) => categoryController.deleteCategory(req, res)
+);
+
 export default router;
