@@ -56,13 +56,13 @@ app.use(cors({
     } else {
       console.warn(`⚠️  CORS blocked request from origin: ${origin}`);
       console.warn(`   Allowed origins: ${environment.ALLOWED_ORIGINS.join(', ')}`);
-      // Return CORS error but still allow the response
+      // Still allow the request but browser will block it
       callback(null, false);
     }
   },
-  credentials: true,
+  credentials: false, // Changed to false for simpler CORS
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
   maxAge: 86400, // 24 hours
   preflightContinue: false,

@@ -91,6 +91,7 @@ class ApiClient {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
+        mode: 'cors',
       });
       clearTimeout(timeout);
       console.log(`[API] Response: ${response.status} ${response.statusText}`);
@@ -99,10 +100,10 @@ class ApiClient {
       clearTimeout(timeout);
       console.error(`[API] Error on ${url}:`, error);
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout. Please try again.');
+        throw new Error('Request timeout. Please check your network connection and try again.');
       }
       if (error.message.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to server. Please check if the API is running.');
+        throw new Error('Cannot connect to API server. Please check the API URL.');
       }
       throw new Error(error.message || 'Network error. Please check your connection.');
     }

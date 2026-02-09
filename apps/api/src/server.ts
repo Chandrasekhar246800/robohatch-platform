@@ -12,15 +12,25 @@ const server = app.listen(PORT, () => {
   console.log(`📊 Health Check: http://localhost:${PORT}/health`);
   console.log(`🔐 Auth APIs:    http://localhost:${PORT}/api/auth`);
   console.log(`🛒 Shop APIs:    http://localhost:${PORT}/api/products`);
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+  console.log(`🏷️  Categories:   http://localhost:${PORT}/api/categories`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  
+  // CORS Configuration
+  console.log(`\n🌍 CORS Configuration:`);
+  console.log(`   Frontend URL: ${environment.FRONTEND_URL}`);
+  console.log(`   Allowed Origins:`);
+  environment.ALLOWED_ORIGINS.forEach(origin => {
+    console.log(`     - ${origin}`);
+  });
   
   if (environment.isDevelopment) {
-    console.log('⚠️  Development mode - Rate limiting relaxed');
-    console.log(`🔗 Frontend URL: ${environment.FRONTEND_URL}\n`);
+    console.log('\n⚠️  Development mode - Rate limiting relaxed');
   } else {
-    console.log('🔒 Production mode - Security features enabled');
-    console.log(`🛡️  Rate limits: ${environment.RATE_LIMIT_MAX_REQUESTS} requests per ${environment.RATE_LIMIT_WINDOW_MS/60000} minutes\n`);
+    console.log(`\n🔒 Production mode - Security features enabled`);
+    console.log(`🛡️  Rate limits: ${environment.RATE_LIMIT_MAX_REQUESTS} requests per ${environment.RATE_LIMIT_WINDOW_MS/60000} minutes`);
   }
+  
+  console.log('\n✅ Server is ready to accept connections\n');
 });
 
 // Handle server errors
