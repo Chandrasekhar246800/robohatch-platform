@@ -74,9 +74,54 @@ class ApiClient {
     useAuthStore.getState().logout();
   }
 
+  // Fetch with timeout and better error handling
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit = {},
+    timeoutMs = 30000
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return response;
+    } catch (error: any) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please try again.');
+      }
+      throw new Error('Network error. Please check your connection.');
+    }
+  }
+
   // Global error handler
   private async handleResponse(response: Response, skipAuthRedirect = false) {
-    const data = await response.json();
+    // Check if response has content
+    const contentType = response.headers.get('content-type');
+    const hasJson = contentType?.includes('application/json');
+    
+    // Handle empty responses
+    if (response.status === 204 || !hasJson) {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return { success: true };
+    }
+
+    // Try to parse JSON, with error handling
+    let data;
+    try {
+      const text = await response.text();
+      data = text ? JSON.parse(text) : { success: true };
+    } catch (error) {
+      console.error('Failed to parse response:', error);
+      throw new Error('Invalid response from server');
+    }
 
     // Handle 401 - Unauthorized (token expired or invalid)
     // Skip redirect during login/register attempts
@@ -98,7 +143,7 @@ class ApiClient {
 
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/register`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/register`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
@@ -122,7 +167,7 @@ class ApiClient {
 
   async login(data: LoginData): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/login`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
@@ -146,7 +191,7 @@ class ApiClient {
 
   async getProfile() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/profile`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/profile`, {
         method: 'GET',
         headers: this.getHeaders(true),
       });
@@ -435,7 +480,7 @@ class ApiClient {
   // ============== CATEGORIES ==============
   async getCategories() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/categories`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/categories`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -446,10 +491,10 @@ class ApiClient {
         return { success: false, message: 'Failed to fetch categories', data: [] };
       }
 
-      return await response.json();
-    } catch (error) {
+      return await this.handleResponse(response);
+    } catch (error: any) {
       console.error('Get categories error:', error);
-      return { success: false, message: 'Network error', data: [] };
+      return { success: false, message: error.message || 'Network error', data: [] };
     }
   }
 
@@ -480,7 +525,7 @@ class ApiClient {
   // ============== PRODUCTS ==============
   async getProducts() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/products/all`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/products/all`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -489,16 +534,16 @@ class ApiClient {
         return { success: false, message: 'Failed to fetch products', data: [] };
       }
 
-      return await response.json();
-    } catch (error) {
+      return await this.handleResponse(response);
+    } catch (error: any) {
       console.error('Get products error:', error);
-      return { success: false, message: 'Network error', data: [] };
+      return { success: false, message: error.message || 'Network error', data: [] };
     }
   }
 
   async getProductById(id: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/products/${id}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/products/${id}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -507,10 +552,10 @@ class ApiClient {
         return { success: false, message: 'Failed to fetch product' };
       }
 
-      return await response.json();
-    } catch (error) {
+      return await this.handleResponse(response);
+    } catch (error: any) {
       console.error('Get product error:', error);
-      return { success: false, message: 'Network error' };
+      return { success: false, message: error.message || 'Network error' };
     }
   }
 

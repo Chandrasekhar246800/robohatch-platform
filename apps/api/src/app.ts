@@ -41,11 +41,23 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (environment.ALLOWED_ORIGINS.includes(origin)) {
+    // Check if origin is allowed
+    const isAllowed = environment.ALLOWED_ORIGINS.some(allowedOrigin => {
+      // Support wildcard matching (e.g., https://*.vercel.app)
+      if (allowedOrigin.includes('*')) {
+        const pattern = allowedOrigin.replace(/\./g, '\\.').replace(/\*/g, '.*');
+        return new RegExp(`^${pattern}$`).test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.warn(`⚠️  CORS blocked request from origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      console.warn(`   Allowed origins: ${environment.ALLOWED_ORIGINS.join(', ')}`);
+      // Return CORS error but still allow the response
+      callback(null, false);
     }
   },
   credentials: true,
@@ -53,6 +65,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
   maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Body parsing middleware
@@ -106,16 +120,29 @@ app.use((req, res) => {
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('❌ Error:', err);
   
+  // Handle CORS errors
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      success: false,
+      message: 'CORS policy: This origin is not allowed',
+    });
+  }
+  
   // Don't leak error details in production
   const message = environment.isProduction 
     ? 'Internal server error' 
-    : err.message;
+    : err.message || 'Unknown error';
   
-  res.status(err.status || 500).json({
-    success: false,
-    message,
-    ...(environment.isDevelopment && { stack: err.stack }),
-  });
+  const statusCode = err.status || err.statusCode || 500;
+  
+  // Ensure we always send JSON
+  if (!res.headersSent) {
+    res.status(statusCode).json({
+      success: false,
+      message,
+      ...(environment.isDevelopment && { stack: err.stack }),
+    });
+  }
 });
 
 export default app;
