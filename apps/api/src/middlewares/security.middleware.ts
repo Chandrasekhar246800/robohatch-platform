@@ -38,9 +38,17 @@ export const generalRateLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  // Skip rate limiting in development if needed
+  statusCode: 429, // Explicitly set status code
+  // Skip rate limiting for OPTIONS requests (CORS preflight)
   skip: (req: Request) => {
+    if (req.method === 'OPTIONS') return true;
     return environment.isDevelopment && req.ip === '::1'; // Skip for localhost in dev
+  },
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many requests from this IP, please try again later.',
+    });
   },
 });
 
@@ -57,7 +65,15 @@ export const authRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  statusCode: 429,
   skipSuccessfulRequests: true, // Don't count successful requests
+  skip: (req: Request) => req.method === 'OPTIONS', // Skip OPTIONS
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many authentication attempts, please try again after 15 minutes.',
+    });
+  },
 });
 
 /**
@@ -72,6 +88,14 @@ export const sensitiveOperationLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  statusCode: 429,
+  skip: (req: Request) => req.method === 'OPTIONS', // Skip OPTIONS
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many requests, please slow down.',
+    });
+  },
 });
 
 /**

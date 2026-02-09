@@ -32,6 +32,12 @@ app.use(productionSecurityHeaders);
 // Request logging
 app.use(requestLogger);
 
+// Log all requests including OPTIONS for debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+  next();
+});
+
 // Compression middleware for better performance
 app.use(compression());
 
@@ -73,7 +79,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Handle preflight requests globally
+// Handle preflight OPTIONS requests BEFORE rate limiting
 app.options('*', cors());
 
 // Health check endpoint (no rate limiting)
@@ -112,16 +118,21 @@ app.use("/api/admin/categories", categoryRoutes);
 app.use(rateLimitErrorHandler);
 
 // 404 handler
-app.use((req, res) => {
+app.use((req, res, next) => {
+  console.warn(`⚠️  404 - Endpoint not found: ${req.method} ${req.path}`);
   res.status(404).json({
     success: false,
     message: 'Endpoint not found',
+    path: req.path,
+    method: req.method,
   });
 });
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('❌ Error:', err);
+  console.error(`   Path: ${req.method} ${req.path}`);
+  console.error(`   Origin: ${req.headers.origin || 'none'}`);
   
   // Handle CORS errors
   if (err.message === 'Not allowed by CORS') {
@@ -137,6 +148,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     : err.message || 'Unknown error';
   
   const statusCode = err.status || err.statusCode || 500;
+  
+  console.error(`   Status: ${statusCode}`);
   
   // Ensure we always send JSON
   if (!res.headersSent) {
