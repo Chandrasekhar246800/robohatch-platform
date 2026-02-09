@@ -155,9 +155,12 @@ class ApiClient {
     const contentType = response.headers.get('content-type');
     const hasJson = contentType?.includes('application/json');
     
+    console.log(`[API] Response content-type: ${contentType}, status: ${response.status}`);
+    
     // Handle empty responses
     if (response.status === 204 || !hasJson) {
       if (!response.ok) {
+        console.error(`[API] Non-JSON error response. Status: ${response.status}`);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       return { success: true };
@@ -167,9 +170,11 @@ class ApiClient {
     let data;
     try {
       const text = await response.text();
+      console.log(`[API] Response body (first 500 chars):`, text.substring(0, 500));
       data = text ? JSON.parse(text) : { success: true };
     } catch (error) {
-      console.error('Failed to parse response:', error);
+      console.error('❌ Failed to parse JSON response:', error);
+      console.error('Response text was:', await response.clone().text());
       throw new Error('Invalid response from server');
     }
 
@@ -217,13 +222,16 @@ class ApiClient {
 
   async login(data: LoginData): Promise<AuthResponse> {
     try {
+      console.log('[API] Attempting login with:', { email: data.email });
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
       });
 
+      console.log('[API] Login response received, status:', response.status);
       const result = await this.handleResponse(response, true);
+      console.log('[API] Login result parsed:', { success: result.success, hasToken: !!result.data?.token });
 
       if (result.success && result.data?.token) {
         this.setToken(result.data.token);
@@ -231,7 +239,11 @@ class ApiClient {
 
       return result;
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack?.substring(0, 200)
+      });
       return {
         success: false,
         message: error.message || 'Network error. Please check your connection.',
