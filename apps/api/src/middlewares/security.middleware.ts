@@ -58,7 +58,7 @@ export const generalRateLimiter = rateLimit({
  */
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 20, // Increased from 5 to 20 to avoid blocking legitimate users
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again after 15 minutes.',
@@ -69,6 +69,7 @@ export const authRateLimiter = rateLimit({
   skipSuccessfulRequests: true, // Don't count successful requests
   skip: (req: Request) => req.method === 'OPTIONS', // Skip OPTIONS
   handler: (req: Request, res: Response) => {
+    console.warn(`⚠️  Rate limit exceeded for auth: ${req.method} ${req.path} from ${req.ip}`);
     res.status(429).json({
       success: false,
       message: 'Too many authentication attempts, please try again after 15 minutes.',

@@ -56,10 +56,13 @@ export class AuthController {
 
   async login(req: Request, res: Response) {
     try {
+      console.log('📝 Login attempt:', { email: req.body?.email, hasPassword: !!req.body?.password });
+      
       const { email, password } = req.body;
 
       // Validate input
       if (!email || !password) {
+        console.warn('⚠️  Login validation failed: missing credentials');
         return res.status(400).json({
           success: false,
           message: 'Email and password are required',
@@ -68,6 +71,7 @@ export class AuthController {
 
       const result = await authService.login({ email, password });
 
+      console.log('✅ Login successful for:', email);
       return res.status(200).json({
         success: true,
         message: 'Login successful',
@@ -75,13 +79,14 @@ export class AuthController {
       });
     } catch (error: any) {
       if (error.message === 'Invalid email or password') {
+        console.warn('⚠️  Login failed: invalid credentials');
         return res.status(401).json({
           success: false,
           message: error.message,
         });
       }
 
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return res.status(500).json({
         success: false,
         message: 'Internal server error',

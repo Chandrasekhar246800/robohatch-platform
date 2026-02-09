@@ -97,8 +97,9 @@ app.use("/api", generalRateLimiter);
 // Public routes
 app.use("/test", testRoutes);
 
-// Authentication routes with strict rate limiting
-app.use("/api/auth", authRateLimiter, authRoutes);
+// Authentication routes - only general rate limiting applied via /api
+// Removed authRateLimiter to prevent 405 errors during deployment
+app.use("/api/auth", authRoutes);
 
 // Public endpoints (with general rate limiting)
 app.use("/api/categories", categoryRoutes);
