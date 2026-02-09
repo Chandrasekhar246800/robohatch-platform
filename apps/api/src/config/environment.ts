@@ -54,6 +54,19 @@ const parseAllowedOrigins = (origins: string): string[] => {
     .filter(origin => origin.length > 0);
 };
 
+// Get default ALLOWED_ORIGINS based on environment
+const getDefaultAllowedOrigins = (): string => {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  
+  if (nodeEnv === 'production') {
+    // In production, default to Vercel domains + localhost for testing
+    return 'https://robohatch-platform-web.vercel.app,https://*.vercel.app,http://localhost:3000';
+  }
+  
+  // In development, default to localhost
+  return 'http://localhost:3000,http://localhost:3001,http://localhost:80';
+};
+
 const environment: EnvironmentConfig = {
   // Server
   NODE_ENV: getEnvironmentVariable('NODE_ENV', 'development'),
@@ -72,10 +85,10 @@ const environment: EnvironmentConfig = {
   AWS_REGION: getEnvironmentVariable('AWS_REGION', 'eu-north-1'),
   AWS_S3_BUCKET: getEnvironmentVariable('AWS_S3_BUCKET'),
   
-  // CORS
+  // CORS - Use smart defaults based on environment
   FRONTEND_URL: getEnvironmentVariable('FRONTEND_URL', 'http://localhost:3000'),
   ALLOWED_ORIGINS: parseAllowedOrigins(
-    getEnvironmentVariable('ALLOWED_ORIGINS', 'http://localhost:3000')
+    getEnvironmentVariable('ALLOWED_ORIGINS', getDefaultAllowedOrigins())
   ),
   
   // Rate Limiting
