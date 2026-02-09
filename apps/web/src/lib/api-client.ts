@@ -37,6 +37,9 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = API_URL;
+    if (typeof window !== 'undefined') {
+      console.log('[API Client] Base URL:', this.baseUrl);
+    }
   }
 
   private getHeaders(withAuth = false): HeadersInit {
@@ -78,24 +81,30 @@ class ApiClient {
   private async fetchWithTimeout(
     url: string,
     options: RequestInit = {},
-    timeoutMs = 30000
+    timeoutMs = 15000
   ): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+      console.log(`[API] Requesting: ${url}`);
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
       });
       clearTimeout(timeout);
+      console.log(`[API] Response: ${response.status} ${response.statusText}`);
       return response;
     } catch (error: any) {
       clearTimeout(timeout);
+      console.error(`[API] Error on ${url}:`, error);
       if (error.name === 'AbortError') {
         throw new Error('Request timeout. Please try again.');
       }
-      throw new Error('Network error. Please check your connection.');
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Cannot connect to server. Please check if the API is running.');
+      }
+      throw new Error(error.message || 'Network error. Please check your connection.');
     }
   }
 
