@@ -21,6 +21,9 @@ import categoryRoutes from "./routes/category.route";
 import customDesignRoutes from "./routes/customDesign.route";
 
 const app = express();
+app.set("trust proxy", 1);
+
+
 
 // Security middleware - Apply first
 app.use(securityHeaders);
