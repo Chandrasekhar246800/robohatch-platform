@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.17.0",
-    "@types/bcrypt": "^6.0.0",
-    "bcrypt": "^6.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^5.1.1",
     "clsx": "^2.0.0",
     "framer-motion": "^10.16.16",
     "lucide-react": "^0.303.0",
@@ -26,6 +26,7 @@
     "@types/node": "^20.10.5",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
+    "@types/serve-static": "^2.2.0",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
