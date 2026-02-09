@@ -1,9 +1,13 @@
 {
   "name": "robohatch-platform",
   "private": true,
+  "packageManager": "npm@10.2.4",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build"
+  },
+  "devDependencies": {
+    "turbo": "^2.7.4"
   }
 }
