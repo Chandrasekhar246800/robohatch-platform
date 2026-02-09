@@ -33,7 +33,7 @@ export class AuthController {
 
       const result = await authService.register({ email, password, name });
 
-      return res.status(201).json({
+      return res.status(201).contentType('application/json').json({
         success: true,
         message: 'Registration successful',
         data: result,
@@ -69,14 +69,20 @@ export class AuthController {
         });
       }
 
+      // Call auth service
       const result = await authService.login({ email, password });
 
       console.log('✅ Login successful for:', email);
-      return res.status(200).json({
-        success: true,
-        message: 'Login successful',
-        data: result,
-      });
+      
+      // ALWAYS return JSON with explicit Content-Type
+      return res
+        .status(200)
+        .contentType('application/json')
+        .json({
+          success: true,
+          message: 'Login successful',
+          data: result,
+        });
     } catch (error: any) {
       if (error.message === 'Invalid email or password') {
         console.warn('⚠️  Login failed: invalid credentials');
@@ -100,7 +106,7 @@ export class AuthController {
       
       const user = await authService.getUserById(userId);
 
-      return res.status(200).json({
+      return res.status(200).contentType('application/json').json({
         success: true,
         data: user,
       });

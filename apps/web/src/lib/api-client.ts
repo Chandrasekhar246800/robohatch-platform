@@ -138,44 +138,81 @@ class ApiClient {
       return response;
     } catch (error: any) {
       clearTimeout(timeout);
-      console.error(`[API] Error on ${url}:`, error);
+      console.error(`[API] Network error on ${url}:`, error);
+      
+      // Timeout error
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout. Please check your network connection and try again.');
+        throw new Error('Request timeout: Server took too long to respond');
       }
-      if (error.message.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to API server. Please check the API URL.');
+      
+      // Network connection error (DNS, offline, server down)
+      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+        throw new Error('Network error: Cannot reach API server. Check your internet connection or API URL.');
       }
-      throw new Error(error.message || 'Network error. Please check your connection.');
+      
+      // Other errors
+      throw error;
     }
   }
 
   // Global error handler
   private async handleResponse(response: Response, skipAuthRedirect = false) {
+    // Clone response FIRST before consuming body
+    const responseClone = response.clone();
+    
     // Check if response has content
     const contentType = response.headers.get('content-type');
     const hasJson = contentType?.includes('application/json');
     
-    console.log(`[API] Response content-type: ${contentType}, status: ${response.status}`);
+    console.log(`[API] Response content-type: ${contentType || 'MISSING'}, status: ${response.status}`);
     
-    // Handle empty responses
-    if (response.status === 204 || !hasJson) {
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return { success: true };
+    }
+
+    // Try to get response text first
+    let text: string;
+    try {
+      text = await response.text();
+      console.log(`[API] Response body (first 500 chars):`, text.substring(0, 500));
+    } catch (error) {
+      console.error('❌ Failed to read response body:', error);
+      throw new Error('Failed to read server response');
+    }
+
+    // If response is empty
+    if (!text || text.trim() === '') {
+      console.warn('⚠️  Empty response body from server');
       if (!response.ok) {
-        console.error(`[API] Non-JSON error response. Status: ${response.status}`);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Server returned empty ${response.status} response`);
       }
       return { success: true };
     }
 
-    // Try to parse JSON, with error handling
-    let data;
+    // Try to parse as JSON (regardless of Content-Type header)
+    let data: any;
     try {
-      const text = await response.text();
-      console.log(`[API] Response body (first 500 chars):`, text.substring(0, 500));
-      data = text ? JSON.parse(text) : { success: true };
-    } catch (error) {
-      console.error('❌ Failed to parse JSON response:', error);
-      console.error('Response text was:', await response.clone().text());
-      throw new Error('Invalid response from server');
+      data = JSON.parse(text);
+      console.log('[API] Successfully parsed JSON response');
+    } catch (parseError) {
+      // If parsing fails and Content-Type suggests JSON, it's an error
+      if (hasJson) {
+        console.error('❌ Invalid JSON from server (Content-Type says JSON but parsing failed):', parseError);
+        console.error('Raw response:', text);
+        throw new Error('Server returned invalid JSON');
+      }
+      
+      // If Content-Type is not JSON and parsing fails, server might be returning HTML/text
+      console.error('❌ Server returned non-JSON response:', text.substring(0, 200));
+      
+      if (!response.ok) {
+        throw new Error(`Server error (${response.status}): Server returned HTML/text instead of JSON`);
+      }
+      
+      // This is a success response but not JSON (shouldn't happen for our API)
+      console.warn('⚠️  Warning: 200 OK but non-JSON response. This might indicate a proxy/CDN issue.');
+      throw new Error('Server returned HTML/text instead of JSON. Check if API URL is correct.');
     }
 
     // Handle 401 - Unauthorized (token expired or invalid)
@@ -185,14 +222,18 @@ class ApiClient {
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
-      throw new Error('Session expired. Please login again.');
+      const errorMsg = data.error || data.message || 'Session expired';
+      throw new Error(errorMsg);
     }
 
-    // Handle other error responses
+    // Handle other HTTP error responses (400, 403, 500, etc.)
     if (!response.ok) {
-      throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      const errorMsg = data.error || data.message || data.success === false && data.message || `HTTP ${response.status}`;
+      console.error(`❌ Server returned error: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
+    // Success response with JSON data
     return data;
   }
 
@@ -231,22 +272,45 @@ class ApiClient {
 
       console.log('[API] Login response received, status:', response.status);
       const result = await this.handleResponse(response, true);
-      console.log('[API] Login result parsed:', { success: result.success, hasToken: !!result.data?.token });
+      console.log('[API] Login result:', { 
+        success: result.success, 
+        hasData: !!result.data,
+        hasToken: !!result.data?.token,
+        message: result.message 
+      });
 
+      // Backend returns: { success: true, message: '...', data: { user, token } }
       if (result.success && result.data?.token) {
+        console.log('✅ Login successful, storing token');
         this.setToken(result.data.token);
+        return result;
+      }
+      
+      // If success but no token, something is wrong
+      if (result.success && !result.data?.token) {
+        console.error('⚠️  Server returned success but no token!');
+        return {
+          success: false,
+          message: 'Server error: Authentication succeeded but no token received',
+        };
       }
 
-      return result;
+      // Backend returned error
+      return {
+        success: false,
+        message: result.message || 'Login failed',
+      };
     } catch (error: any) {
-      console.error('❌ Login error details:', {
+      console.error('❌ Login error:', {
         name: error.name,
         message: error.message,
         stack: error.stack?.substring(0, 200)
       });
+      
+      // Return the actual error message from server or network
       return {
         success: false,
-        message: error.message || 'Network error. Please check your connection.',
+        message: error.message || 'An unexpected error occurred',
       };
     }
   }

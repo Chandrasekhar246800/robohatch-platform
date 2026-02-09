@@ -5,6 +5,17 @@ import { prisma } from '../config/prisma';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+// Validate JWT_SECRET in production
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('🚨 CRITICAL: JWT_SECRET environment variable is not set in production!');
+  throw new Error('JWT_SECRET must be set in production');
+}
+
+if (!JWT_SECRET) {
+  console.error('🚨 CRITICAL: JWT_SECRET is missing!');
+  throw new Error('JWT_SECRET is required for authentication');
+}
+
 export interface RegisterInput {
   email: string;
   password: string;
@@ -50,11 +61,24 @@ export class AuthService {
     });
 
     // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
-    );
+    let token: string;
+    try {
+      token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+      );
+    } catch (error) {
+      console.error('❌ Failed to generate JWT token:', error);
+      throw new Error('Registration failed: Could not generate token');
+    }
+
+    if (!token) {
+      console.error('❌ Token generation returned empty value');
+      throw new Error('Registration failed: Token generation failed');
+    }
+
+    console.log('✅ User registered and token generated:', user.email);
 
     return {
       user: {
@@ -85,11 +109,24 @@ export class AuthService {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
-    );
+    let token: string;
+    try {
+      token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+      );
+    } catch (error) {
+      console.error('❌ Failed to generate JWT token:', error);
+      throw new Error('Authentication failed: Could not generate token');
+    }
+
+    if (!token) {
+      console.error('❌ Token generation returned empty value');
+      throw new Error('Authentication failed: Token generation failed');
+    }
+
+    console.log('✅ Token generated successfully for user:', user.email);
 
     return {
       user: {
