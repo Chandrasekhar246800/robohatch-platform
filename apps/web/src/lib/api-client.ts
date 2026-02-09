@@ -1,6 +1,31 @@
 import { useAuthStore } from '@/store/auth.store';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// Ensure API_URL is an absolute URL
+const getApiUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  // If no URL is set, use localhost for development
+  if (!envUrl) {
+    console.warn('⚠️  NEXT_PUBLIC_API_URL not set, using localhost:5000');
+    return 'http://localhost:5000';
+  }
+  
+  // If URL doesn't start with http:// or https://, add https://
+  if (!envUrl.startsWith('http://') && !envUrl.startsWith('https://')) {
+    console.warn('⚠️  NEXT_PUBLIC_API_URL missing protocol, adding https://');
+    return `https://${envUrl}`;
+  }
+  
+  // Remove trailing slash if present
+  return envUrl.replace(/\/$/, '');
+};
+
+const API_URL = getApiUrl();
+
+// Log the API URL in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('🌐 API URL:', API_URL);
+}
 
 export interface RegisterData {
   email: string;
@@ -39,6 +64,21 @@ class ApiClient {
     this.baseUrl = API_URL;
     if (typeof window !== 'undefined') {
       console.log('[API Client] Base URL:', this.baseUrl);
+      
+      // Validate URL is absolute
+      if (!this.baseUrl.startsWith('http://') && !this.baseUrl.startsWith('https://')) {
+        console.error('❌ CRITICAL ERROR: API URL must be absolute (start with http:// or https://)');
+        console.error('   Current value:', this.baseUrl);
+        console.error('   Set NEXT_PUBLIC_API_URL in Vercel to: https://your-api.railway.app');
+      }
+      
+      // Check if URL contains the frontend domain (common mistake)
+      if (this.baseUrl.includes('vercel.app') && this.baseUrl.includes('railway.app')) {
+        console.error('❌ CRITICAL ERROR: API URL contains both vercel.app and railway.app');
+        console.error('   This indicates a malformed URL!');
+        console.error('   Current value:', this.baseUrl);
+        console.error('   Should be just: https://your-api.railway.app');
+      }
     }
   }
 
