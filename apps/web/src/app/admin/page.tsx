@@ -27,7 +27,7 @@ import { apiClient } from '@/lib/api-client';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, token } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'products' | 'orders' | 'uploads'
@@ -35,6 +35,8 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [orderStats, setOrderStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [seedingCategories, setSeedingCategories] = useState(false);
+  const [seedResult, setSeedResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -92,6 +94,38 @@ export default function AdminPage() {
       loadOrderStats();
     } catch (error) {
       console.error('Failed to update order status:', error);
+    }
+  };
+
+  const handleSeedCategories = async () => {
+    setSeedingCategories(true);
+    setSeedResult(null);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/categories/seed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSeedResult({ success: true, message: data.message });
+        setTimeout(() => setSeedResult(null), 5000);
+      } else {
+        setSeedResult({ success: false, message: data.message || 'Failed to seed categories' });
+        setTimeout(() => setSeedResult(null), 5000);
+      }
+    } catch (err: any) {
+      console.error('Seed error:', err);
+      setSeedResult({ success: false, message: err.message || 'Failed to connect to API' });
+      setTimeout(() => setSeedResult(null), 5000);
+    } finally {
+      setSeedingCategories(false);
     }
   };
 
@@ -333,12 +367,22 @@ export default function AdminPage() {
                   <h2 className="text-xl font-bold">Product Management</h2>
                   <div className="flex gap-3">
                     <Button
-                      onClick={() => router.push('/admin/seed-categories')}
+                      onClick={handleSeedCategories}
+                      disabled={seedingCategories}
                       variant="secondary"
-                      className="border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
+                      className="border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white disabled:opacity-50"
                     >
-                      <Database className="w-4 h-4 mr-2" />
-                      Seed Categories
+                      {seedingCategories ? (
+                        <>
+                          <div className="w-4 h-4 mr-2 border-2 border-brand-gold border-t-transparent rounded-full animate-spin" />
+                          Seeding...
+                        </>
+                      ) : (
+                        <>
+                          <Database className="w-4 h-4 mr-2" />
+                          Seed Categories
+                        </>
+                      )}
                     </Button>
                     <Button
                       onClick={() => router.push('/admin/categories')}
@@ -353,6 +397,28 @@ export default function AdminPage() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Seed Result Notification */}
+                {seedResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mb-4 p-4 rounded-lg ${
+                      seedResult.success
+                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {seedResult.success ? (
+                        <CheckCircle className="w-5 h-5" />
+                      ) : (
+                        <XCircle className="w-5 h-5" />
+                      )}
+                      <span className="font-medium">{seedResult.message}</span>
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="mb-4">
                   <Input placeholder="Search products..." />
