@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth.store';
 interface Category {
   id: string;
   name: string;
+  type?: string; // 'CUSTOM' or 'DEFAULT'
 }
 
 export default function AddProductPage() {
@@ -53,12 +54,22 @@ export default function AddProductPage() {
 
   const loadCategories = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`
-      );
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      console.log('Loading categories from:', `${apiUrl}/api/categories`);
+      
+      const response = await fetch(`${apiUrl}/api/categories`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Categories response:', data);
+      
       if (data.success && data.data && data.data.length > 0) {
+        // Categories are already sorted by backend (type ASC, name ASC)
         setCategories(data.data);
+        console.log('Loaded categories:', data.data.length);
       } else {
         // If no categories exist, show message
         console.warn('No categories found in database');
@@ -66,6 +77,7 @@ export default function AddProductPage() {
       }
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setError('Failed to load categories. Please refresh the page.');
       setCategories([]);
     }
   };
@@ -288,15 +300,39 @@ export default function AddProductPage() {
                       value={formData.categoryId}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                      disabled={loading}
+                      disabled={loading || categories.length === 0}
                     >
-                      <option value="">Select a category</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
+                      <option value="">
+                        {categories.length === 0 ? 'No categories available' : 'Select a category'}
+                      </option>
+                      
+                      {/* Custom Categories */}
+                      {categories.filter(c => c.type === 'CUSTOM').length > 0 && (
+                        <optgroup label="Custom Categories">
+                          {categories.filter(c => c.type === 'CUSTOM').map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      
+                      {/* Default Categories */}
+                      {categories.filter(c => c.type === 'DEFAULT' || !c.type).length > 0 && (
+                        <optgroup label="Default Categories">
+                          {categories.filter(c => c.type === 'DEFAULT' || !c.type).map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
+                    {categories.length === 0 && (
+                      <p className="mt-1 text-sm text-yellow-500">
+                        No categories found. Please create categories first.
+                      </p>
+                    )}
                   </div>
                 </div>
 
