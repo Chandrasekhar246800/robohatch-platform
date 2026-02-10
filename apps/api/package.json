@@ -7,8 +7,9 @@
   },
   "scripts": {
     "dev": "ts-node-dev src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
+    "postinstall": "prisma generate",
     "lint": "eslint src/",
     "clean": "rm -rf dist",
     "seed": "tsx prisma/seed.ts",

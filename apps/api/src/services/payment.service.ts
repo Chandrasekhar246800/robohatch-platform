@@ -21,7 +21,7 @@ export class PaymentService {
 
     // Calculate total
     const total = cart.items.reduce(
-      (sum, item) => sum + Number(item.product.price) * item.quantity,
+      (sum: number, item: any) => sum + Number(item.product.price) * item.quantity,
       0
     );
 
@@ -32,7 +32,7 @@ export class PaymentService {
         total,
         status: 'PENDING',
         items: {
-          create: cart.items.map((item) => ({
+          create: cart.items.map((item: any) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.product.price,
