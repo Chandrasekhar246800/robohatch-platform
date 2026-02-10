@@ -59,8 +59,8 @@ const getDefaultAllowedOrigins = (): string => {
   const nodeEnv = process.env.NODE_ENV || 'development';
   
   if (nodeEnv === 'production') {
-    // In production, default to Vercel domains + localhost for testing
-    return 'https://robohatch-platform-web.vercel.app,https://*.vercel.app,http://localhost:3000';
+    // In production, default to all production domains
+    return 'https://robohatch.in,https://www.robohatch.in,https://robohatch-platform-web.vercel.app,https://*.vercel.app,http://localhost:3000';
   }
   
   // In development, default to localhost
