@@ -19,6 +19,31 @@ router.post(
 );
 
 /**
+ * @route   PUT /api/admin/products/:id
+ * @desc    Update a product
+ * @access  Private (Admin only)
+ */
+router.put(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  upload.array('images', 10),
+  (req, res) => productController.updateProduct(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/products/:id
+ * @desc    Delete a product
+ * @access  Private (Admin only)
+ */
+router.delete(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  (req, res) => productController.deleteProduct(req, res)
+);
+
+/**
  * @route   GET /api/products
  * @desc    Get all products
  * @access  Public

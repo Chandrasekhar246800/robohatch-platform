@@ -25,8 +25,8 @@ export default function AddProductPage() {
     name: '',
     description: '',
     price: '',
-    categoryId: '',
   });
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -144,8 +144,8 @@ export default function AddProductPage() {
       return;
     }
 
-    if (!formData.categoryId) {
-      setError('Please select a category');
+    if (selectedCategories.length === 0) {
+      setError('Please select at least one category');
       return;
     }
 
@@ -162,7 +162,7 @@ export default function AddProductPage() {
       formDataToSend.append('name', formData.name);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('price', formData.price);
-      formDataToSend.append('categoryId', formData.categoryId);
+      formDataToSend.append('categoryIds', JSON.stringify(selectedCategories));
 
       // Append all images
       selectedImages.forEach((image) => {
@@ -190,8 +190,8 @@ export default function AddProductPage() {
           name: '',
           description: '',
           price: '',
-          categoryId: '',
         });
+        setSelectedCategories([]);
         setSelectedImages([]);
         setImagePreviews([]);
 
@@ -290,48 +290,73 @@ export default function AddProductPage() {
                     />
                   </div>
 
-                  {/* Category */}
+                  {/* Categories */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Category <span className="text-red-500">*</span>
+                      Categories <span className="text-red-500">*</span>
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({selectedCategories.length} selected)
+                      </span>
                     </label>
-                    <select
-                      name="categoryId"
-                      value={formData.categoryId}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                      disabled={loading || categories.length === 0}
-                    >
-                      <option value="">
-                        {categories.length === 0 ? 'No categories available' : 'Select a category'}
-                      </option>
-                      
-                      {/* Custom Categories */}
-                      {categories.filter(c => c.type === 'CUSTOM').length > 0 && (
-                        <optgroup label="Custom Categories">
-                          {categories.filter(c => c.type === 'CUSTOM').map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                      
-                      {/* Default Categories */}
-                      {categories.filter(c => c.type === 'DEFAULT' || !c.type).length > 0 && (
-                        <optgroup label="Default Categories">
-                          {categories.filter(c => c.type === 'DEFAULT' || !c.type).map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </select>
-                    {categories.length === 0 && (
-                      <p className="mt-1 text-sm text-yellow-500">
-                        No categories found. Please create categories first.
-                      </p>
+                    
+                    {categories.length === 0 ? (
+                      <p className="text-yellow-500 text-sm">No categories available. Please create categories first.</p>
+                    ) : (
+                      <div className="border border-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto bg-gray-900">
+                        {/* Custom Categories */}
+                        {categories.filter(c => c.type === 'CUSTOM').length > 0 && (
+                          <div className="mb-4">
+                            <h3 className="font-semibold text-brand-gold mb-2">Custom Categories</h3>
+                            <div className="space-y-2">
+                              {categories.filter(c => c.type === 'CUSTOM').map((category) => (
+                                <label key={category.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCategories.includes(category.id)}
+                                    onChange={() => {
+                                      setSelectedCategories(prev =>
+                                        prev.includes(category.id)
+                                          ? prev.filter(id => id !== category.id)
+                                          : [...prev, category.id]
+                                      );
+                                    }}
+                                    className="w-4 h-4 text-brand-gold border-gray-600 rounded focus:ring-brand-gold"
+                                    disabled={loading}
+                                  />
+                                  <span className="text-gray-200">{category.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Default Categories */}
+                        {categories.filter(c => c.type === 'DEFAULT' || !c.type).length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-gray-300 mb-2">Default Categories</h3>
+                            <div className="space-y-2">
+                              {categories.filter(c => c.type === 'DEFAULT' || !c.type).map((category) => (
+                                <label key={category.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCategories.includes(category.id)}
+                                    onChange={() => {
+                                      setSelectedCategories(prev =>
+                                        prev.includes(category.id)
+                                          ? prev.filter(id => id !== category.id)
+                                          : [...prev, category.id]
+                                      );
+                                    }}
+                                    className="w-4 h-4 text-brand-gold border-gray-600 rounded focus:ring-brand-gold"
+                                    disabled={loading}
+                                  />
+                                  <span className="text-gray-200">{category.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

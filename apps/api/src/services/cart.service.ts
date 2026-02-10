@@ -15,7 +15,6 @@ export class CartService {
                 description: true,
                 price: true,
                 isActive: true,
-                categoryId: true,
                 images: {
                   select: {
                     url: true,
@@ -23,12 +22,16 @@ export class CartService {
                   },
                   take: 1, // Only get first image for performance
                 },
-                category: {
+                categories: {
                   select: {
-                    id: true,
-                    name: true,
-                    slug: true,
-                    description: true,
+                    category: {
+                      select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                      },
+                    },
                   },
                 },
               },
@@ -55,7 +58,6 @@ export class CartService {
                   description: true,
                   price: true,
                   isActive: true,
-                  categoryId: true,
                   images: {
                     select: {
                       url: true,
@@ -63,12 +65,16 @@ export class CartService {
                     },
                     take: 1,
                   },
-                  category: {
+                  categories: {
                     select: {
-                      id: true,
-                      name: true,
-                      slug: true,
-                      description: true,
+                      category: {
+                        select: {
+                          id: true,
+                          name: true,
+                          slug: true,
+                          description: true,
+                        },
+                      },
                     },
                   },
                 },

@@ -34,8 +34,7 @@ model Product {
   images      ProductImage[]
   orderItems  OrderItem[]
   cartItems   CartItem[]
-  category    Category? @relation(fields: [categoryId], references: [id])
-  categoryId  String?
+  categories  ProductCategory[]
 }
 
 model ProductImage {
@@ -56,7 +55,20 @@ model Category {
   description String?      @db.Text
   createdAt   DateTime     @default(now())
 
-  products  Product[]
+  products  ProductCategory[]
+}
+
+model ProductCategory {
+  id         String   @id @default(uuid())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+  createdAt  DateTime @default(now())
+
+  @@unique([productId, categoryId])
+  @@index([productId])
+  @@index([categoryId])
 }
 
 model Order {

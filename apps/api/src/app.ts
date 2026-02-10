@@ -20,6 +20,7 @@ import productRoutes from "./routes/product.route";
 import categoryRoutes from "./routes/category.route";
 import customDesignRoutes from "./routes/customDesign.route";
 import seedRoutes from "./routes/seed.route";
+import adminRoutes from "./routes/admin.route";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -113,9 +114,9 @@ app.use("/api/payment", sensitiveOperationLimiter, paymentRoutes);
 app.use("/api/custom-designs", customDesignRoutes);
 
 // Admin routes (already protected by auth middleware in routes)
+app.use("/api/admin", adminRoutes);
 app.use("/api/admin/products", productRoutes);
 app.use("/api/admin/categories", categoryRoutes);
-app.use("/api/admin", seedRoutes);
 
 // Rate limit error handler
 app.use(rateLimitErrorHandler);
