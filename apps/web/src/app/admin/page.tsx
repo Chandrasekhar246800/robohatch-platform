@@ -17,6 +17,7 @@ import {
   XCircle,
   Clock,
   DollarSign,
+  Database,
 } from 'lucide-react';
 import { Button, Badge, Card, CardContent, Input, AdminDashboardSkeleton } from '@/components/ui';
 import { products, mockOrders } from '@/lib/mock-data';
@@ -331,6 +332,14 @@ export default function AdminPage() {
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold">Product Management</h2>
                   <div className="flex gap-3">
+                    <Button
+                      onClick={() => router.push('/admin/seed-categories')}
+                      variant="secondary"
+                      className="border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      Seed Categories
+                    </Button>
                     <Button
                       onClick={() => router.push('/admin/categories')}
                       variant="secondary"
