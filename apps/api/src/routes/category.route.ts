@@ -47,4 +47,16 @@ router.delete(
   (req, res) => categoryController.deleteCategory(req, res)
 );
 
+/**
+ * @route   POST /api/admin/categories/seed
+ * @desc    Seed initial categories (one-time setup)
+ * @access  Private (Admin only)
+ */
+router.post(
+  '/seed',
+  authMiddleware,
+  adminMiddleware,
+  (req, res) => categoryController.seedCategories(req, res)
+);
+
 export default router;

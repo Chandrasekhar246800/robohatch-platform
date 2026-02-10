@@ -28,7 +28,7 @@ export default function SeedCategoriesPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/admin/seed-categories`, {
+      const response = await fetch(`${apiUrl}/api/admin/categories/seed`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
