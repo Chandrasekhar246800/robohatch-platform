@@ -13,6 +13,7 @@ import { products as mockProducts, categories as mockCategories } from '@/lib/mo
 interface Category {
   id: string;
   name: string;
+  type?: string; // 'CUSTOM' or 'DEFAULT'
   slug: string;
   image: string;
   description: string;
@@ -109,6 +110,7 @@ function ProductsContent() {
           categoriesData = categoriesResponse.data.map((c: any) => ({
             id: c.id,
             name: c.name,
+            type: c.type, // Include type from API
             slug: c.name.toLowerCase().replace(/\s+/g, '-'),
             image: '',
             description: '',
@@ -226,12 +228,12 @@ function ProductsContent() {
                   </label>
                   
                   {/* Custom Categories */}
-                  {categories.slice(0, 5).length > 0 && (
+                  {categories.filter(c => c.type === 'CUSTOM').length > 0 && (
                     <>
                       <div className="pt-3 pb-1">
                         <span className="text-xs font-bold text-gray-700 uppercase">Custom</span>
                       </div>
-                      {categories.slice(0, 5).map((category) => (
+                      {categories.filter(c => c.type === 'CUSTOM').map((category) => (
                         <label key={category.id} className="flex items-center space-x-2 cursor-pointer pl-2">
                           <input
                             type="radio"
@@ -248,12 +250,12 @@ function ProductsContent() {
                   )}
 
                   {/* Default Categories */}
-                  {categories.slice(5).length > 0 && (
+                  {categories.filter(c => c.type === 'DEFAULT' || !c.type).length > 0 && (
                     <>
                       <div className="pt-3 pb-1">
                         <span className="text-xs font-bold text-gray-700 uppercase">Default</span>
                       </div>
-                      {categories.slice(5).map((category) => (
+                      {categories.filter(c => c.type === 'DEFAULT' || !c.type).map((category) => (
                         <label key={category.id} className="flex items-center space-x-2 cursor-pointer pl-2">
                           <input
                             type="radio"

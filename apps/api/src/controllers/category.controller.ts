@@ -5,9 +5,14 @@ export class CategoryController {
   async getAllCategories(req: Request, res: Response) {
     try {
       const categories = await prisma.category.findMany({
-        orderBy: {
-          name: 'asc',
-        },
+        orderBy: [
+          {
+            type: 'asc', // CUSTOM first, then DEFAULT
+          },
+          {
+            name: 'asc', // Then alphabetically within each type
+          },
+        ],
       });
 
       return res.status(200).json({
