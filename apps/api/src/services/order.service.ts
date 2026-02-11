@@ -20,10 +20,16 @@ class OrderService {
       throw new Error('Cart is empty');
     }
 
-    // Calculate total
-    const total = cart.items.reduce((sum: number, item: any) => {
+    // Calculate subtotal
+    const subtotal = cart.items.reduce((sum: number, item: any) => {
       return sum + Number(item.product.price) * item.quantity;
     }, 0);
+
+    // Calculate GST (18%)
+    const gst = Math.round(subtotal * 0.18);
+    
+    // Total = Subtotal + GST
+    const total = subtotal + gst;
 
     // Create order with items
     const order = await prisma.order.create({

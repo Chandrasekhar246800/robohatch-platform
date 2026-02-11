@@ -20,8 +20,7 @@ export default function CartPage() {
 
   const subtotal = getTotal();
   const shipping = subtotal > 999 ? 0 : 50;
-  const tax = Math.round(subtotal * 0.18); // 18% GST
-  const total = subtotal + shipping + tax;
+  const total = subtotal + shipping;
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -191,10 +190,6 @@ export default function CartPage() {
                     Add {formatPrice(999 - subtotal)} more for free shipping
                   </p>
                 )}
-                <div className="flex justify-between text-gray-600">
-                  <span>Tax (GST 18%)</span>
-                  <span>{formatPrice(tax)}</span>
-                </div>
                 <div className="pt-3 border-t border-gray-200">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
