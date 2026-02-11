@@ -102,6 +102,11 @@ export default function CheckoutPage() {
       const amount = response.data.amount;
       
       console.log('✓ Razorpay order created:', razorpayOrderId);
+      console.log('💰 Real-time payment amount:', {
+        amountInPaise: amount,
+        amountInRupees: `₹${(amount / 100).toFixed(2)}`,
+        note: 'This is DYNAMIC - calculated from your current cart items'
+      });
 
       // Check if Razorpay script is loaded
       if (typeof window.Razorpay === 'undefined') {

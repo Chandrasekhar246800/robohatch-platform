@@ -30,6 +30,14 @@ class OrderService {
     
     // Total = Subtotal + GST
     const total = subtotal + gst;
+    
+    console.log('💰 Real-time order calculation:', {
+      items: cart.items.length,
+      subtotal: `₹${subtotal}`,
+      gst: `₹${gst} (18%)`,
+      total: `₹${total}`,
+      breakdown: cart.items.map((item: any) => `${item.product.name}: ₹${item.product.price} × ${item.quantity}`)
+    });
 
     // Create order with items
     const order = await prisma.order.create({

@@ -71,8 +71,16 @@ export class PaymentService {
     }
 
     // Create Razorpay order
+    const amountInPaise = Math.round(Number(order.total) * 100);
+    console.log('💳 Creating Razorpay order:', {
+      orderId,
+      amount: `₹${order.total}`,
+      amountInPaise: `${amountInPaise} paise`,
+      note: 'This amount is calculated LIVE from current cart items'
+    });
+    
     const razorpayOrder = await this.razorpay.orders.create({
-      amount: Math.round(Number(order.total) * 100), // Convert to paise
+      amount: amountInPaise, // Convert to paise
       currency: 'INR',
       receipt: orderId,
       notes: {
