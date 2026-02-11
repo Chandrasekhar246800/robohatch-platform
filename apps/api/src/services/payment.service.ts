@@ -71,6 +71,7 @@ export class PaymentService {
     const payment = await prisma.payment.create({
       data: {
         orderId,
+        userId,
         gatewayOrderId: razorpayOrder.id,
         amount: order.total,
         currency: 'INR',
@@ -216,7 +217,6 @@ export class PaymentService {
       where: { id: payment.id },
       data: {
         status: 'FAILED',
-        updatedAt: new Date(),
       },
     });
 
@@ -368,15 +368,6 @@ export class PaymentService {
         payment: true,
       },
     });
-
-    if (!order) {
-      throw new Error('Order not found');
-    }
-
-    return order;
-  }
-}
-
 
     if (!order) {
       throw new Error('Order not found');

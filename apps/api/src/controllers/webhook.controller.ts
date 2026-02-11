@@ -149,7 +149,6 @@ export class WebhookController {
           data: {
             gatewayPaymentId: razorpayPaymentId,
             status: 'CAPTURED',
-            updatedAt: new Date(),
           },
         });
 
@@ -158,7 +157,6 @@ export class WebhookController {
           where: { id: payment.orderId },
           data: {
             status: 'PAID',
-            updatedAt: new Date(),
           },
         });
 
@@ -213,7 +211,6 @@ export class WebhookController {
         where: { id: payment.id },
         data: {
           status: 'FAILED',
-          updatedAt: new Date(),
         },
       });
 
