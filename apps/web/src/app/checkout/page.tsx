@@ -260,7 +260,6 @@ export default function CheckoutPage() {
               </p>
             </div>
           ))}
-          ))}
           
           {/* Price Breakdown */}
           <div className="border-t pt-3 md:pt-4 space-y-2">
