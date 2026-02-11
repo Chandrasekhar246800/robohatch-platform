@@ -16,6 +16,7 @@ import authRoutes from "./routes/auth.route";
 import cartRoutes from "./routes/cart.route";
 import orderRoutes from "./routes/order.route";
 import paymentRoutes from "./routes/payment.route";
+import webhookRoutes from "./routes/webhook.route";
 import productRoutes from "./routes/product.route";
 import categoryRoutes from "./routes/category.route";
 import customDesignRoutes from "./routes/customDesign.route";
@@ -112,6 +113,10 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", sensitiveOperationLimiter, orderRoutes);
 app.use("/api/payment", sensitiveOperationLimiter, paymentRoutes);
 app.use("/api/custom-designs", customDesignRoutes);
+
+// 🔒 WEBHOOK ROUTES: No auth required, signature verification in controller
+// IMPORTANT: These must NOT have authMiddleware or rate limiting
+app.use("/api/webhook", webhookRoutes);
 
 // Admin routes (already protected by auth middleware in routes)
 app.use("/api/admin", adminRoutes);

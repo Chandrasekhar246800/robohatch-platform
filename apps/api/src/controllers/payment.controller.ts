@@ -5,148 +5,210 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 const paymentService = new PaymentService();
 
 export class PaymentController {
-  // Create order from cart
+  /**
+   * Create order from cart (Step 1: Before payment)
+   */
   async createOrder(req: Request, res: Response) {
     try {
       const userId = (req as AuthRequest).user?.userId;
 
       if (!userId) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const order = await paymentService.createOrder(userId);
+      const order = await paymentService.createOrderFromCart(userId);
 
       res.status(201).json({
         success: true,
         message: 'Order created successfully',
-        data: { order },
+        data: order,
       });
     } catch (error: any) {
       console.error('Create order error:', error);
 
-      if (error.message === 'Cart is empty') {
-        return res.status(400).json({ success: false, error: error.message });
+      if (error.message === 'Cart is empty' || error.message === 'Some products in cart are no longer available') {
+        return res.status(400).json({ success: false, message: error.message });
       }
 
-      res.status(500).json({ success: false, error: 'Failed to create order' });
+      res.status(500).json({ success: false, message: 'Failed to create order' });
     }
   }
 
-  // Initiate UPI payment
-  async initiatePayment(req: Request, res: Response) {
+  /**
+   * Create Razorpay order (Step 2: Initialize payment)
+   */
+  async createRazorpayOrder(req: Request, res: Response) {
     try {
       const userId = (req as AuthRequest).user?.userId;
-      const { orderId, upiId } = req.body;
+      const { orderId } = req.params;
 
       if (!userId) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      if (!orderId || !upiId) {
-        return res.status(400).json({ success: false, error: 'Order ID and UPI ID are required' });
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: 'Order ID is required' });
       }
 
-      // Validate UPI ID format
-      const upiRegex = /^[\w.-]+@[\w.-]+$/;
-      if (!upiRegex.test(upiId)) {
-        return res.status(400).json({ success: false, error: 'Invalid UPI ID format' });
-      }
-
-      const result = await paymentService.initiatePayment(orderId, userId, upiId);
+      const razorpayOrder = await paymentService.createRazorpayOrder(orderId, userId);
 
       res.json({
         success: true,
-        message: 'Payment initiated successfully',
-        data: result,
+        data: razorpayOrder,
       });
     } catch (error: any) {
-      console.error('Initiate payment error:', error);
+      console.error('Create Razorpay order error:', error);
 
-      if (error.message === 'Order not found' || error.message === 'Order already processed' || error.message === 'Payment already initiated') {
-        return res.status(400).json({ success: false, error: error.message });
+      if (
+        error.message === 'Order not found or unauthorized' ||
+        error.message === 'Order already paid' ||
+        error.message === 'Payment already initiated'
+      ) {
+        return res.status(400).json({ success: false, message: error.message });
       }
 
-      res.status(500).json({ success: false, error: 'Failed to initiate payment' });
+      res.status(500).json({ success: false, message: 'Failed to create payment order' });
     }
   }
 
-  // Verify payment
+  /**
+   * Verify Razorpay payment (Step 3: After user payment)
+   * ⚠️ CRITICAL: This endpoint verifies payment signature
+   */
   async verifyPayment(req: Request, res: Response) {
     try {
       const userId = (req as AuthRequest).user?.userId;
-      const { transactionId } = req.body;
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
       if (!userId) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      if (!transactionId) {
-        return res.status(400).json({ success: false, error: 'Transaction ID is required' });
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing payment verification data',
+        });
       }
 
-      const payment = await paymentService.verifyPayment(transactionId, userId);
+      const result = await paymentService.verifyPayment(
+        {
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+        },
+        userId
+      );
 
       res.json({
         success: true,
         message: 'Payment verified successfully',
-        data: { payment },
+        data: result,
       });
     } catch (error: any) {
       console.error('Verify payment error:', error);
 
-      if (error.message === 'Payment not found' || error.message === 'Unauthorized' || error.message === 'Payment already verified') {
-        return res.status(400).json({ success: false, error: error.message });
+      // Log security-critical errors
+      if (error.message === 'Invalid payment signature') {
+        console.error('⚠️ SECURITY ALERT: Invalid payment signature detected', {
+          userId: (req as AuthRequest).user?.userId,
+          ip: req.ip,
+          timestamp: new Date().toISOString(),
+        });
       }
 
-      res.status(500).json({ success: false, error: 'Failed to verify payment' });
+      if (
+        error.message === 'Payment not found' ||
+        error.message === 'Unauthorized' ||
+        error.message === 'Payment already verified' ||
+        error.message === 'Invalid payment signature'
+      ) {
+        return res.status(400).json({ success: false, message: error.message });
+      }
+
+      res.status(500).json({ success: false, message: 'Failed to verify payment' });
     }
   }
 
-  // Get payment status
+  /**
+   * Handle payment failure
+   */
+  async handlePaymentFailure(req: Request, res: Response) {
+    try {
+      const userId = (req as AuthRequest).user?.userId;
+      const { orderId, reason } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: 'Order ID is required' });
+      }
+
+      const result = await paymentService.handlePaymentFailure(orderId, userId, reason);
+
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      console.error('Handle payment failure error:', error);
+
+      if (error.message === 'Payment not found') {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+
+      res.status(500).json({ success: false, message: 'Failed to handle payment failure' });
+    }
+  }
+
+  /**
+   * Get payment status for an order
+   */
   async getPaymentStatus(req: Request, res: Response) {
     try {
       const userId = (req as AuthRequest).user?.userId;
       const { orderId } = req.params;
 
       if (!userId) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
       const payment = await paymentService.getPaymentStatus(orderId, userId);
 
-      res.json({ success: true, data: { payment } });
+      res.json({ success: true, data: payment });
     } catch (error: any) {
       console.error('Get payment status error:', error);
 
       if (error.message === 'Payment not found' || error.message === 'Unauthorized') {
-        return res.status(404).json({ success: false, error: error.message });
+        return res.status(404).json({ success: false, message: error.message });
       }
 
-      res.status(500).json({ success: false, error: 'Failed to get payment status' });
+      res.status(500).json({ success: false, message: 'Failed to get payment status' });
     }
   }
 
-  // Get order with payment
+  /**
+   * Get order with payment details
+   */
   async getOrderWithPayment(req: Request, res: Response) {
     try {
       const userId = (req as AuthRequest).user?.userId;
       const { orderId } = req.params;
 
       if (!userId) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
       const order = await paymentService.getOrderWithPayment(orderId, userId);
 
-      res.json({ success: true, data: { order } });
+      res.json({ success: true, data: order });
     } catch (error: any) {
       console.error('Get order error:', error);
 
       if (error.message === 'Order not found') {
-        return res.status(404).json({ success: false, error: error.message });
+        return res.status(404).json({ success: false, message: error.message });
       }
 
-      res.status(500).json({ success: false, error: 'Failed to get order' });
+      res.status(500).json({ success: false, message: 'Failed to get order' });
     }
   }
 }

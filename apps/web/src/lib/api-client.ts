@@ -505,7 +505,11 @@ class ApiClient {
     }
   }
 
-  // Payment API methods
+  // ============== PAYMENT API (Razorpay Integration) ==============
+  
+  /**
+   * Step 1: Create order from cart (before payment)
+   */
   async createPaymentOrder() {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/orders`, {
@@ -515,7 +519,7 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json();
-        return { success: false, message: errorData.error || 'Failed to create order' };
+        return { success: false, message: errorData.message || 'Failed to create order' };
       }
 
       return await response.json();
@@ -525,46 +529,81 @@ class ApiClient {
     }
   }
 
-  async initiatePayment(orderId: string, upiId: string) {
+  /**
+   * Step 2: Create Razorpay order (initialize payment)
+   */
+  async createRazorpayOrder(orderId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/initiate`, {
+      const response = await fetch(`${this.baseUrl}/api/payment/create-order/${orderId}`, {
         method: 'POST',
         headers: this.getHeaders(true),
-        body: JSON.stringify({ orderId, upiId }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        return { success: false, message: errorData.error || 'Failed to initiate payment' };
+        return { success: false, message: errorData.message || 'Failed to create Razorpay order' };
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Initiate payment error:', error);
+      console.error('Create Razorpay order error:', error);
       return { success: false, message: 'Network error' };
     }
   }
 
-  async verifyPayment(transactionId: string) {
+  /**
+   * Step 3: Verify payment signature (after user payment)
+   */
+  async verifyRazorpayPayment(paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/verify`, {
         method: 'POST',
         headers: this.getHeaders(true),
-        body: JSON.stringify({ transactionId }),
+        body: JSON.stringify(paymentData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        return { success: false, message: errorData.error || 'Payment verification failed' };
+        return { success: false, message: errorData.message || 'Payment verification failed' };
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Verify payment error:', error);
+      console.error('Verify Razorpay payment error:', error);
       return { success: false, message: 'Network error' };
     }
   }
 
+  /**
+   * Handle payment failure
+   */
+  async handlePaymentFailure(orderId: string, reason?: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/payment/failure`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ orderId, reason }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || 'Failed to handle payment failure' };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Handle payment failure error:', error);
+      return { success: false, message: 'Network error' };
+    }
+  }
+
+  /**
+   * Get payment status for an order
+   */
   async getPaymentStatus(orderId: string) {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/status/${orderId}`, {
@@ -574,7 +613,7 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json();
-        return { success: false, message: errorData.error || 'Failed to get payment status' };
+        return { success: false, message: errorData.message || 'Failed to get payment status' };
       }
 
       return await response.json();
@@ -584,6 +623,9 @@ class ApiClient {
     }
   }
 
+  /**
+   * Get order with payment details
+   */
   async getOrderWithPayment(orderId: string) {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/orders/${orderId}`, {
@@ -593,7 +635,7 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json();
-        return { success: false, message: errorData.error || 'Failed to get order' };
+        return { success: false, message: errorData.message || 'Failed to get order' };
       }
 
       return await response.json();
