@@ -292,6 +292,25 @@ export class PaymentService {
     // If pending order exists, return it instead of creating new one
     if (existingPendingOrder) {
       console.log(`♻️ Reusing existing pending order: ${existingPendingOrder.id}`);
+      
+      // 🔄 RECALCULATE TOTAL: Ensure order total includes GST (in case it was created before GST logic)
+      const subtotal = existingPendingOrder.items.reduce((sum: number, item: any) => {
+        return sum + Number(item.price) * item.quantity;
+      }, 0);
+      const gst = Math.round(subtotal * 0.18);
+      const correctTotal = subtotal + gst;
+      
+      // Update order total if it's different (e.g., old orders without GST)
+      if (Number(existingPendingOrder.total) !== correctTotal) {
+        console.log(`🔄 Updating order total from ₹${existingPendingOrder.total} to ₹${correctTotal} (added GST)`);
+        const updatedOrder = await prisma.order.update({
+          where: { id: existingPendingOrder.id },
+          data: { total: correctTotal },
+          include: { items: true },
+        });
+        return updatedOrder;
+      }
+      
       return existingPendingOrder;
     }
 
