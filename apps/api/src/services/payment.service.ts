@@ -286,6 +286,7 @@ export class PaymentService {
       },
       include: {
         items: true,
+        payment: true, // Include payment to check for existing payments
       },
     });
 
@@ -306,7 +307,10 @@ export class PaymentService {
         const updatedOrder = await prisma.order.update({
           where: { id: existingPendingOrder.id },
           data: { total: correctTotal },
-          include: { items: true },
+          include: { 
+            items: true,
+            payment: true, // Include payment relation for downstream logic
+          },
         });
         return updatedOrder;
       }
