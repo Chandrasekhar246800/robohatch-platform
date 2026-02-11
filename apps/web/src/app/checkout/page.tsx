@@ -16,10 +16,10 @@ declare global {
 export default function CheckoutPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const { items, total, clearCart } = useCartStore();
+  const { items, getTotal, clearCart } = useCartStore();
   
   // Calculate pricing breakdown
-  const subtotal = total;
+  const subtotal = getTotal();
   const gst = Math.round(subtotal * 0.18); // 18% GST
   const grandTotal = subtotal + gst;
   
