@@ -53,16 +53,21 @@ export class PaymentService {
       throw new Error('Order already paid');
     }
 
-    // Check if payment was already created
-    if (order.payment && order.payment.status !== 'PENDING') {
-      throw new Error('Payment already initiated');
-    }
-
-    // Delete any existing pending payment to allow retry
-    if (order.payment && order.payment.status === 'PENDING') {
-      await prisma.payment.delete({
-        where: { id: order.payment.id },
-      });
+    // 🔒 ALLOW RETRY: Delete pending/created payments to enable retry after failures
+    // Only block if payment was CAPTURED, AUTHORIZED, or REFUNDED (actual money involved)
+    if (order.payment) {
+      const blockingStatuses = ['CAPTURED', 'AUTHORIZED', 'REFUNDED'];
+      if (blockingStatuses.includes(order.payment.status)) {
+        throw new Error('Payment already initiated');
+      }
+      
+      // Delete PENDING or CREATED payments to allow retry
+      if (['PENDING', 'CREATED'].includes(order.payment.status)) {
+        console.log(`🔄 Deleting ${order.payment.status} payment to allow retry:`, order.payment.id);
+        await prisma.payment.delete({
+          where: { id: order.payment.id },
+        });
+      }
     }
 
     // Create Razorpay order

@@ -71,8 +71,8 @@ export default function CheckoutPage() {
       console.error('Create order error:', err);
       setError(err.message || 'Failed to create order');
       setIsCreatingOrder(false); // Reset on error
+      setIsProcessingPayment(false);
     }
-    // Note: Don't reset isCreatingOrder here to prevent double-submit
   };
 
   /**
@@ -89,6 +89,7 @@ export default function CheckoutPage() {
       if (!response.success || !response.data) {
         setError(response.message || 'Failed to initialize payment');
         setIsProcessingPayment(false);
+        setIsCreatingOrder(false); // Reset to allow retry
         return;
       }
 
@@ -101,6 +102,7 @@ export default function CheckoutPage() {
       if (typeof window.Razorpay === 'undefined') {
         setError('Payment gateway not loaded. Please refresh the page.');
         setIsProcessingPayment(false);
+        setIsCreatingOrder(false); // Reset to allow retry
         return;
       }
 
@@ -208,6 +210,7 @@ export default function CheckoutPage() {
       console.error('Razorpay initialization error:', err);
       setError(err.message || 'Failed to initialize payment');
       setIsProcessingPayment(false);
+      setIsCreatingOrder(false); // Reset to allow retry
     }
   };
 
