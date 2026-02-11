@@ -19,7 +19,6 @@ import paymentRoutes from "./routes/payment.route";
 import productRoutes from "./routes/product.route";
 import categoryRoutes from "./routes/category.route";
 import customDesignRoutes from "./routes/customDesign.route";
-import seedRoutes from "./routes/seed.route";
 import adminRoutes from "./routes/admin.route";
 
 const app = express();
