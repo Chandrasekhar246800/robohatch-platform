@@ -2,21 +2,30 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 
-// Initialize Razorpay with credentials from environment
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
-// Validate Razorpay configuration at startup
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  console.error('❌ RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment');
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Missing Razorpay credentials');
-  }
-}
-
 export class PaymentService {
+  private razorpay: Razorpay;
+
+  constructor() {
+    // 🔒 CRITICAL: Validate Razorpay credentials before initialization
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      const error = '❌ RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment variables';
+      console.error(error);
+      console.error('Current env check:', {
+        hasKeyId: !!process.env.RAZORPAY_KEY_ID,
+        hasKeySecret: !!process.env.RAZORPAY_KEY_SECRET,
+        nodeEnv: process.env.NODE_ENV,
+      });
+      throw new Error('Missing Razorpay credentials - check Railway environment variables');
+    }
+
+    // Initialize Razorpay with validated credentials
+    this.razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    console.log('✅ Razorpay initialized successfully');
+  }
   /**
    * Create Razorpay order for an existing order
    * @param orderId - Order ID from database
@@ -57,7 +66,7 @@ export class PaymentService {
     }
 
     // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
+    const razorpayOrder = await this.razorpay.orders.create({
       amount: Math.round(Number(order.total) * 100), // Convert to paise
       currency: 'INR',
       receipt: orderId,
