@@ -150,20 +150,23 @@ export class AuthService {
       sameSite: 'lax', // ✅ CSRF protection + Razorpay redirect compatibility
       maxAge: maxAge,
       path: '/',
+      domain: isProduction ? undefined : 'localhost', // ✅ Share cookie across localhost ports in dev
     });
 
-    console.log(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction})`);
+    console.log(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, domain: ${isProduction ? 'auto' : 'localhost'})`);
   }
 
   /**
    * Clear authentication cookie (logout)
    */
   clearAuthCookie(res: Response): void {
+    const isProduction = process.env.NODE_ENV === 'production';
     res.clearCookie('auth_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax',
       path: '/',
+      domain: isProduction ? undefined : 'localhost', // ✅ Must match the domain used when setting
     });
 
     console.log('✅ Auth cookie cleared');
