@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { s3 } from '../config/s3';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import environment from '../config/environment';
 
 export class ProductController {
   async createProduct(req: AuthRequest, res: Response) {
@@ -364,9 +367,10 @@ export class ProductController {
     try {
       const { id } = req.params;
 
-      // Check if product exists
+      // Check if product exists and get images
       const product = await prisma.product.findUnique({
         where: { id },
+        include: { images: true },
       });
 
       if (!product) {
@@ -376,14 +380,38 @@ export class ProductController {
         });
       }
 
-      // Delete product (categories and images will cascade delete)
+      // Delete images from S3 bucket
+      if (product.images && product.images.length > 0) {
+        const deletePromises = product.images.map(async (image) => {
+          try {
+            // Extract S3 key from URL (e.g., "products/xyz.jpg")
+            const url = new URL(image.url);
+            const key = url.pathname.substring(1); // Remove leading slash
+            
+            const deleteCommand = new DeleteObjectCommand({
+              Bucket: environment.AWS_S3_BUCKET,
+              Key: key,
+            });
+            
+            await s3.send(deleteCommand);
+            console.log(`✓ Deleted image from S3: ${key}`);
+          } catch (s3Error: any) {
+            console.error(`Failed to delete image from S3: ${image.url}`, s3Error.message);
+            // Continue even if S3 deletion fails
+          }
+        });
+
+        await Promise.all(deletePromises);
+      }
+
+      // Delete product from database (categories and images will cascade delete)
       await prisma.product.delete({
         where: { id },
       });
 
       return res.status(200).json({
         success: true,
-        message: 'Product deleted successfully',
+        message: 'Product deleted successfully from database and S3',
       });
     } catch (error: any) {
       console.error('Delete product error:', error);

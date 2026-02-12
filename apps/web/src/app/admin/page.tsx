@@ -37,6 +37,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -100,6 +101,30 @@ export default function AdminPage() {
       console.error('Failed to load products:', error);
       setProducts([]);
       setProductsLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    if (!confirm(`Are you sure you want to delete "${productName}"?\n\nThis will permanently delete:\n• Product from database\n• All product images from S3\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingProductId(productId);
+      const response = await apiClient.deleteProduct(productId);
+      
+      if (response.success) {
+        // Remove product from local state
+        setProducts(products.filter(p => p.id !== productId));
+        alert('Product deleted successfully!');
+      } else {
+        alert(`Failed to delete product: ${response.message}`);
+      }
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      alert('Failed to delete product. Please try again.');
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
@@ -438,6 +463,14 @@ export default function AdminPage() {
                                 title="View Product"
                               >
                                 <Eye size={16} />
+                              </button>
+                              <button 
+                                className="p-2 hover:bg-red-50 text-red-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() => handleDeleteProduct(product.id, product.name)}
+                                disabled={deletingProductId === product.id}
+                                title="Delete Product"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </div>
                           </td>

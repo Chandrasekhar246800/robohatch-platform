@@ -739,6 +739,26 @@ class ApiClient {
       return { success: false, message: 'Network error' };
     }
   }
+
+  async deleteProduct(id: string) {
+    try {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/products/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || 'Failed to delete product' };
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Delete product error:', error);
+      return { success: false, message: error.message || 'Network error' };
+    }
+  }
 }
 
 export const apiClient = new ApiClient();
