@@ -50,10 +50,10 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Add small delay to allow cookies to be set after login
+    // Wait longer to allow cookie to be set and avoid logout loop after login
     const timer = setTimeout(() => {
       initAuth();
-    }, 100);
+    }, 500); // Increased from 100ms to 500ms
 
     return () => clearTimeout(timer);
   }, [isAuthenticated, user?.id]); // Only re-run when auth status or user ID changes

@@ -38,22 +38,34 @@ export const LoginForm: React.FC = () => {
     setIsLoading(true);
 
     try {
+      console.log('[Login] Attempting login for:', formData.email);
       const response = await apiClient.login({
         email: formData.email,
         password: formData.password,
       });
 
+      console.log('[Login] Response:', { 
+        success: response.success, 
+        hasData: !!response.data,
+        hasUser: !!response.data?.user 
+      });
+
       if (response.success && response.data) {
-        // Store user data in Zustand store
-        setAuth(response.data.user, response.data.token);
+        // Store user data in Zustand store (token is in httpOnly cookie, not response)
+        setAuth(response.data.user, '');
         
         // Get redirect URL from query params, default to homepage
         const redirectUrl = searchParams.get('redirect') || '/';
+        console.log('[Login] Redirecting to:', redirectUrl);
+        
+        // Small delay to ensure cookie is set before redirect
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Redirect after successful login
         router.push(redirectUrl);
       } else {
         // Show error message from API
+        console.error('[Login] Login failed:', response.message);
         setApiError(response.message);
       }
     } catch (error) {
