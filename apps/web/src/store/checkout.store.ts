@@ -5,10 +5,12 @@ export interface ShippingAddress {
   fullName: string;
   phone: string;
   email: string;
-  streetAddress: string;
+  addressLine1: string;
+  addressLine2?: string;
   city: string;
   state: string;
-  pincode: string;
+  postalCode: string;
+  country: string;
 }
 
 interface CheckoutState {

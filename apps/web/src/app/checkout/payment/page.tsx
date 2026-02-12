@@ -275,9 +275,12 @@ export default function PaymentPage() {
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="font-medium text-gray-900">{shippingAddress.fullName}</p>
-                <p className="text-sm text-gray-600 mt-1">{shippingAddress.streetAddress}</p>
+                <p className="text-sm text-gray-600 mt-1">{shippingAddress.addressLine1}</p>
+                {shippingAddress.addressLine2 && (
+                  <p className="text-sm text-gray-600">{shippingAddress.addressLine2}</p>
+                )}
                 <p className="text-sm text-gray-600">
-                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}
+                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.postalCode}
                 </p>
                 <p className="text-sm text-gray-600 mt-2">Phone: {shippingAddress.phone}</p>
                 <p className="text-sm text-gray-600">Email: {shippingAddress.email}</p>

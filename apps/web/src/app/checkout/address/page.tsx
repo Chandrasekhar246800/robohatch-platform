@@ -19,10 +19,12 @@ export default function AddressPage() {
     fullName: '',
     phone: '',
     email: '',
-    streetAddress: '',
+    addressLine1: '',
+    addressLine2: '',
     city: '',
     state: '',
-    pincode: '',
+    postalCode: '',
+    country: 'India',
   });
   const [errors, setErrors] = useState<Partial<ShippingAddress>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,8 +81,8 @@ export default function AddressPage() {
       newErrors.email = 'Enter a valid email address';
     }
 
-    if (!formData.streetAddress.trim()) {
-      newErrors.streetAddress = 'Street address is required';
+    if (!formData.addressLine1.trim()) {
+      newErrors.addressLine1 = 'Street address is required';
     }
 
     if (!formData.city.trim()) {
@@ -91,10 +93,10 @@ export default function AddressPage() {
       newErrors.state = 'State is required';
     }
 
-    if (!formData.pincode.trim()) {
-      newErrors.pincode = 'Pincode is required';
-    } else if (!/^\d{6}$/.test(formData.pincode.replace(/\s/g, ''))) {
-      newErrors.pincode = 'Enter a valid 6-digit pincode';
+    if (!formData.postalCode.trim()) {
+      newErrors.postalCode = 'Pincode is required';
+    } else if (!/^\d{6}$/.test(formData.postalCode.replace(/\s/g, ''))) {
+      newErrors.postalCode = 'Enter a valid 6-digit pincode';
     }
 
     setErrors(newErrors);
@@ -237,23 +239,39 @@ export default function AddressPage() {
 
                 {/* Street Address */}
                 <div>
-                  <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="addressLine1" className="block text-sm font-medium text-gray-700 mb-2">
                     Street Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    id="streetAddress"
-                    name="streetAddress"
-                    value={formData.streetAddress}
+                    id="addressLine1"
+                    name="addressLine1"
+                    value={formData.addressLine1}
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.streetAddress ? 'border-red-500' : 'border-gray-300'
+                      errors.addressLine1 ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="House no., Building name, Street"
                   />
-                  {errors.streetAddress && (
-                    <p className="mt-1 text-sm text-red-500">{errors.streetAddress}</p>
+                  {errors.addressLine1 && (
+                    <p className="mt-1 text-sm text-red-500">{errors.addressLine1}</p>
                   )}
+                </div>
+
+                {/* Address Line 2 (Optional) */}
+                <div>
+                  <label htmlFor="addressLine2" className="block text-sm font-medium text-gray-700 mb-2">
+                    Apartment, Suite, etc. (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="addressLine2"
+                    name="addressLine2"
+                    value={formData.addressLine2 || ''}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Apartment, suite, unit, building, floor, etc."
+                  />
                 </div>
 
                 {/* City, State, Pincode */}
@@ -310,23 +328,23 @@ export default function AddressPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="pincode" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
                       Pincode <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      id="pincode"
-                      name="pincode"
-                      value={formData.pincode}
+                      id="postalCode"
+                      name="postalCode"
+                      value={formData.postalCode}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                        errors.pincode ? 'border-red-500' : 'border-gray-300'
+                        errors.postalCode ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="6-digit pincode"
                       maxLength={6}
                     />
-                    {errors.pincode && (
-                      <p className="mt-1 text-sm text-red-500">{errors.pincode}</p>
+                    {errors.postalCode && (
+                      <p className="mt-1 text-sm text-red-500">{errors.postalCode}</p>
                     )}
                   </div>
                 </div>
