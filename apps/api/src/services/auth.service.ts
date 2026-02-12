@@ -43,9 +43,12 @@ export class AuthService {
    * Register new user with strong password hashing
    */
   async register(input: RegisterInput): Promise<AuthResponse> {
+    // Normalize email to lowercase for case-insensitive lookup
+    const normalizedEmail = input.email.toLowerCase();
+    
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: input.email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -55,10 +58,10 @@ export class AuthService {
     // Hash password with configurable rounds (default: 12 for 2026 standards)
     const hashedPassword = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
-    // Create user
+    // Create user with normalized email
     const user = await prisma.user.create({
       data: {
-        email: input.email,
+        email: normalizedEmail,
         password: hashedPassword,
         name: input.name,
       },
@@ -81,9 +84,12 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<AuthResponse> {
+    // Normalize email to lowercase for case-insensitive lookup
+    const normalizedEmail = input.email.toLowerCase();
+    
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: input.email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
