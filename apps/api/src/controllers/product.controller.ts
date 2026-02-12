@@ -5,7 +5,7 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 export class ProductController {
   async createProduct(req: AuthRequest, res: Response) {
     try {
-      const { name, description, price, categoryIds } = req.body;
+      const { name, description, price, stock, categoryIds } = req.body;
       const files = req.files as Express.MulterS3.File[];
 
       // Validate required fields
@@ -49,6 +49,15 @@ export class ProductController {
         });
       }
 
+      // Parse stock (default to 0 if not provided)
+      const parsedStock = stock ? parseInt(stock, 10) : 0;
+      if (isNaN(parsedStock) || parsedStock < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stock must be a non-negative number',
+        });
+      }
+
       // Validate all categories exist
       const categories = await prisma.category.findMany({
         where: { id: { in: parsedCategoryIds } },
@@ -75,6 +84,7 @@ export class ProductController {
           name,
           description: description || '',
           price: parsedPrice,
+          stock: parsedStock,
           images: {
             create: files.map((file, index) => ({
               url: file.location, // S3 URL from multer-s3
@@ -98,10 +108,18 @@ export class ProductController {
         },
       });
 
+      // Transform response to include single category instead of categories array
+      const transformedProduct = {
+        ...product,
+        category: product.categories[0]?.category || null,
+        categoryId: product.categories[0]?.categoryId || null,
+      };
+      delete (transformedProduct as any).categories;
+
       return res.status(201).json({
         success: true,
         message: 'Product created successfully',
-        data: product,
+        data: transformedProduct,
       });
     } catch (error: any) {
       console.error('Create product error:', error);
@@ -138,9 +156,20 @@ export class ProductController {
         },
       });
 
+      // Transform response to include single category instead of categories array
+      const transformedProducts = products.map(product => {
+        const transformed = {
+          ...product,
+          category: product.categories[0]?.category || null,
+          categoryId: product.categories[0]?.categoryId || null,
+        };
+        delete (transformed as any).categories;
+        return transformed;
+      });
+
       return res.status(200).json({
         success: true,
-        data: products,
+        data: transformedProducts,
       });
     } catch (error: any) {
       console.error('Get products error:', error);
@@ -175,9 +204,17 @@ export class ProductController {
         });
       }
 
+      // Transform response to include single category instead of categories array
+      const transformedProduct = {
+        ...product,
+        category: product.categories[0]?.category || null,
+        categoryId: product.categories[0]?.categoryId || null,
+      };
+      delete (transformedProduct as any).categories;
+
       return res.status(200).json({
         success: true,
-        data: product,
+        data: transformedProduct,
       });
     } catch (error: any) {
       console.error('Get product error:', error);
@@ -192,7 +229,7 @@ export class ProductController {
   async updateProduct(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { name, description, price, categoryIds } = req.body;
+      const { name, description, price, stock, categoryIds } = req.body;
       const files = req.files as Express.MulterS3.File[];
 
       // Check if product exists
@@ -253,6 +290,16 @@ export class ProductController {
         }
         updateData.price = parsedPrice;
       }
+      if (stock !== undefined) {
+        const parsedStock = parseInt(stock, 10);
+        if (isNaN(parsedStock) || parsedStock < 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Stock must be a non-negative number',
+          });
+        }
+        updateData.stock = parsedStock;
+      }
 
       // Handle category updates
       if (parsedCategoryIds && parsedCategoryIds.length > 0) {
@@ -290,10 +337,18 @@ export class ProductController {
         },
       });
 
+      // Transform response to include single category instead of categories array
+      const transformedProduct = {
+        ...product,
+        category: product.categories[0]?.category || null,
+        categoryId: product.categories[0]?.categoryId || null,
+      };
+      delete (transformedProduct as any).categories;
+
       return res.status(200).json({
         success: true,
         message: 'Product updated successfully',
-        data: product,
+        data: transformedProduct,
       });
     } catch (error: any) {
       console.error('Update product error:', error);
