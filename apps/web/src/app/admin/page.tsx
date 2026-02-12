@@ -92,7 +92,7 @@ export default function AdminPage() {
   const loadProducts = async () => {
     try {
       setProductsLoading(true);
-      const response = await apiClient.getAllProducts();
+      const response = await apiClient.getProducts();
       const productsData = response?.data || [];
       setProducts(Array.isArray(productsData) ? productsData : []);
       setProductsLoading(false);
