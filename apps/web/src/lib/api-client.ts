@@ -195,7 +195,8 @@ class ApiClient {
     // Handle 401 - Unauthorized (token expired or invalid)
     // Skip redirect during login/register attempts
     if (response.status === 401 && !skipAuthRedirect) {
-      this.removeToken();
+      // Clear auth state (httpOnly cookie cleared by backend)
+      useAuthStore.getState().logout();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
