@@ -74,11 +74,16 @@ export default function PaymentPage() {
       return;
     }
 
+    if (!shippingAddress) {
+      setError('Shipping address is required');
+      return;
+    }
+
     setIsCreatingOrder(true);
     setError('');
     
     try {
-      const response = await apiClient.createPaymentOrder();
+      const response = await apiClient.createPaymentOrder(shippingAddress);
       
       if (!response.success || !response.data) {
         setError(response.message || 'Failed to create order');

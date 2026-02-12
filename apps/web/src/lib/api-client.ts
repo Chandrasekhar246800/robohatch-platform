@@ -506,12 +506,13 @@ class ApiClient {
   /**
    * Step 1: Create order from cart (before payment)
    */
-  async createPaymentOrder() {
+  async createPaymentOrder(shippingAddress?: any) {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/orders`, {
         method: 'POST',
         headers: this.getHeaders(),
         credentials: 'include', // Send cookies for authentication
+        body: JSON.stringify({ shippingAddress }),
       });
 
       if (!response.ok) {
