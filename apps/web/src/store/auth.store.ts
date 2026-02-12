@@ -13,6 +13,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   _hasHydrated: boolean;
+  _lastLoginTime: number;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -25,10 +26,12 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       _hasHydrated: false,
+      _lastLoginTime: 0,
       setAuth: (user, token) => {
-        // Token parameter kept for backward compatibility but not stored
-        // Authentication now handled via httpOnly cookies set by backend
-        set({ user, isAuthenticated: true });
+        const now = Date.now();
+        set({ user, isAuthenticated: true, _lastLoginTime: now });
+        console.log('[AuthStore] Login completed at:', now);
+
         // Merge local cart with backend after login (non-blocking for faster login)
         if (typeof window !== 'undefined') {
           setTimeout(() => {
