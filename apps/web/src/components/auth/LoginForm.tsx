@@ -54,15 +54,21 @@ export const LoginForm: React.FC = () => {
         // Store user data in Zustand store (token is in httpOnly cookie, not response)
         setAuth(response.data.user, '');
         
-        // Get redirect URL from query params, default to homepage
-        const redirectUrl = searchParams.get('redirect') || '/';
-        console.log('[Login] Redirecting to:', redirectUrl);
+        console.log('[Login] User role:', response.data.user.role);
         
         // Small delay to ensure cookie is set before redirect
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Redirect after successful login
-        router.push(redirectUrl);
+        // Redirect based on user role
+        if (response.data.user.role === 'ADMIN') {
+          console.log('[Login] Admin user - redirecting to /admin');
+          router.push('/admin');
+        } else {
+          // Regular users go to redirect URL or homepage
+          const redirectUrl = searchParams.get('redirect') || '/';
+          console.log('[Login] Regular user - redirecting to:', redirectUrl);
+          router.push(redirectUrl);
+        }
       } else {
         // Show error message from API
         console.error('[Login] Login failed:', response.message);
