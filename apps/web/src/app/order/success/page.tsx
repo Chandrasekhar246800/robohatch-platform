@@ -130,9 +130,12 @@ export default function OrderSuccessPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Shipping Address</h2>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="font-semibold text-gray-900">{shippingAddress.fullName}</p>
-                <p className="text-gray-700 mt-2">{shippingAddress.streetAddress}</p>
+                <p className="text-gray-700 mt-2">{shippingAddress.addressLine1}</p>
+                {shippingAddress.addressLine2 && (
+                  <p className="text-gray-700">{shippingAddress.addressLine2}</p>
+                )}
                 <p className="text-gray-700">
-                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}
+                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.postalCode}
                 </p>
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <p className="text-sm text-gray-600">Phone: <span className="font-medium text-gray-900">{shippingAddress.phone}</span></p>
