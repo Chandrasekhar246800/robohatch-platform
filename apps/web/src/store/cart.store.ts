@@ -192,6 +192,7 @@ export const useCartStore = create<CartStore>()(
         }
 
         try {
+          // Silently skip sync if request fails (user not authenticated)
           const response = await apiClient.getCart();
           if (response.cart) {
             const backendItems: CartItem[] = (response.cart.items || []).map((item: any) => ({
@@ -224,8 +225,11 @@ export const useCartStore = create<CartStore>()(
             }));
             set({ items: backendItems, lastSyncTime: now });
           }
-        } catch (error) {
-          console.error('Failed to sync cart with backend:', error);
+        } catch (error: any) {
+          // Silently fail if 401 (not authenticated), log other errors
+          if (!error.message?.includes('401')) {
+            console.error('Failed to sync cart with backend:', error);
+          }
         }
       },
 

@@ -46,13 +46,9 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
             logout();
           }
         } catch (error: any) {
-          // Only logout if it's an authentication error, not network errors
-          if (error.message?.includes('401') || error.message?.includes('Authentication')) {
-            console.warn('Auth validation failed, logging out');
-            logout();
-          } else {
-            console.error('Profile check failed, but keeping session:', error.message);
-          }
+          // Logout on ANY error - don't keep stale auth state
+          console.warn('Auth validation failed, logging out:', error.message);
+          logout();
         }
       }
     };
