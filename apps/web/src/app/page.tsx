@@ -11,34 +11,7 @@ import { AnimatedHero } from '@/components/hero/AnimatedHero';
 import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
 import { ProductGridSkeleton, CategoryGridSkeleton } from '@/components/ui';
-import { products as mockProducts, categories as mockCategories, getFeaturedProducts } from '@/lib/mock-data';
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  image: string;
-  description: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  originalPrice?: number;
-  images: string[];
-  category: Category;
-  rating: number;
-  reviews: number;
-  inStock: boolean;
-  featured: boolean;
-  customizable: boolean;
-  material?: string;
-  dimensions?: string;
-  weight?: string;
-  tags: string[];
-}
+import { Product, Category } from '@/types';
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -56,7 +29,7 @@ export default function HomePage() {
         let productsData = [];
         let categoriesData = [];
 
-        if (productsResponse.success && productsResponse.data && productsResponse.data.length > 0) {
+        if (productsResponse.success && productsResponse.data) {
           // Get first 6 active products as featured
           const activeProducts = productsResponse.data
             .filter((p: any) => p.isActive)
@@ -65,6 +38,7 @@ export default function HomePage() {
               name: p.name,
               description: p.description,
               price: Number(p.price),
+              stock: p.stock || 0,
               images: p.images?.map((img: any) => img.url) || [],
               category: {
                 id: p.category?.id || '',
@@ -75,33 +49,27 @@ export default function HomePage() {
               },
               rating: 4.5,
               reviews: 0,
-              inStock: true,
+              inStock: (p.stock || 0) > 0,
               featured: false,
               customizable: false,
               tags: [],
+              isActive: p.isActive,
+              createdAt: p.createdAt,
             }));
           productsData = activeProducts.slice(0, 6);
-        } else {
-          // Use mock data
-          console.log('Using mock data for featured products');
-          productsData = getFeaturedProducts().slice(0, 6);
         }
 
-        if (categoriesResponse.success && categoriesResponse.data && categoriesResponse.data.length > 0) {
-          categoriesData = categoriesResponse.data;
-        } else {
-          // Use mock data - show only DEFAULT categories (skip first 5 custom categories)
-          console.log('Using mock data for categories');
-          categoriesData = mockCategories.slice(5, 11); // Show 6 default categories
+        if (categoriesResponse.success && categoriesResponse.data) {
+          categoriesData = categoriesResponse.data.slice(0, 6); // Show first 6 categories
         }
 
         setFeaturedProducts(productsData);
         setCategories(categoriesData);
       } catch (error) {
-        console.error('Failed to load data, using mock data:', error);
-        // Use mock data on error
-        setFeaturedProducts(getFeaturedProducts().slice(0, 6));
-        setCategories(mockCategories.slice(0, 6));
+        console.error('Failed to load data:', error);
+        // Show empty state on error, no fallback to mock data
+        setFeaturedProducts([]);
+        setCategories([]);
       } finally {
         setLoading(false);
       }

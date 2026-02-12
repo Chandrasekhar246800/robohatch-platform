@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Product } from '@/lib/mock-data';
+import { Product } from '@/types';
 import { apiClient } from '@/lib/api-client';
 
 export interface CartItem {

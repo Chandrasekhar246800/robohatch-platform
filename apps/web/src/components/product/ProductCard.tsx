@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingCart, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Product } from '@/lib/mock-data';
+import { Product } from '@/types';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
@@ -43,7 +43,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Image */}
           <div className="relative aspect-square bg-gray-100">
             <Image
-              src={product.images[0]}
+              src={
+                product.images && product.images.length > 0
+                  ? typeof product.images[0] === 'string'
+                    ? product.images[0]
+                    : product.images[0]?.url || '/placeholder-product.jpg'
+                  : '/placeholder-product.jpg'
+              }
               alt={product.name}
               fill
               className="object-cover"

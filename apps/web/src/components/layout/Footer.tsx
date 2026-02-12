@@ -43,9 +43,13 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">R</span>
+            <Link href="/" className="flex items-center space-x-2 mb-4 group">
+              <div className="w-10 h-10 flex items-center justify-center transform group-hover:scale-110 transition-all duration-300">
+                <img 
+                  src="/logo.jpeg" 
+                  alt="RoboHatch Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-xl font-bold text-white">
                 Robo<span className="text-primary">hatch</span>

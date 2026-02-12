@@ -8,43 +8,10 @@ import { ProductGridSkeleton } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
-import { products as mockProducts, categories as mockCategories } from '@/lib/mock-data';
+import { Product, Category } from '@/types';
 
-interface Category {
-  id: string;
-  name: string;
+interface ExtendedCategory extends Category {
   type?: string; // 'CUSTOM' or 'DEFAULT'
-  slug: string;
-  image: string;
-  description: string;
-}
-
-interface ProductImage {
-  id: string;
-  url: string;
-  alt?: string;
-  order: number;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  originalPrice?: number;
-  images: string[];
-  category: Category;
-  rating: number;
-  reviews: number;
-  inStock: boolean;
-  featured: boolean;
-  customizable: boolean;
-  material?: string;
-  dimensions?: string;
-  weight?: string;
-  tags: string[];
-  isActive?: boolean;
-  createdAt?: string;
 }
 
 function ProductsContent() {
@@ -52,7 +19,7 @@ function ProductsContent() {
   const categoryParam = searchParams.get('category');
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ExtendedCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(
     categoryParam || 'all'
   );
@@ -66,7 +33,7 @@ function ProductsContent() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Try to fetch from API first
+        // Fetch products and categories from API
         const [productsResponse, categoriesResponse] = await Promise.all([
           apiClient.getProducts(),
           apiClient.getCategories(),
@@ -75,12 +42,13 @@ function ProductsContent() {
         let productsData = [];
         let categoriesData = [];
 
-        if (productsResponse.success && productsResponse.data && productsResponse.data.length > 0) {
+        if (productsResponse.success && productsResponse.data) {
           productsData = productsResponse.data.map((p: any) => ({
             id: p.id,
             name: p.name,
             description: p.description,
             price: Number(p.price),
+            stock: p.stock || 0,
             images: p.images?.map((img: any) => img.url) || [],
             category: {
               id: p.category?.id || '',
@@ -91,49 +59,43 @@ function ProductsContent() {
             },
             rating: 4.5,
             reviews: 0,
-            inStock: true,
+            inStock: (p.stock || 0) > 0,
             featured: false,
             customizable: false,
             tags: [],
             isActive: p.isActive,
             createdAt: p.createdAt,
           }));
+          // Filter to only show active products
           const activeProducts = productsData.filter((p: any) => p.isActive);
           productsData = activeProducts;
-        } else {
-          // Fallback to mock data if API returns empty
-          console.log('Using mock data for products');
-          productsData = mockProducts;
         }
 
-        if (categoriesResponse.success && categoriesResponse.data && categoriesResponse.data.length > 0) {
+        if (categoriesResponse.success && categoriesResponse.data) {
           categoriesData = categoriesResponse.data.map((c: any) => ({
             id: c.id,
             name: c.name,
-            type: c.type, // Include type from API
-            slug: c.name.toLowerCase().replace(/\s+/g, '-'),
-            image: '',
-            description: '',
+            type: c.type,
+            slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+            image: c.image || '',
+            description: c.description || '',
           }));
-        } else {
-          // Fallback to mock data if API returns empty
-          console.log('Using mock data for categories');
-          categoriesData = mockCategories;
         }
 
         setProducts(productsData);
         setCategories(categoriesData);
         
         // Set featured products (random 4 products for "You May Also Like")
-        const shuffled = [...productsData].sort(() => 0.5 - Math.random());
-        setFeaturedProducts(shuffled.slice(0, 4));
+        if (productsData.length > 0) {
+          const shuffled = [...productsData].sort(() => 0.5 - Math.random());
+          setFeaturedProducts(shuffled.slice(0, 4));
+        }
       } catch (error) {
-        console.error('Failed to load products, using mock data:', error);
-        // Use mock data on error
-        setProducts(mockProducts);
-        setCategories(mockCategories);
-        const shuffled = [...mockProducts].sort(() => 0.5 - Math.random());
-        setFeaturedProducts(shuffled.slice(0, 4));
+        console.error('Failed to load products:', error);
+        // On error, show empty state - no fallback to mock data
+        setProducts([]);
+        setCategories([]);
+        setFeaturedProducts([]);
       } finally {
         setIsLoading(false);
       }
@@ -224,14 +186,14 @@ function ProductsContent() {
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="text-primary focus:ring-primary"
                     />
-                    <span className="text-sm">All Products</span>
+                    <span className="text-sm font-medium">All Products</span>
                   </label>
                   
-                  {/* Custom Categories */}
+                  {/* CUSTOM Categories Section */}
                   {categories.filter(c => c.type === 'CUSTOM').length > 0 && (
                     <>
                       <div className="pt-3 pb-1">
-                        <span className="text-xs font-bold text-gray-700 uppercase">Custom</span>
+                        <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">CUSTOM</span>
                       </div>
                       {categories.filter(c => c.type === 'CUSTOM').map((category) => (
                         <label key={category.id} className="flex items-center space-x-2 cursor-pointer pl-2">
@@ -249,13 +211,13 @@ function ProductsContent() {
                     </>
                   )}
 
-                  {/* Default Categories */}
-                  {categories.filter(c => c.type === 'DEFAULT' || !c.type).length > 0 && (
+                  {/* DEFAULT Categories Section */}
+                  {categories.filter(c => c.type === 'DEFAULT').length > 0 && (
                     <>
                       <div className="pt-3 pb-1">
-                        <span className="text-xs font-bold text-gray-700 uppercase">Default</span>
+                        <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">DEFAULT</span>
                       </div>
-                      {categories.filter(c => c.type === 'DEFAULT' || !c.type).map((category) => (
+                      {categories.filter(c => c.type === 'DEFAULT').map((category) => (
                         <label key={category.id} className="flex items-center space-x-2 cursor-pointer pl-2">
                           <input
                             type="radio"
@@ -269,6 +231,10 @@ function ProductsContent() {
                         </label>
                       ))}
                     </>
+                  )}
+                  
+                  {categories.length === 0 && (
+                    <p className="text-xs text-gray-400 italic py-2">No categories available</p>
                   )}
                 </div>
               </div>
@@ -346,9 +312,30 @@ function ProductsContent() {
               <ProductGridSkeleton count={8} />
             ) : filteredProducts.length > 0 ? (
               <ProductGrid products={filteredProducts} />
+            ) : products.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <div className="max-w-md mx-auto">
+                  <h3 className="text-xl font-semibold mb-2">No Products Available Yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    Products will appear here once they are added to the catalog.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Admin: Add products via the <a href="/admin/products/add" className="text-primary underline">Admin Panel</a>
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-600">No products found</p>
+                <p className="text-gray-600">No products match your filters</p>
+                <button
+                  onClick={() => {
+                    setSelectedCategory('all');
+                    setPriceRange([0, 10000]);
+                  }}
+                  className="mt-4 text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
               </div>
             )}
           </div>
