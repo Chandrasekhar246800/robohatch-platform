@@ -352,6 +352,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/cart/items`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ productId, quantity }),
       });
 
@@ -372,6 +373,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {
         method: 'PUT',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ quantity }),
       });
 
@@ -392,6 +394,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -411,6 +414,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/cart`, {
         method: 'DELETE',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {

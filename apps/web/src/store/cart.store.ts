@@ -62,13 +62,17 @@ export const useCartStore = create<CartStore>()(
             await apiClient.addToCart(product.id, quantity);
             // Quick sync to get backend cart item ID
             await get().syncWithBackend(true);
-          } catch (error) {
+          } catch (error: any) {
             console.error('Failed to add item to backend cart:', error);
-            // Revert optimistic update on error
-            set((state) => ({
-              items: state.items.filter((item) => item.product.id !== product.id),
-            }));
-            throw error;
+            // Don't revert on 401 - keep item in local cart for fallback
+            // Only revert on other errors (product not found, out of stock, etc.)
+            if (!error.message?.includes('401')) {
+              set((state) => ({
+                items: state.items.filter((item) => item.product.id !== product.id),
+              }));
+            } else {
+              console.log('Cart saved locally - will sync when authenticated');
+            }
           }
         } else {
           // Local cart for non-authenticated users
