@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma';
 import { OrderStatus } from '@prisma/client';
+import { emailService } from './email.service';
 
 class OrderService {
   // Create order from cart
@@ -128,11 +129,13 @@ class OrderService {
 
     // Validate status transition
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+      CREATED: [OrderStatus.PAID, OrderStatus.PENDING, OrderStatus.CANCELLED],
       PENDING: [OrderStatus.PAID, OrderStatus.CANCELLED],
       PAID: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
       SHIPPED: [OrderStatus.DELIVERED],
       DELIVERED: [],
       CANCELLED: [],
+      REFUNDED: [],
     };
 
     const currentStatus = order.status as OrderStatus;
@@ -152,6 +155,13 @@ class OrderService {
         payment: true,
       },
     });
+
+    // 📧 Send shipping notification when order is shipped (non-blocking)
+    if (status === OrderStatus.SHIPPED) {
+      emailService.sendShippingNotification(orderId).catch(error => {
+        console.error('⚠️  Shipping email notification failed (non-critical):', error.message);
+      });
+    }
 
     return updatedOrder;
   }

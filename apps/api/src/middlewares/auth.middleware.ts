@@ -9,32 +9,27 @@ export interface AuthRequest extends Request {
   };
 }
 
+/**
+ * Authentication middleware - validates JWT from httpOnly cookie
+ * 🔒 SECURITY: Reads token from cookie, not Authorization header
+ */
 export const authMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authorization header missing',
-      });
-    }
-
-    const token = authHeader.startsWith('Bearer ')
-      ? authHeader.substring(7)
-      : authHeader;
+    // 🔒 Read token from httpOnly cookie
+    const token = req.cookies?.auth_token;
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Token missing',
+        message: 'Authentication required',
       });
     }
 
+    // Verify token
     const decoded = await authService.verifyToken(token);
     (req as AuthRequest).user = decoded;
 

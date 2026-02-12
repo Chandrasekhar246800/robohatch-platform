@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Header, Footer } from '@/components/layout';
 import { Providers } from './providers';
+import { CookieBanner } from '@/components/CookieBanner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -48,6 +49,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <CookieBanner />
         </Providers>
       </body>
     </html>

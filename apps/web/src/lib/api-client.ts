@@ -87,34 +87,10 @@ class ApiClient {
       'Content-Type': 'application/json',
     };
 
-    if (withAuth) {
-      const token = this.getToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
+    // 🔒 SECURITY: No Authorization header - using httpOnly cookies
+    // Tokens are automatically sent via cookies with credentials: 'include'
 
     return headers;
-  }
-
-  private getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    // Check Zustand store first, then fallback to localStorage
-    const storeToken = useAuthStore.getState().token;
-    return storeToken || localStorage.getItem('token');
-  }
-
-  private setToken(token: string): void {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('token', token);
-    // Note: Zustand store will be updated by the login/register functions
-  }
-
-  private removeToken(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('token');
-    // Also clear Zustand store
-    useAuthStore.getState().logout();
   }
 
   // Fetch with timeout and better error handling
@@ -132,6 +108,7 @@ class ApiClient {
         ...options,
         signal: controller.signal,
         mode: 'cors',
+        credentials: 'include', // 🔒 REQUIRED: Send httpOnly cookies
       });
       clearTimeout(timeout);
       console.log(`[API] Response: ${response.status} ${response.statusText}`);
@@ -247,8 +224,10 @@ class ApiClient {
 
       const result = await this.handleResponse(response, true);
 
-      if (result.success && result.data?.token) {
-        this.setToken(result.data.token);
+      // 🔒 SECURITY: Token is in httpOnly cookie, not in response
+      // Update auth store with user data only (no token)
+      if (result.success && result.data?.user) {
+        useAuthStore.getState().login(result.data.user, null);
       }
 
       return result;
@@ -279,20 +258,12 @@ class ApiClient {
         message: result.message 
       });
 
-      // Backend returns: { success: true, message: '...', data: { user, token } }
-      if (result.success && result.data?.token) {
-        console.log('✅ Login successful, storing token');
-        this.setToken(result.data.token);
+      // Backend returns: { success: true, message: '...', data: { user } }
+      // 🔒 SECURITY: No token in response, it's in httpOnly cookie
+      if (result.success && result.data?.user) {
+        console.log('✅ Login successful, user data received');
+        useAuthStore.getState().login(result.data.user, null);
         return result;
-      }
-      
-      // If success but no token, something is wrong
-      if (result.success && !result.data?.token) {
-        console.error('⚠️  Server returned success but no token!');
-        return {
-          success: false,
-          message: 'Server error: Authentication succeeded but no token received',
-        };
       }
 
       // Backend returned error
@@ -319,7 +290,7 @@ class ApiClient {
     try {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/profile`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(), // No withAuth needed - cookies sent automatically
       });
 
       return await this.handleResponse(response);
@@ -332,12 +303,26 @@ class ApiClient {
     }
   }
 
-  logout(): void {
-    this.removeToken();
+  async logout(): Promise<void> {
+    try {
+      // Call backend to clear httpOnly cookie
+      await this.fetchWithTimeout(`${this.baseUrl}/api/auth/logout`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+      
+      // Clear local auth state
+      useAuthStore.getState().logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local state even if backend call fails
+      useAuthStore.getState().logout();
+    }
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    // Check auth store, not local token
+    return useAuthStore.getState().isAuthenticated;
   }
 
   // Cart API methods
@@ -345,7 +330,8 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
+        credentials: 'include', // Send cookies
       });
 
       if (!response.ok) {
@@ -364,7 +350,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart/items`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
         body: JSON.stringify({ productId, quantity }),
       });
 
@@ -384,7 +370,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {
         method: 'PUT',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
         body: JSON.stringify({ quantity }),
       });
 
@@ -404,7 +390,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {
         method: 'DELETE',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -423,7 +409,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart`, {
         method: 'DELETE',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -443,7 +429,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/orders`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
       return await response.json();
     } catch (error) {
@@ -456,7 +442,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/orders?limit=${limit}&offset=${offset}`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
       return await response.json();
     } catch (error) {
@@ -469,7 +455,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/orders/${orderId}`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
       return await response.json();
     } catch (error) {
@@ -482,7 +468,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/status`, {
         method: 'PUT',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
         body: JSON.stringify({ status }),
       });
       return await response.json();
@@ -496,7 +482,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/orders/stats`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
       return await response.json();
     } catch (error) {
@@ -514,7 +500,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/orders`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -536,7 +522,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/create-order/${orderId}`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -562,7 +548,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/verify`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
         body: JSON.stringify(paymentData),
       });
 
@@ -585,7 +571,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/failure`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
         body: JSON.stringify({ orderId, reason }),
       });
 
@@ -608,7 +594,7 @@ class ApiClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/status/${orderId}`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -624,13 +610,20 @@ class ApiClient {
   }
 
   /**
+   * Verify payment for an order (alias to getPaymentStatus)
+   */
+  async verifyPayment(orderId: string) {
+    return this.getPaymentStatus(orderId);
+  }
+
+  /**
    * Get order with payment details
    */
   async getOrderWithPayment(orderId: string) {
     try {
       const response = await fetch(`${this.baseUrl}/api/payment/orders/${orderId}`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -668,12 +661,11 @@ class ApiClient {
 
   async createCategory(name: string) {
     try {
-      const token = this.getToken();
       const response = await fetch(`${this.baseUrl}/api/admin/categories`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ name }),
       });
@@ -729,12 +721,9 @@ class ApiClient {
 
   async createProduct(formData: FormData) {
     try {
-      const token = this.getToken();
       const response = await fetch(`${this.baseUrl}/api/admin/products`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include',
         body: formData,
       });
 

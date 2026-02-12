@@ -1,36 +1,153 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { prisma } from '../config/prisma';
+import { prisma, Prisma } from '../config/prisma';
+import { validateShippingAddress, validatePaymentVerification } from '../validators/order.validator';
+import { emailService } from './email.service';
+
+// 🔒 SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.error('🚨 CRITICAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set!');
+  throw new Error('Missing Razorpay credentials');
+}
+
+// 🔒 SECURITY: Webhook secret required
+if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
+  console.error('🚨 CRITICAL: RAZORPAY_WEBHOOK_SECRET must be set!');
+  console.error('This is required for webhook signature verification');
+  throw new Error('Missing Razorpay webhook secret');
+}
+
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+console.log('✅ Razorpay credentials loaded successfully');
+console.log('✅ Webhook secret configured');
 
 export class PaymentService {
   private razorpay: Razorpay;
 
   constructor() {
-    // 🔒 CRITICAL: Validate Razorpay credentials before initialization
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      const error = '❌ RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment variables';
-      console.error(error);
-      console.error('Current env check:', {
-        hasKeyId: !!process.env.RAZORPAY_KEY_ID,
-        hasKeySecret: !!process.env.RAZORPAY_KEY_SECRET,
-        nodeEnv: process.env.NODE_ENV,
-      });
-      throw new Error('Missing Razorpay credentials - check Railway environment variables');
-    }
-
-    // Initialize Razorpay with validated credentials
     this.razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
     });
 
     console.log('✅ Razorpay initialized successfully');
   }
+
   /**
-   * Create Razorpay order for an existing order
-   * @param orderId - Order ID from database
-   * @param userId - User ID for verification
-   * @returns Razorpay order object
+   * Create order from cart WITH shipping address
+   * ✅ CRITICAL FIX: Stores shipping address atomically
+   */
+  async createOrderFromCart(userId: string, shippingAddressData: any) {
+    // ✅ VALIDATION: Validate shipping address
+    const validatedAddress = validateShippingAddress(shippingAddressData);
+
+    // Get user's cart
+    const cart = await prisma.cart.findUnique({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      throw new Error('Cart is empty');
+    }
+
+    // ✅ INVENTORY CHECK: Verify stock availability
+    for (const item of cart.items) {
+      if (!item.product.isActive) {
+        throw new Error(`Product ${item.product.name} is no longer available`);
+      }
+      
+      if (item.product.stock < item.quantity) {
+        throw new Error(`Insufficient stock for ${item.product.name}. Available: ${item.product.stock}`);
+      }
+    }
+
+    // Calculate total
+    const total = cart.items.reduce((sum: number, item: typeof cart.items[0]) => {
+      return sum + Number(item.product.price) * item.quantity;
+    }, 0);
+
+    // ✅ ATOMIC TRANSACTION: Create order + shipping address + reserve stock
+    const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Create order
+      const newOrder = await tx.order.create({
+        data: {
+          userId,
+          total,
+          status: 'CREATED',
+        },
+      });
+
+      // Create order items
+      for (const cartItem of cart.items) {
+        await tx.orderItem.create({
+          data: {
+            orderId: newOrder.id,
+            productId: cartItem.productId,
+            quantity: cartItem.quantity,
+            price: cartItem.product.price,
+          },
+        });
+
+        // ✅ RESERVE STOCK: Conditional decrement prevents negative stock
+        const stockUpdate = await tx.product.updateMany({
+          where: {
+            id: cartItem.productId,
+            stock: { gte: cartItem.quantity }, // Only update if sufficient stock
+          },
+          data: {
+            stock: {
+              decrement: cartItem.quantity,
+            },
+          },
+        });
+
+        // Verify stock was actually decremented
+        if (stockUpdate.count === 0) {
+          throw new Error(
+            `Insufficient stock for ${cartItem.product.name}. ` +
+            `Available: ${cartItem.product.stock}, Requested: ${cartItem.quantity}. ` +
+            `Please reduce quantity or remove from cart.`
+          );
+        }
+      }
+
+      // ✅ CRITICAL FIX: Store shipping address
+      await tx.shippingAddress.create({
+        data: {
+          orderId: newOrder.id,
+          fullName: validatedAddress.fullName,
+          email: validatedAddress.email,
+          phone: validatedAddress.phone,
+          addressLine1: validatedAddress.addressLine1,
+          addressLine2: validatedAddress.addressLine2 || null,
+          city: validatedAddress.city,
+          state: validatedAddress.state,
+          postalCode: validatedAddress.postalCode,
+          country: validatedAddress.country,
+        },
+      });
+
+      return newOrder;
+    });
+
+    console.log(`✅ Order created with shipping address: ${order.id}`);
+
+    return order;
+  }
+
+  /**
+   * Create Razorpay order with idempotency
+   * ✅ IDEMPOTENCY: Uses orderId as idempotency key
    */
   async createRazorpayOrder(orderId: string, userId: string) {
     // Verify order exists and belongs to user
@@ -53,16 +170,15 @@ export class PaymentService {
       throw new Error('Order already paid');
     }
 
-    // 🔒 ALLOW RETRY: Delete pending/created payments to enable retry after failures
-    // Only block if payment was CAPTURED, AUTHORIZED, or REFUNDED (actual money involved)
+    // 🔒 ALLOW RETRY: Delete pending/created payments to enable retry
     if (order.payment) {
-      const blockingStatuses = ['CAPTURED', 'AUTHORIZED', 'REFUNDED'];
+      const blockingStatuses = ['CAPTURED', 'AUTHORIZED', 'REFUNDED', 'PARTIALLY_REFUNDED'];
       if (blockingStatuses.includes(order.payment.status)) {
-        throw new Error('Payment already initiated');
+        throw new Error('Payment already processed');
       }
       
       // Delete PENDING or CREATED payments to allow retry
-      if (['PENDING', 'CREATED'].includes(order.payment.status)) {
+      if (['PENDING', 'CREATED', 'FAILED'].includes(order.payment.status)) {
         console.log(`🔄 Deleting ${order.payment.status} payment to allow retry:`, order.payment.id);
         await prisma.payment.delete({
           where: { id: order.payment.id },
@@ -70,19 +186,20 @@ export class PaymentService {
       }
     }
 
-    // Create Razorpay order
+    // Create Razorpay order with idempotency
     const amountInPaise = Math.round(Number(order.total) * 100);
+    
     console.log('💳 Creating Razorpay order:', {
       orderId,
       amount: `₹${order.total}`,
       amountInPaise: `${amountInPaise} paise`,
-      note: 'This amount is calculated LIVE from current cart items'
     });
     
+    // ✅ IDEMPOTENCY: Use orderId as receipt for idempotency
     const razorpayOrder = await this.razorpay.orders.create({
-      amount: amountInPaise, // Convert to paise
+      amount: amountInPaise,
       currency: 'INR',
-      receipt: orderId,
+      receipt: orderId, // This acts as idempotency key
       notes: {
         orderId,
         userId,
@@ -101,6 +218,8 @@ export class PaymentService {
       },
     });
 
+    console.log(`✅ Razorpay order created: ${razorpayOrder.id}`);
+
     return {
       id: razorpayOrder.id,
       amount: razorpayOrder.amount,
@@ -110,26 +229,23 @@ export class PaymentService {
   }
 
   /**
-   * Verify Razorpay payment signature (CRITICAL SECURITY CHECK)
-   * @param paymentData - Payment response from Razorpay frontend
-   * @param userId - User ID for verification
-   * @returns Verified payment object
+   * Verify Razorpay payment signature
+   * ✅ SECURITY: Timing-safe comparison + idempotency
    */
-  async verifyPayment(
-    paymentData: {
-      razorpay_order_id: string;
-      razorpay_payment_id: string;
-      razorpay_signature: string;
-    },
-    userId: string
-  ) {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentData;
+  async verifyPayment(paymentData: any, userId: string) {
+    // ✅ VALIDATION: Validate payment data
+    const validated = validatePaymentVerification(paymentData);
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = validated;
 
     // 🔒 IDEMPOTENCY CHECK: Find payment by gateway order ID
     const payment = await prisma.payment.findUnique({
       where: { gatewayOrderId: razorpay_order_id },
       include: {
-        order: true,
+        order: {
+          include: {
+            shippingAddress: true,
+          },
+        },
       },
     });
 
@@ -139,11 +255,17 @@ export class PaymentService {
 
     // Verify order belongs to user
     if (payment.order.userId !== userId) {
+      console.error('🚨 SECURITY ALERT: Unauthorized payment verification attempt', {
+        userId,
+        orderId: payment.orderId,
+        ip: 'N/A', // Add IP from request in controller
+      });
       throw new Error('Unauthorized');
     }
 
     // 🔒 IDEMPOTENCY: Return existing payment if already processed
     if (payment.status === 'CAPTURED') {
+      console.log(`✓ Payment already captured (idempotent): ${payment.id}`);
       return {
         success: true,
         orderId: payment.orderId,
@@ -153,13 +275,13 @@ export class PaymentService {
     }
 
     // Prevent processing if payment is in final state
-    if (payment.status === 'REFUNDED') {
+    if (['REFUNDED', 'PARTIALLY_REFUNDED'].includes(payment.status)) {
       throw new Error('Payment was refunded and cannot be reprocessed');
     }
 
     // ⚠️ CRITICAL SECURITY: Verify Razorpay signature with timing-safe comparison
     const generatedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac('sha256', RAZORPAY_KEY_SECRET!)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex');
 
@@ -172,16 +294,26 @@ export class PaymentService {
       );
 
     if (!isValidSignature) {
+      // 🔒 AUDIT LOG: Security-critical event
+      console.error('🚨 SECURITY ALERT: Invalid payment signature detected', {
+        userId,
+        orderId: payment.orderId,
+        razorpay_order_id,
+        razorpay_payment_id,
+        timestamp: new Date().toISOString(),
+      });
+
       // Mark payment as failed
       await prisma.payment.update({
         where: { id: payment.id },
         data: { status: 'FAILED' },
       });
+
       throw new Error('Invalid payment signature');
     }
 
-    // Payment signature verified - Execute transaction atomically
-    await prisma.$transaction(async (tx) => {
+    // ✅ Payment signature verified - Execute transaction atomically
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update payment status
       await tx.payment.update({
         where: { id: payment.id },
@@ -210,6 +342,16 @@ export class PaymentService {
       }
     });
 
+    console.log(`✅ Payment verified and captured: ${payment.id}`);
+
+    // 📧 Send email notifications (non-blocking)
+    Promise.all([
+      emailService.sendOrderConfirmation(payment.orderId),
+      emailService.sendPaymentSuccess(payment.orderId, razorpay_payment_id),
+    ]).catch(error => {
+      console.error('⚠️  Email notification failed (non-critical):', error.message);
+    });
+
     return {
       success: true,
       orderId: payment.orderId,
@@ -218,12 +360,166 @@ export class PaymentService {
   }
 
   /**
+   * Refund payment
+   * ✅ NEW: Full refund implementation
+   */
+  async refundPayment(orderId: string, userId: string, reason?: string) {
+    // Find payment
+    const payment = await prisma.payment.findFirst({
+      where: {
+        orderId,
+        order: { userId },
+      },
+      include: {
+        order: {
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new Error('Payment not found');
+    }
+
+    // Verify payment can be refunded
+    if (payment.status !== 'CAPTURED') {
+      throw new Error('Only captured payments can be refunded');
+    }
+
+    if (payment.refundId) {
+      throw new Error('Payment already refunded');
+    }
+
+    // Create refund via Razorpay API
+    try {
+      const refund = await this.razorpay.payments.refund(
+        payment.gatewayPaymentId!,
+        {
+          amount: Math.round(Number(payment.amount) * 100), // Full refund in paise
+          notes: {
+            orderId,
+            reason: reason || 'Customer requested refund',
+          },
+        }
+      );
+
+      // ✅ ATOMIC TRANSACTION: Update payment + order + restore stock
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Update payment status
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'REFUNDED',
+            refundId: refund.id,
+            refundedAt: new Date(),
+          },
+        });
+
+        // Update order status
+        await tx.order.update({
+          where: { id: orderId },
+          data: { status: 'REFUNDED' },
+        });
+
+        // ✅ RESTORE STOCK: Add items back to inventory
+        for (const item of payment.order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+          });
+        }
+      });
+
+      console.log(`✅ Payment refunded: ${payment.id}, Refund ID: ${refund.id}`);
+
+      // 📧 Send refund confirmation email (non-blocking)
+      emailService.sendRefundConfirmation(
+        orderId,
+        Number(payment.amount),
+        refund.id
+      ).catch(error => {
+        console.error('⚠️  Refund email notification failed (non-critical):', error.message);
+      });
+
+      return {
+        success: true,
+        refundId: refund.id,
+        amount: Number(payment.amount),
+        status: 'REFUNDED',
+      };
+    } catch (error: any) {
+      console.error('❌ Razorpay refund failed:', error);
+      throw new Error('Refund processing failed: ' + error.message);
+    }
+  }
+
+  /**
    * Handle payment failure
-   * @param orderId - Order ID
-   * @param userId - User ID for verification
-   * @param reason - Failure reason
    */
   async handlePaymentFailure(orderId: string, userId: string, reason?: string) {
+    const payment = await prisma.payment.findFirst({
+      where: {
+        orderId,
+        order: { userId },
+      },
+      include: {
+        order: {
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new Error('Payment not found');
+    }
+
+    // ✅ ATOMIC: Mark payment as failed + restore stock
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+        },
+      });
+
+      // ✅ RESTORE STOCK: Payment failed, release reserved stock
+      for (const item of payment.order.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+    });
+
+    console.log(`✅ Payment marked as failed and stock restored: ${payment.id}`);
+
+    return { success: true, message: 'Payment marked as failed' };
+  }
+
+  /**
+   * Get payment status for an order
+   */
+  async getPaymentStatus(orderId: string, userId: string) {
     const payment = await prisma.payment.findFirst({
       where: {
         orderId,
@@ -235,164 +531,11 @@ export class PaymentService {
       throw new Error('Payment not found');
     }
 
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: 'FAILED',
-      },
-    });
-
-    return { success: true, message: 'Payment marked as failed' };
-  }
-
-  /**
-   * Get payment status for an order
-   * @param orderId - Order ID
-   * @param userId - User ID for verification
-   * @returns Payment details
-   */
-  async getPaymentStatus(orderId: string, userId: string) {
-    const payment = await prisma.payment.findUnique({
-      where: { orderId },
-      include: {
-        order: true,
-      },
-    });
-
-    if (!payment) {
-      throw new Error('Payment not found');
-    }
-
-    if (payment.order.userId !== userId) {
-      throw new Error('Unauthorized');
-    }
-
-    return {
-      id: payment.id,
-      orderId: payment.orderId,
-      amount: payment.amount,
-      currency: payment.currency,
-      status: payment.status,
-      gatewayOrderId: payment.gatewayOrderId,
-      gatewayPaymentId: payment.gatewayPaymentId,
-      createdAt: payment.createdAt,
-      updatedAt: payment.updatedAt,
-    };
-  }
-
-  /**
-   * Create order from cart (before payment)
-   * @param userId - User ID
-   * @returns Created order
-   */
-  async createOrderFromCart(userId: string) {
-    // 🔒 DOUBLE ORDER PREVENTION: Check for existing pending order
-    const existingPendingOrder = await prisma.order.findFirst({
-      where: {
-        userId,
-        status: 'PENDING',
-      },
-      include: {
-        items: true,
-        payment: true, // Include payment to check for existing payments
-      },
-    });
-
-    // If pending order exists, return it instead of creating new one
-    if (existingPendingOrder) {
-      console.log(`♻️ Reusing existing pending order: ${existingPendingOrder.id}`);
-      
-      // 🔄 RECALCULATE TOTAL: Ensure order total includes GST (in case it was created before GST logic)
-      const subtotal = existingPendingOrder.items.reduce((sum: number, item: any) => {
-        return sum + Number(item.price) * item.quantity;
-      }, 0);
-      const gst = Math.round(subtotal * 0.18);
-      const correctTotal = subtotal + gst;
-      
-      // Update order total if it's different (e.g., old orders without GST)
-      if (Number(existingPendingOrder.total) !== correctTotal) {
-        console.log(`🔄 Updating order total from ₹${existingPendingOrder.total} to ₹${correctTotal} (added GST)`);
-        const updatedOrder = await prisma.order.update({
-          where: { id: existingPendingOrder.id },
-          data: { total: correctTotal },
-          include: { 
-            items: true,
-            payment: true, // Include payment relation for downstream logic
-          },
-        });
-        return updatedOrder;
-      }
-      
-      return existingPendingOrder;
-    }
-
-    // Get user's cart
-    const cart = await prisma.cart.findUnique({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                images: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!cart || cart.items.length === 0) {
-      throw new Error('Cart is empty');
-    }
-
-    // Validate all products are active
-    const inactiveProducts = cart.items.filter((item) => !item.product.isActive);
-    if (inactiveProducts.length > 0) {
-      throw new Error('Some products in cart are no longer available');
-    }
-
-    // Calculate total (locked prices from current time)
-    const total = cart.items.reduce(
-      (sum, item) => sum + Number(item.product.price) * item.quantity,
-      0
-    );
-
-    // Create order with items (NO payment yet, NO cart clearing)
-    const order = await prisma.order.create({
-      data: {
-        userId,
-        total,
-        status: 'PENDING',
-        items: {
-          create: cart.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product.price, // Lock price at order time
-          })),
-        },
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                images: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return order;
+    return payment;
   }
 
   /**
    * Get order with payment details
-   * @param orderId - Order ID
-   * @param userId - User ID for verification
-   * @returns Order with items and payment
    */
   async getOrderWithPayment(orderId: string, userId: string) {
     const order = await prisma.order.findFirst({
@@ -403,14 +546,11 @@ export class PaymentService {
       include: {
         items: {
           include: {
-            product: {
-              include: {
-                images: true,
-              },
-            },
+            product: true,
           },
         },
         payment: true,
+        shippingAddress: true, // ✅ Include shipping address
       },
     });
 

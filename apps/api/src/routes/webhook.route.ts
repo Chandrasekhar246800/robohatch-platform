@@ -1,9 +1,22 @@
 import { Router } from 'express';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { WebhookController } from '../controllers/webhook.controller';
 
 const router = Router();
 const webhookController = new WebhookController();
+
+// 🔒 RATE LIMITING: Protect webhook from DDoS attacks
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute window
+  max: 100, // Max 100 webhook events per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many webhook requests',
+  },
+});
 
 /**
  * 🔒 WEBHOOK ENDPOINT: Razorpay async notifications
@@ -21,6 +34,7 @@ const webhookController = new WebhookController();
  */
 router.post(
   '/razorpay',
+  webhookLimiter, // Apply rate limiting
   express.json(), // Parse JSON body
   (req, res) => webhookController.handleRazorpayWebhook(req, res)
 );

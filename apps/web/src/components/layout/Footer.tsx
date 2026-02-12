@@ -1,35 +1,39 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const { isAuthenticated } = useAuthStore();
 
   const footerLinks = {
     shop: [
       { name: 'All Products', href: '/products' },
       { name: 'Keychains', href: '/products?category=keychains' },
-      { name: 'Figurines', href: '/products?category=figurines' },
-      { name: 'Anime Figures', href: '/products?category=anime-figures' },
-      { name: 'Home Décor', href: '/products?category=home-decor' },
       { name: 'Lamps', href: '/products?category=lamps' },
+      { name: 'Anime Things', href: '/products?category=anime-things' },
+      { name: 'Devotional Idols', href: '/products?category=devotional-idols' },
+      { name: 'Mobile Accessories', href: '/products?category=mobile-accessories' },
     ],
     company: [
       { name: 'About Us', href: '/about' },
-      { name: 'Contact', href: '/contact' },
-      { name: 'Custom Orders', href: '/products?category=custom-designs' },
-      { name: 'Bulk Orders', href: '/bulk' },
+      { name: 'Contact Us', href: '/contact' },
     ],
     support: [
       { name: 'FAQ', href: '/faq' },
-      { name: 'Shipping Info', href: '/shipping' },
-      { name: 'Returns', href: '/returns' },
-      { name: 'Track Order', href: '/track' },
+      { name: 'Shipping Policy', href: '/shipping' },
+      { 
+        name: 'Track Order', 
+        href: isAuthenticated ? '/account/orders' : '/login?redirect=/account/orders' 
+      },
     ],
     legal: [
       { name: 'Privacy Policy', href: '/privacy' },
       { name: 'Terms of Service', href: '/terms' },
-      { name: 'Refund Policy', href: '/refund' },
+      { name: 'Refund & Cancellation Policy', href: '/refund' },
     ],
   };
 
@@ -140,18 +144,18 @@ export const Footer: React.FC = () => {
               <li className="flex items-start space-x-2">
                 <MapPin size={18} className="mt-0.5 flex-shrink-0" />
                 <span className="text-sm">
-                  123 Tech Park, Bangalore
-                  <br />
-                  Karnataka 560001, India
+                  Urbanrise Revolution 1<br />
+                  C-Block - 726<br />
+                  Padur, Chennai-603103
                 </span>
               </li>
               <li className="flex items-center space-x-2">
                 <Phone size={18} className="flex-shrink-0" />
-                <span className="text-sm">+91 98765 43210</span>
+                <span className="text-sm">+91 95055 51727</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail size={18} className="flex-shrink-0" />
-                <span className="text-sm">hello@robohatch.com</span>
+                <span className="text-sm">founder@robohatch.in</span>
               </li>
             </ul>
           </div>

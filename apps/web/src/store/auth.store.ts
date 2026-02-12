@@ -11,7 +11,6 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
@@ -22,14 +21,11 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      token: null,
       isAuthenticated: false,
       setAuth: (user, token) => {
-        set({ user, token, isAuthenticated: true });
-        // Sync token with localStorage for api-client
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('token', token);
-        }
+        // Token parameter kept for backward compatibility but not stored
+        // Authentication now handled via httpOnly cookies set by backend
+        set({ user, isAuthenticated: true });
         // Merge local cart with backend after login (non-blocking for faster login)
         if (typeof window !== 'undefined') {
           setTimeout(() => {
@@ -43,10 +39,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       logout: () => {
-        set({ user: null, token: null, isAuthenticated: false });
-        // Clear token from storage
+        set({ user: null, isAuthenticated: false });
+        // Clear the auth cookie
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
+          document.cookie = 'isLoggedIn=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         }
         // Clear cart on logout (both backend flag set to false and clear local)
         useCartStore.getState().clearCart(false);

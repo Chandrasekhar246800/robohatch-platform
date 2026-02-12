@@ -1,187 +1,241 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiClient } from '@/lib/api-client';
+import { CheckCircle2, Package, Mail, ShoppingBag, Download } from 'lucide-react';
+import { useCheckoutStore } from '@/store/checkout.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useCartStore } from '@/store/cart.store';
+import { CheckoutSteps } from '@/components/checkout/CheckoutSteps';
 
-function OrderSuccessContent() {
+export default function OrderSuccessPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const orderId = searchParams.get('orderId');
-  const { isAuthenticated } = useAuthStore();
-  
-  const [order, setOrder] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { user, isAuthenticated } = useAuthStore();
+  const { orderId, paymentId, razorpayOrderId, shippingAddress, setCurrentStep } = useCheckoutStore();
+  const { clearCart } = useCartStore();
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    setCurrentStep('complete');
+  }, [setCurrentStep]);
 
+  // Clear cart on successful order
+  useEffect(() => {
+    if (mounted && orderId) {
+      clearCart();
+    }
+  }, [mounted, orderId, clearCart]);
+
+  // Redirect if not authenticated
   useEffect(() => {
     if (mounted && !isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/login');
     }
   }, [isAuthenticated, mounted, router]);
 
+  // Redirect if no order details
   useEffect(() => {
-    if (mounted && orderId && isAuthenticated) {
-      fetchOrderDetails();
+    if (mounted && !orderId) {
+      router.push('/');
     }
-  }, [orderId, mounted, isAuthenticated]);
+  }, [orderId, mounted, router]);
 
-  const fetchOrderDetails = async () => {
-    try {
-      const response = await apiClient.getOrderWithPayment(orderId!);
-      
-      if (!response.success) {
-        setError(response.message || 'Failed to fetch order details');
-        return;
-      }
-      
-      setOrder(response.data.order);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch order details');
-    } finally {
-      setLoading(false);
-    }
+  const handlePrintInvoice = () => {
+    window.print();
   };
 
   if (!mounted) {
     return null;
   }
 
-  if (!isAuthenticated) {
-    return <div className="container mx-auto px-4 py-8">Redirecting to login...</div>;
-  }
-
-  if (loading) {
+  if (!isAuthenticated || !orderId) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading order details...</div>
-      </div>
-    );
-  }
-
-  if (error || !order) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-          {error || 'Order not found'}
-        </div>
-        <Link href="/" className="text-blue-600 hover:underline">
-          Return to Home
-        </Link>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Redirecting...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Success Message */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6 text-center">
-          <div className="text-green-600 text-5xl mb-4">✓</div>
-          <h1 className="text-3xl font-bold text-green-800 mb-2">Order Placed Successfully!</h1>
-          <p className="text-green-700">Thank you for your purchase</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        {/* Success Header */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <CheckCircle2 className="w-20 h-20 text-green-500" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-24 h-24 bg-green-100 rounded-full -z-10 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
+          <p className="text-lg text-gray-600">
+            Thank you for your purchase. Your order has been successfully placed.
+          </p>
         </div>
 
-        {/* Order Details */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Order Details</h2>
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Order ID:</span>
-              <span className="font-medium">{order.id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Status:</span>
-              <span className="font-medium text-green-600">{order.status}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Amount:</span>
-              <span className="font-medium">₹{order.total.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Order Date:</span>
-              <span className="font-medium">
-                {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
+        {/* Progress Steps */}
+        <CheckoutSteps currentStep="complete" />
+
+        {/* Order Details Card */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mt-12">
+          {/* Order Summary */}
+          <div className="mb-8 pb-8 border-b">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Package className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-600">Order ID</p>
+                    <p className="font-mono font-semibold text-gray-900">{orderId}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-600">Payment ID</p>
+                    <p className="font-mono font-semibold text-gray-900 text-sm">{paymentId}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-600">Confirmation Email</p>
+                    <p className="font-medium text-gray-900">{shippingAddress?.email || user?.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Package className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-600">Order Status</p>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                      ✓ Confirmed
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Payment Details */}
-          {order.payment && (
-            <div className="border-t pt-4 mt-4">
-              <h3 className="font-semibold mb-2">Payment Details</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Transaction ID:</span>
-                  <span className="font-medium">{order.payment.transactionId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Payment Method:</span>
-                  <span className="font-medium">{order.payment.method}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Payment Status:</span>
-                  <span className="font-medium text-green-600">{order.payment.status}</span>
+          {/* Shipping Address */}
+          {shippingAddress && (
+            <div className="mb-8 pb-8 border-b">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Shipping Address</h2>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-semibold text-gray-900">{shippingAddress.fullName}</p>
+                <p className="text-gray-700 mt-2">{shippingAddress.streetAddress}</p>
+                <p className="text-gray-700">
+                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}
+                </p>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-sm text-gray-600">Phone: <span className="font-medium text-gray-900">{shippingAddress.phone}</span></p>
+                  <p className="text-sm text-gray-600">Email: <span className="font-medium text-gray-900">{shippingAddress.email}</span></p>
                 </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Order Items */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Items Ordered</h2>
-          <div className="space-y-4">
-            {order.items?.map((item: any) => (
-              <div key={item.id} className="flex justify-between items-center pb-4 border-b last:border-b-0">
-                <div>
-                  <p className="font-medium">{item.product?.name || 'Product'}</p>
-                  <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                  <p className="text-sm text-gray-600">Price: ₹{item.price.toFixed(2)}</p>
+          {/* What's Next */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">What happens next?</h2>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                  1
                 </div>
-                <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                <div>
+                  <p className="font-semibold text-gray-900">Order Confirmation</p>
+                  <p className="text-sm text-gray-600">You'll receive a confirmation email shortly at {shippingAddress?.email || user?.email}</p>
+                </div>
               </div>
-            ))}
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                  2
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Order Processing</p>
+                  <p className="text-sm text-gray-600">We'll prepare your order for shipment within 1-2 business days</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                  3
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Shipping Updates</p>
+                  <p className="text-sm text-gray-600">Track your order status and get shipping updates via email</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                  4
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Delivery</p>
+                  <p className="text-sm text-gray-600">Your order will be delivered to your address within 5-7 business days</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={handlePrintInvoice}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-orange-50 transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              Download Invoice
+            </button>
+            <Link
+              href="/products"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-accent transition-colors"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              Continue Shopping
+            </Link>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4">
-          <Link
-            href="/"
-            className="flex-1 bg-blue-600 text-white text-center py-3 rounded-lg hover:bg-blue-700"
-          >
-            Continue Shopping
-          </Link>
-          <button
-            onClick={() => window.print()}
-            className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300"
-          >
-            Print Order
-          </button>
+        {/* Support Section */}
+        <div className="mt-8 bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900 mb-2">Need Help?</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              If you have any questions about your order, please don't hesitate to contact us.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+              <a href="mailto:founder@robohatch.in" className="flex items-center gap-2 text-primary hover:underline font-medium">
+                <Mail className="w-4 h-4" />
+                founder@robohatch.in
+              </a>
+              <a href="tel:+919505551727" className="flex items-center gap-2 text-primary hover:underline font-medium">
+                📞 +91 95055 51727
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Print-only section */}
+        <div className="hidden print:block mt-8 p-6 border-t-2 border-gray-300">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">RoboHatch</h2>
+            <p className="text-sm text-gray-600">Invoice / Order Confirmation</p>
+          </div>
+          <div className="text-sm text-gray-600">
+            <p>Order ID: {orderId}</p>
+            <p>Payment ID: {paymentId}</p>
+            <p>Date: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-export default function OrderSuccessPage() {
-  return (
-    <Suspense fallback={<div className="container mx-auto px-4 py-8">Loading...</div>}>
-      <OrderSuccessContent />
-    </Suspense>
   );
 }

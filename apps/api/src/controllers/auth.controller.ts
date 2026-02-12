@@ -1,120 +1,128 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/auth.service';
+import { validateRegister, validateLogin } from '../validators/auth.validator';
 
 export class AuthController {
+  /**
+   * Register new user
+   * POST /api/auth/register
+   */
   async register(req: Request, res: Response) {
     try {
-      const { email, password, name } = req.body;
+      // ✅ VALIDATION: Using Zod schema
+      const validatedData = validateRegister(req.body);
 
-      // Validate input
-      if (!email || !password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email and password are required',
-        });
-      }
+      // Register user
+      const result = await authService.register(validatedData);
 
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid email format',
-        });
-      }
+      // 🔒 Set httpOnly cookie
+      authService.setAuthCookie(res, result.token);
 
-      // Validate password strength
-      if (password.length < 6) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password must be at least 6 characters long',
-        });
-      }
-
-      const result = await authService.register({ email, password, name });
-
-      return res.status(201).contentType('application/json').json({
+      res.status(201).json({
         success: true,
-        message: 'Registration successful',
-        data: result,
+        message: 'User registered successfully',
+        data: {
+          user: result.user,
+          // ❌ DO NOT send token in response body (cookie only)
+        },
       });
     } catch (error: any) {
-      if (error.message === 'Email already registered') {
-        return res.status(409).json({
-          success: false,
-          message: error.message,
-        });
-      }
+      console.error('Register error:', error);
 
-      console.error('Registration error:', error);
-      return res.status(500).json({
+      // Sanitize error message for production
+      const message = error.message === 'Email already registered'
+        ? error.message
+        : 'Registration failed';
+
+      res.status(400).json({
         success: false,
-        message: 'Internal server error',
+        message: message,
       });
     }
   }
 
+  /**
+   * Login user
+   * POST /api/auth/login
+   */
   async login(req: Request, res: Response) {
     try {
-      console.log('📝 Login attempt:', { email: req.body?.email, hasPassword: !!req.body?.password });
-      
-      const { email, password } = req.body;
+      // ✅ VALIDATION: Using Zod schema
+      const validatedData = validateLogin(req.body);
 
-      // Validate input
-      if (!email || !password) {
-        console.warn('⚠️  Login validation failed: missing credentials');
-        return res.status(400).json({
-          success: false,
-          message: 'Email and password are required',
-        });
-      }
+      // Authenticate user
+      const result = await authService.login(validatedData);
 
-      // Call auth service
-      const result = await authService.login({ email, password });
+      // 🔒 Set httpOnly cookie
+      authService.setAuthCookie(res, result.token);
 
-      console.log('✅ Login successful for:', email);
-      
-      // ALWAYS return JSON with explicit Content-Type
-      return res
-        .status(200)
-        .contentType('application/json')
-        .json({
-          success: true,
-          message: 'Login successful',
-          data: result,
-        });
+      res.json({
+        success: true,
+        message: 'Login successful',
+        data: {
+          user: result.user,
+          // ❌ DO NOT send token in response body (cookie only)
+        },
+      });
     } catch (error: any) {
-      if (error.message === 'Invalid email or password') {
-        console.warn('⚠️  Login failed: invalid credentials');
-        return res.status(401).json({
-          success: false,
-          message: error.message,
-        });
-      }
+      console.error('Login error:', error);
 
-      console.error('❌ Login error:', error);
-      return res.status(500).json({
+      // Generic error message for security
+      res.status(401).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Invalid email or password',
       });
     }
   }
 
+  /**
+   * Logout user
+   * POST /api/auth/logout
+   */
+  async logout(req: Request, res: Response) {
+    try {
+      // 🔒 Clear httpOnly cookie
+      authService.clearAuthCookie(res);
+
+      res.json({
+        success: true,
+        message: 'Logged out successfully',
+      });
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Logout failed',
+      });
+    }
+  }
+
+  /**
+   * Get current user profile
+   * GET /api/auth/profile
+   */
   async getProfile(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.userId;
-      
+      const userId = (req as any).user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated',
+        });
+      }
+
       const user = await authService.getUserById(userId);
 
-      return res.status(200).contentType('application/json').json({
+      res.json({
         success: true,
-        data: user,
+        data: { user },
       });
     } catch (error: any) {
       console.error('Get profile error:', error);
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Failed to fetch profile',
       });
     }
   }

@@ -20,11 +20,13 @@
     "@aws-sdk/client-s3": "^3.984.0",
     "@prisma/client": "^5.22.0",
     "@prisma/driver-adapter-utils": "^7.3.0",
+    "@sendgrid/mail": "^8.1.6",
     "@types/bcrypt": "^5.0.2",
     "@types/multer": "^2.0.0",
     "@types/multer-s3": "^3.0.3",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
@@ -35,10 +37,12 @@
     "multer-s3": "^3.0.1",
     "mysql2": "^3.16.2",
     "prisma": "^5.22.0",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.6",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/compression": "^1.8.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
     "@types/express-rate-limit": "^5.1.3",

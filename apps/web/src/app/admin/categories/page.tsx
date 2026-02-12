@@ -72,15 +72,14 @@ export default function CategoriesManagementPage() {
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/categories`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
+          credentials: 'include', // Send httpOnly cookies
           body: JSON.stringify({ name: newCategoryName.trim() }),
         }
       );
@@ -111,14 +110,11 @@ export default function CategoriesManagementPage() {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/categories/${categoryId}`,
         {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          credentials: 'include',
         }
       );
 
@@ -158,15 +154,14 @@ export default function CategoriesManagementPage() {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/categories/${categoryId}`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
+          credentials: 'include',
           body: JSON.stringify({ name: editingName.trim() }),
         }
       );

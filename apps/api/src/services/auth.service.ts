@@ -1,20 +1,21 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma';
+import { Response } from 'express';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-
-// Validate JWT_SECRET in production
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error('🚨 CRITICAL: JWT_SECRET environment variable is not set in production!');
-  throw new Error('JWT_SECRET must be set in production');
-}
-
-if (!JWT_SECRET) {
-  console.error('🚨 CRITICAL: JWT_SECRET is missing!');
+// 🔒 SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
+if (!process.env.JWT_SECRET) {
+  console.error('🚨 CRITICAL: JWT_SECRET environment variable is not set!');
+  console.error('Server cannot start without JWT_SECRET');
   throw new Error('JWT_SECRET is required for authentication');
 }
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
+
+console.log('✅ JWT_SECRET loaded successfully');
+console.log(`🔐 Bcrypt rounds: ${BCRYPT_ROUNDS}`);
 
 export interface RegisterInput {
   email: string;
@@ -38,6 +39,9 @@ export interface AuthResponse {
 }
 
 export class AuthService {
+  /**
+   * Register new user with strong password hashing
+   */
   async register(input: RegisterInput): Promise<AuthResponse> {
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -48,8 +52,8 @@ export class AuthService {
       throw new Error('Email already registered');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(input.password, 10);
+    // Hash password with configurable rounds (default: 12 for 2026 standards)
+    const hashedPassword = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
     // Create user
     const user = await prisma.user.create({
@@ -61,24 +65,9 @@ export class AuthService {
     });
 
     // Generate JWT token
-    let token: string;
-    try {
-      token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
-      );
-    } catch (error) {
-      console.error('❌ Failed to generate JWT token:', error);
-      throw new Error('Registration failed: Could not generate token');
-    }
+    const token = this.generateToken(user.id, user.email, user.role);
 
-    if (!token) {
-      console.error('❌ Token generation returned empty value');
-      throw new Error('Registration failed: Token generation failed');
-    }
-
-    console.log('✅ User registered and token generated:', user.email);
+    console.log('✅ User registered:', user.email);
 
     return {
       user: {
@@ -109,24 +98,9 @@ export class AuthService {
     }
 
     // Generate JWT token
-    let token: string;
-    try {
-      token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
-      );
-    } catch (error) {
-      console.error('❌ Failed to generate JWT token:', error);
-      throw new Error('Authentication failed: Could not generate token');
-    }
+    const token = this.generateToken(user.id, user.email, user.role);
 
-    if (!token) {
-      console.error('❌ Token generation returned empty value');
-      throw new Error('Authentication failed: Token generation failed');
-    }
-
-    console.log('✅ Token generated successfully for user:', user.email);
+    console.log('✅ User logged in:', user.email);
 
     return {
       user: {
@@ -137,6 +111,62 @@ export class AuthService {
       },
       token,
     };
+  }
+
+  /**
+   * Generate JWT token (centralized)
+   * @private
+   */
+  private generateToken(userId: string, email: string, role: string): string {
+    try {
+      const token = jwt.sign(
+        { userId, email, role },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+      );
+
+      if (!token) {
+        throw new Error('Token generation returned empty value');
+      }
+
+      return token;
+    } catch (error) {
+      console.error('❌ Failed to generate JWT token:', error);
+      throw new Error('Authentication failed: Could not generate token');
+    }
+  }
+
+  /**
+   * Set authentication cookie in response
+   * 🔒 SECURITY: httpOnly + secure + sameSite protection
+   */
+  setAuthCookie(res: Response, token: string): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+    res.cookie('auth_token', token, {
+      httpOnly: true, // ✅ Prevents JavaScript access (XSS protection)
+      secure: isProduction, // ✅ HTTPS only in production
+      sameSite: 'lax', // ✅ CSRF protection + Razorpay redirect compatibility
+      maxAge: maxAge,
+      path: '/',
+    });
+
+    console.log(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction})`);
+  }
+
+  /**
+   * Clear authentication cookie (logout)
+   */
+  clearAuthCookie(res: Response): void {
+    res.clearCookie('auth_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    console.log('✅ Auth cookie cleared');
   }
 
   async verifyToken(token: string): Promise<any> {

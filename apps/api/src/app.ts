@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import environment from "./config/environment";
 import {
   securityHeaders,
@@ -44,9 +45,12 @@ app.use((req, res, next) => {
 // Compression middleware for better performance
 app.use(compression());
 
+// 🔒 COOKIE PARSER: Required for httpOnly authentication cookies
+app.use(cookieParser());
+
 // Configure CORS with environment variables
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
@@ -69,7 +73,7 @@ app.use(cors({
       callback(null, false);
     }
   },
-  credentials: false, // Changed to false for simpler CORS
+  credentials: true, // 🔒 REQUIRED: Enable cookies for httpOnly authentication
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],

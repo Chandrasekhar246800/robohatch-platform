@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares';
+import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware';
 import {
   createCustomDesign,
   getUserCustomDesigns,
@@ -11,12 +11,12 @@ import {
 const router = Router();
 
 // User routes
-router.post('/', authenticate, createCustomDesign);
-router.get('/my-designs', authenticate, getUserCustomDesigns);
-router.get('/:id', authenticate, getCustomDesignById);
+router.post('/', authMiddleware, createCustomDesign);
+router.get('/my-designs', authMiddleware, getUserCustomDesigns);
+router.get('/:id', authMiddleware, getCustomDesignById);
 
-// Admin routes
-router.get('/', authenticate, getAllCustomDesigns); // Admin only
-router.patch('/:id/status', authenticate, updateCustomDesignStatus); // Admin only
+// Admin routes - 🔒 ADMIN ONLY
+router.get('/', authMiddleware, adminMiddleware, getAllCustomDesigns);
+router.patch('/:id/status', authMiddleware, adminMiddleware, updateCustomDesignStatus);
 
 export default router;

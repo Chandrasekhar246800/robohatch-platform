@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import "dotenv/config";
 
 const globalForPrisma = global as unknown as {
@@ -14,4 +14,7 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+// Export Prisma namespace for types
+export { Prisma };
 
