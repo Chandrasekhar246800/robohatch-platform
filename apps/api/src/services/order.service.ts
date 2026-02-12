@@ -131,8 +131,10 @@ class OrderService {
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
       CREATED: [OrderStatus.PAID, OrderStatus.PENDING, OrderStatus.CANCELLED],
       PENDING: [OrderStatus.PAID, OrderStatus.CANCELLED],
-      PAID: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
-      SHIPPED: [OrderStatus.DELIVERED],
+      PAID: [OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+      PROCESSING: [OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED],
+      SHIPPED: [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED],
+      OUT_FOR_DELIVERY: [OrderStatus.DELIVERED, OrderStatus.SHIPPED],
       DELIVERED: [],
       CANCELLED: [],
       REFUNDED: [],

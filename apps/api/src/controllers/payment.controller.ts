@@ -16,7 +16,13 @@ export class PaymentController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const order = await paymentService.createOrderFromCart(userId);
+      const { shippingAddress } = req.body;
+
+      if (!shippingAddress) {
+        return res.status(400).json({ success: false, message: 'Shipping address is required' });
+      }
+
+      const order = await paymentService.createOrderFromCart(userId, shippingAddress);
 
       res.status(201).json({
         success: true,
