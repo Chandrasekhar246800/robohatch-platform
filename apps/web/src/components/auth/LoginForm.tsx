@@ -13,7 +13,10 @@ import { useAuthStore } from '@/store/auth.store';
 export const LoginForm: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { setAuth, setHasHydrated } = useAuthStore((state) => ({ 
+    setAuth: state.setAuth, 
+    setHasHydrated: state.setHasHydrated 
+  }));
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +56,9 @@ export const LoginForm: React.FC = () => {
       if (response.success && response.data) {
         // Store user data in Zustand store (token is in httpOnly cookie, not response)
         setAuth(response.data.user, '');
+        
+        // Immediately mark as hydrated since we just set state manually (not from localStorage)
+        setHasHydrated(true);
         
         console.log('[Login] User role:', response.data.user.role);
         
