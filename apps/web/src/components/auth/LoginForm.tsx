@@ -60,6 +60,11 @@ export const LoginForm: React.FC = () => {
         // Immediately mark as hydrated since we just set state manually (not from localStorage)
         setHasHydrated(true);
         
+        // Set isLoggedIn cookie so middleware can see it (expires in 7 days)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+        document.cookie = `isLoggedIn=true; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
+        
         console.log('[Login] User role:', response.data.user.role);
         
         // Longer delay to ensure:
