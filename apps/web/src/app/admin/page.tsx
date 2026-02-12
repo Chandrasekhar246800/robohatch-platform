@@ -44,8 +44,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (mounted) {
       if (!isAuthenticated) {
-        // Redirect to login without redirect parameter (user logged out)
-        router.push('/login');
+        // Redirect to login with redirect parameter
+        router.push('/login?redirect=/admin');
         return;
       }
       

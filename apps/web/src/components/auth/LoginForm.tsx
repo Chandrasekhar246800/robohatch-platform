@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { AnimatedInput } from '@/components/ui/AnimatedInput';
@@ -12,6 +12,7 @@ import { useAuthStore } from '@/store/auth.store';
 
 export const LoginForm: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,8 +47,11 @@ export const LoginForm: React.FC = () => {
         // Store user data in Zustand store
         setAuth(response.data.user, response.data.token);
         
-        // Redirect to homepage after successful login
-        router.push('/');
+        // Get redirect URL from query params, default to homepage
+        const redirectUrl = searchParams.get('redirect') || '/';
+        
+        // Redirect after successful login
+        router.push(redirectUrl);
       } else {
         // Show error message from API
         setApiError(response.message);
