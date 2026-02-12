@@ -147,13 +147,13 @@ export class AuthService {
     res.cookie('auth_token', token, {
       httpOnly: true, // ✅ Prevents JavaScript access (XSS protection)
       secure: isProduction, // ✅ HTTPS only in production
-      sameSite: 'lax', // ✅ CSRF protection + Razorpay redirect compatibility
+      sameSite: isProduction ? 'none' : 'lax', // ✅ 'none' for cross-domain in prod, 'lax' for localhost
       maxAge: maxAge,
       path: '/',
       domain: isProduction ? undefined : 'localhost', // ✅ Share cookie across localhost ports in dev
     });
 
-    console.log(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, domain: ${isProduction ? 'auto' : 'localhost'})`);
+    console.log(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${isProduction ? 'auto' : 'localhost'})`);
   }
 
   /**
@@ -164,7 +164,7 @@ export class AuthService {
     res.clearCookie('auth_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax',
+      sameSite: isProduction ? 'none' : 'lax', // ✅ Must match cookie settings
       path: '/',
       domain: isProduction ? undefined : 'localhost', // ✅ Must match the domain used when setting
     });
