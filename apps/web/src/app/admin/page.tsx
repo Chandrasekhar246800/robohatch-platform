@@ -27,7 +27,7 @@ import { apiClient } from '@/lib/api-client';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, isAuthenticated, token } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'products' | 'orders' | 'uploads'
