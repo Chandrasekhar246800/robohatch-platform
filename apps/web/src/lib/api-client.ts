@@ -435,6 +435,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/orders`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
       return await response.json();
     } catch (error) {
@@ -448,6 +449,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/orders?limit=${limit}&offset=${offset}`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
       return await response.json();
     } catch (error) {
@@ -461,6 +463,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/orders/${orderId}`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
       return await response.json();
     } catch (error) {
@@ -474,6 +477,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ status }),
       });
       return await response.json();
@@ -488,6 +492,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/orders/stats`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
       return await response.json();
     } catch (error) {
@@ -506,6 +511,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/payment/orders`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -528,6 +534,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/payment/create-order/${orderId}`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -554,6 +561,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/payment/verify`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify(paymentData),
       });
 
@@ -577,6 +585,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/payment/failure`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ orderId, reason }),
       });
 
@@ -600,6 +609,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/payment/status/${orderId}`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -629,6 +639,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/payment/orders/${orderId}`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
