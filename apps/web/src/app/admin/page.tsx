@@ -27,7 +27,7 @@ import { apiClient } from '@/lib/api-client';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, _hasHydrated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'products' | 'orders' | 'uploads'
@@ -42,7 +42,8 @@ export default function AdminPage() {
 
   // Check authentication and admin role
   useEffect(() => {
-    if (mounted) {
+    // Wait for both: component mounted AND state hydrated from localStorage
+    if (mounted && _hasHydrated) {
       if (!isAuthenticated) {
         // Redirect to login with redirect parameter
         router.push('/login?redirect=/admin');
@@ -58,7 +59,7 @@ export default function AdminPage() {
       loadOrders();
       loadOrderStats();
     }
-  }, [isAuthenticated, user, mounted, router]);
+  }, [isAuthenticated, user, mounted, _hasHydrated, router]);
 
   const loadOrders = async () => {
     try {
@@ -95,7 +96,7 @@ export default function AdminPage() {
     }
   };
 
-  if (!mounted || !isAuthenticated || user?.role !== 'ADMIN') {
+  if (!mounted || !_hasHydrated || !isAuthenticated || user?.role !== 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">

@@ -56,8 +56,11 @@ export const LoginForm: React.FC = () => {
         
         console.log('[Login] User role:', response.data.user.role);
         
-        // Small delay to ensure cookie is set before redirect
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Longer delay to ensure:
+        // 1. Cookie is set by browser
+        // 2. Zustand persists state to localStorage
+        // 3. Next page can read the persisted state
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Redirect based on user role
         if (response.data.user.role === 'ADMIN') {
