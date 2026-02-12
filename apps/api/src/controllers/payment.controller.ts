@@ -32,7 +32,15 @@ export class PaymentController {
     } catch (error: any) {
       console.error('Create order error:', error);
 
-      if (error.message === 'Cart is empty' || error.message === 'Some products in cart are no longer available') {
+      // Return specific error messages for validation failures
+      if (error.message === 'Cart is empty') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Your cart is empty. Please add products to your cart before checking out.'
+        });
+      }
+
+      if (error.message.includes('no longer available') || error.message.includes('Insufficient stock')) {
         return res.status(400).json({ success: false, message: error.message });
       }
 

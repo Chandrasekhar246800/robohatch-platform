@@ -19,7 +19,7 @@ declare global {
 export default function PaymentPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const { items, getTotal } = useCartStore();
+  const { items, getTotal, mergeLocalCartWithBackend } = useCartStore();
   const { 
     shippingAddress, 
     setOrderId, 
@@ -38,7 +38,14 @@ export default function PaymentPage() {
   useEffect(() => {
     setMounted(true);
     setCurrentStep('payment');
-  }, [setCurrentStep]);
+    
+    // Merge any local cart items with backend on mount
+    if (isAuthenticated) {
+      mergeLocalCartWithBackend().catch(err => {
+        console.error('Failed to merge cart on payment page load:', err);
+      });
+    }
+  }, [setCurrentStep, isAuthenticated, mergeLocalCartWithBackend]);
 
   // Redirect if not authenticated
   useEffect(() => {
