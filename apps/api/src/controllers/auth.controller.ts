@@ -116,7 +116,7 @@ export class AuthController {
 
       res.json({
         success: true,
-        data: { user },
+        data: user, // ✅ Return user directly, not nested in { user: ... }
       });
     } catch (error: any) {
       console.error('Get profile error:', error);
