@@ -228,7 +228,7 @@ class ApiClient {
       // 🔒 SECURITY: Token is in httpOnly cookie, not in response
       // Update auth store with user data only (no token)
       if (result.success && result.data?.user) {
-        useAuthStore.getState().login(result.data.user, null);
+        useAuthStore.getState().setAuth(result.data.user, '');
       }
 
       return result;
@@ -263,7 +263,7 @@ class ApiClient {
       // 🔒 SECURITY: No token in response, it's in httpOnly cookie
       if (result.success && result.data?.user) {
         console.log('✅ Login successful, user data received');
-        useAuthStore.getState().login(result.data.user, null);
+        useAuthStore.getState().setAuth(result.data.user, '');
         return result;
       }
 
