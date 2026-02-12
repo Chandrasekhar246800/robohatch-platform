@@ -261,9 +261,8 @@ export const useCartStore = create<CartStore>()(
             const backendItem = backendMap.get(localItem.product.id) as any;
             
             if (backendItem && backendItem.id) {
-              // Item exists in backend, update quantity (add local to backend quantity)
-              const newQuantity = (backendItem.quantity || 0) + localItem.quantity;
-              await apiClient.updateCartItem(backendItem.id, newQuantity);
+              // Item exists in backend, sync quantity to match local state
+              await apiClient.updateCartItem(backendItem.id, localItem.quantity);
             } else {
               // Item doesn't exist in backend, add it
               await apiClient.addToCart(localItem.product.id, localItem.quantity);

@@ -71,10 +71,16 @@ export class PaymentService {
       }
     }
 
-    // Calculate total
-    const total = cart.items.reduce((sum: number, item: typeof cart.items[0]) => {
+    // Calculate subtotal
+    const subtotal = cart.items.reduce((sum: number, item: typeof cart.items[0]) => {
       return sum + Number(item.product.price) * item.quantity;
     }, 0);
+
+    // Calculate GST (18% for India)
+    const gst = Math.round(subtotal * 0.18);
+    
+    // Calculate total including GST
+    const total = subtotal + gst;
 
     // ✅ ATOMIC TRANSACTION: Create order + shipping address + reserve stock
     const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
