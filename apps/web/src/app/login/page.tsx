@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { LoginForm } from '@/components/auth/LoginForm';
 
@@ -106,7 +106,17 @@ export default function LoginPage() {
 
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
-        <LoginForm />
+        <Suspense fallback={
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden p-8">
+              <div className="text-center">
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        }>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
