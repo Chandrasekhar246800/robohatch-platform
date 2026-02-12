@@ -1,6 +1,25 @@
 import { prisma } from '../config/prisma';
 
 export class CartService {
+  // Helper function to transform product structure to match frontend expectations
+  private transformProduct(product: any) {
+    if (!product) return product;
+    
+    return {
+      ...product,
+      category: product.categories?.[0]?.category || null,
+      images: product.images || [],
+    };
+  }
+
+  // Helper function to transform cart items
+  private transformCartItems(items: any[]) {
+    return items.map(item => ({
+      ...item,
+      product: this.transformProduct(item.product),
+    }));
+  }
+
   // Get user's cart with all items (optimized for performance)
   async getUserCart(userId: string) {
     let cart = await prisma.cart.findUnique({
@@ -15,6 +34,7 @@ export class CartService {
                 description: true,
                 price: true,
                 isActive: true,
+                stock: true,
                 images: {
                   select: {
                     url: true,
@@ -58,6 +78,7 @@ export class CartService {
                   description: true,
                   price: true,
                   isActive: true,
+                  stock: true,
                   images: {
                     select: {
                       url: true,
@@ -85,7 +106,13 @@ export class CartService {
       });
     }
 
-    return cart;
+    // Transform cart items to match frontend structure
+    const transformedCart = {
+      ...cart,
+      items: this.transformCartItems(cart.items),
+    };
+
+    return transformedCart;
   }
 
   // Add item to cart or update quantity if exists (optimized)
