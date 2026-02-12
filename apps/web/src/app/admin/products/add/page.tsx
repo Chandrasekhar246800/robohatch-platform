@@ -25,6 +25,7 @@ export default function AddProductPage() {
     name: '',
     description: '',
     price: '',
+    stock: '',
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -144,6 +145,11 @@ export default function AddProductPage() {
       return;
     }
 
+    if (!formData.stock || parseInt(formData.stock) < 0) {
+      setError('Valid stock quantity is required (0 or more)');
+      return;
+    }
+
     if (selectedCategories.length === 0) {
       setError('Please select at least one category');
       return;
@@ -162,6 +168,7 @@ export default function AddProductPage() {
       formDataToSend.append('name', formData.name);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('price', formData.price);
+      formDataToSend.append('stock', formData.stock);
       formDataToSend.append('categoryIds', JSON.stringify(selectedCategories));
 
       // Append all images
@@ -187,6 +194,7 @@ export default function AddProductPage() {
           name: '',
           description: '',
           price: '',
+          stock: '',
         });
         setSelectedCategories([]);
         setSelectedImages([]);
@@ -267,8 +275,8 @@ export default function AddProductPage() {
                   />
                 </div>
 
-                {/* Price and Category Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Price, Stock, and Category Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -287,8 +295,25 @@ export default function AddProductPage() {
                     />
                   </div>
 
-                  {/* Categories */}
+                  {/* Stock */}
                   <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Stock Quantity <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="number"
+                      name="stock"
+                      value={formData.stock}
+                      onChange={handleInputChange}
+                      placeholder="0"
+                      min="0"
+                      className="bg-gray-900 border-gray-700 text-white"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  {/* Categories */}
+                  <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Categories <span className="text-red-500">*</span>
                       <span className="ml-2 text-sm text-gray-500">

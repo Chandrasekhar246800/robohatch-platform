@@ -20,7 +20,7 @@ import {
   Database,
 } from 'lucide-react';
 import { Button, Badge, Card, CardContent, Input, AdminDashboardSkeleton } from '@/components/ui';
-import { products, mockOrders } from '@/lib/mock-data';
+// Removed mock data imports - using real API data
 import { formatPrice, formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import { apiClient } from '@/lib/api-client';
@@ -34,7 +34,9 @@ export default function AdminPage() {
   >('dashboard');
   const [orders, setOrders] = useState<any[]>([]);
   const [orderStats, setOrderStats] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +60,7 @@ export default function AdminPage() {
       // Load data
       loadOrders();
       loadOrderStats();
+      loadProducts();
     }
   }, [isAuthenticated, user, mounted, _hasHydrated, router]);
 
@@ -83,6 +86,20 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Failed to load stats:', error);
       setLoading(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const response = await apiClient.getAllProducts();
+      const productsData = response?.data || [];
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setProductsLoading(false);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      setProducts([]);
+      setProductsLoading(false);
     }
   };
 
@@ -291,35 +308,39 @@ export default function AdminPage() {
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4">Products Status</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="text-green-600" size={20} />
-                      <span className="font-medium">In Stock</span>
+                {productsLoading ? (
+                  <p className="text-gray-600 text-center py-4">Loading products...</p>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <CheckCircle className="text-green-600" size={20} />
+                        <span className="font-medium">In Stock</span>
+                      </div>
+                      <span className="text-2xl font-bold text-green-600">
+                        {products.filter((p) => p.stock > 0).length}
+                      </span>
                     </div>
-                    <span className="text-2xl font-bold text-green-600">
-                      {products.filter((p) => p.inStock).length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <XCircle className="text-red-600" size={20} />
-                      <span className="font-medium">Out of Stock</span>
+                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <XCircle className="text-red-600" size={20} />
+                        <span className="font-medium">Out of Stock</span>
+                      </div>
+                      <span className="text-2xl font-bold text-red-600">
+                        {products.filter((p) => p.stock === 0).length}
+                      </span>
                     </div>
-                    <span className="text-2xl font-bold text-red-600">
-                      {products.filter((p) => !p.inStock).length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Clock className="text-yellow-600" size={20} />
-                      <span className="font-medium">Featured</span>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <Package className="text-blue-600" size={20} />
+                        <span className="font-medium">Total Products</span>
+                      </div>
+                      <span className="text-2xl font-bold text-blue-600">
+                        {products.length}
+                      </span>
                     </div>
-                    <span className="text-2xl font-bold text-yellow-600">
-                      {products.filter((p) => p.featured).length}
-                    </span>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -342,28 +363,48 @@ export default function AdminPage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b">
-                      <tr className="text-left">
-                        <th className="py-3 px-2">Product</th>
-                        <th className="py-3 px-2">Category</th>
-                        <th className="py-3 px-2">Price</th>
-                        <th className="py-3 px-2">Stock</th>
-                        <th className="py-3 px-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {products.slice(0, 10).map((product) => (
+                  {productsLoading ? (
+                    <p className="text-gray-600 text-center py-8">Loading products...</p>
+                  ) : products.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package size={48} className="text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No products yet</p>
+                      <Button 
+                        onClick={() => router.push('/admin/products/add')}
+                        className="mt-4"
+                      >
+                        Add Your First Product
+                      </Button>
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead className="border-b">
+                        <tr className="text-left">
+                          <th className="py-3 px-2">Product</th>
+                          <th className="py-3 px-2">Category</th>
+                          <th className="py-3 px-2">Price</th>
+                          <th className="py-3 px-2">Stock</th>
+                          <th className="py-3 px-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map((product) => (
                         <tr key={product.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-2">
                             <div className="flex items-center space-x-3">
                               <div className="relative w-12 h-12 bg-gray-100 rounded flex-shrink-0">
-                                <Image
-                                  src={product.images[0]}
-                                  alt={product.name}
-                                  fill
-                                  className="object-cover rounded"
-                                />
+                                {product.images?.[0]?.url ? (
+                                  <Image
+                                    src={product.images[0].url}
+                                    alt={product.name}
+                                    fill
+                                    className="object-cover rounded"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded">
+                                    <Package size={20} className="text-gray-400" />
+                                  </div>
+                                )}
                               </div>
                               <span className="font-medium line-clamp-1">
                                 {product.name}
@@ -372,7 +413,7 @@ export default function AdminPage() {
                           </td>
                           <td className="py-3 px-2">
                             <span className="text-sm text-gray-600">
-                              {product.category.name}
+                              {product.category?.name || 'Uncategorized'}
                             </span>
                           </td>
                           <td className="py-3 px-2">
@@ -381,29 +422,30 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="py-3 px-2">
-                            <Badge
-                              variant={product.inStock ? 'success' : 'danger'}
-                            >
-                              {product.inStock ? 'In Stock' : 'Out of Stock'}
-                            </Badge>
+                            <div className="text-sm">
+                              <Badge
+                                variant={product.stock > 0 ? 'success' : 'danger'}
+                              >
+                                {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
+                              </Badge>
+                            </div>
                           </td>
                           <td className="py-3 px-2">
                             <div className="flex space-x-2">
-                              <button className="p-2 hover:bg-gray-100 rounded">
+                              <button 
+                                className="p-2 hover:bg-gray-100 rounded"
+                                onClick={() => router.push(`/product/${product.id}`)}
+                                title="View Product"
+                              >
                                 <Eye size={16} />
-                              </button>
-                              <button className="p-2 hover:bg-gray-100 rounded">
-                                <Edit size={16} />
-                              </button>
-                              <button className="p-2 hover:bg-red-50 text-red-600 rounded">
-                                <Trash2 size={16} />
                               </button>
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </CardContent>
             </Card>
