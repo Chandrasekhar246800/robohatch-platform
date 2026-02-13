@@ -200,6 +200,36 @@ export class AuthController {
   }
 
   /**
+   * Verify reset token validity
+   * ✅ NEW: Check if token is valid before showing reset form
+   */
+  async verifyResetToken(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token is required',
+        });
+      }
+
+      const isValid = await authService.verifyResetToken(token);
+
+      res.json({
+        success: true,
+        valid: isValid,
+      });
+    } catch (error: any) {
+      console.error('Verify reset token error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to verify token',
+      });
+    }
+  }
+
+  /**
    * Reset password with token
    * ✅ NEW: Reset password functionality
    */

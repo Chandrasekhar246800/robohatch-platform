@@ -149,7 +149,8 @@ export const Footer: React.FC = () => {
                 <span className="text-sm">
                   Urbanrise Revolution 1,<br />
                   C-Block 726, Padur,<br />
-                  Chennai - 603103
+                  Chennai - 603103,<br />
+                  Tamil Nadu, India
                 </span>
               </li>
               <li className="flex items-center space-x-2">

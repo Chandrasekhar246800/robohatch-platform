@@ -234,6 +234,26 @@ export class AuthService {
   }
 
   /**
+   * Verify if a reset token is valid
+   * ✅ SECURITY: Checks token validity without revealing email
+   */
+  async verifyResetToken(token: string): Promise<boolean> {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: {
+        token: hashedToken,
+        used: false,
+        expiresAt: {
+          gt: new Date(), // Token must not be expired
+        },
+      },
+    });
+
+    return !!resetToken;
+  }
+
+  /**
    * Initiate password reset process
    * ✅ SECURITY: Generates secure token and sends email
    */

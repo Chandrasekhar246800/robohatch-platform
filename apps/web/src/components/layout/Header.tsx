@@ -85,7 +85,7 @@ export const Header: React.FC = () => {
     { name: 'Home', href: '/', hideForAdmin: true },
     { name: 'Products', href: '/products', hideForAdmin: true },
     { name: 'Categories', href: '/products', hideForAdmin: true },
-    { name: 'Custom Design', href: '/login?redirect=/upload-3d-file', hideForAdmin: true },
+    { name: 'Custom Design', href: '/custom-design', hideForAdmin: true },
   ];
 
   return (

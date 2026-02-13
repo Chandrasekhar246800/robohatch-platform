@@ -121,16 +121,40 @@ export default function CustomDesignPage() {
 
     setIsSubmitting(true);
     try {
-      // TODO: Implement API call to submit custom design
-      console.log('Submitting custom design:', formData);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirect to success page or orders
-      router.push('/orders?new=custom-design');
+      // Prepare the request data
+      const requestData = {
+        name: formData.name,
+        description: formData.description,
+        material: formData.material,
+        color: formData.color,
+        size: formData.size === 'custom' ? formData.customDimensions : sizes.find(s => s.id === formData.size)?.dimensions,
+        quantity: formData.quantity,
+        fileUrl: formData.file ? formData.file.name : undefined, // TODO: Implement S3 upload
+        category: formData.category,
+      };
+
+      const response = await fetch(`${apiUrl}/api/custom-designs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Success - redirect to orders page
+        router.push('/orders?new=custom-design');
+      } else {
+        throw new Error(data.message || 'Failed to submit custom design');
+      }
     } catch (error) {
       console.error('Failed to submit design:', error);
+      setErrors({ submit: error instanceof Error ? error.message : 'Failed to submit custom design. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }

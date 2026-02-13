@@ -94,8 +94,13 @@ export default function TermsPage() {
           
           <h3 className="text-lg font-semibold text-gray-800 mb-3">5.1 Pricing</h3>
           <p className="text-gray-700 mb-4">
-            All prices are listed in Indian Rupees (INR) and include applicable taxes unless otherwise stated. We reserve the right to change prices at any time without prior notice. Price changes will not affect orders already placed.
+            All prices are listed in Indian Rupees (INR) and <strong>include 18% GST</strong> as applicable under Indian tax regulations. We reserve the right to change prices at any time without prior notice. Price changes will not affect orders already placed.
           </p>
+          <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-4">
+            <p className="text-gray-800 font-medium">
+              <strong>GST Disclosure:</strong> All product prices shown on our website are <span className="text-green-600 font-bold">inclusive of 18% Goods and Services Tax (GST)</span>. The GST component is clearly displayed at checkout.
+            </p>
+          </div>
 
           <h3 className="text-lg font-semibold text-gray-800 mb-3">5.2 Payment Processing</h3>
           <p className="text-gray-700 mb-4">

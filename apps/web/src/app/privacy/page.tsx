@@ -92,6 +92,11 @@ export default function PrivacyPage() {
           <p className="text-gray-700 mb-4">
             When you make a payment, your financial information is transmitted directly to Razorpay using industry-standard encryption (SSL/TLS). Razorpay complies with PCI-DSS (Payment Card Industry Data Security Standards) to ensure secure handling of payment data.
           </p>
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-4">
+            <p className="text-gray-800 font-medium">
+              <strong>Pricing & GST:</strong> All prices displayed on our website are <span className="text-blue-600 font-bold">inclusive of 18% GST</span> as applicable under Indian tax regulations.
+            </p>
+          </div>
           <p className="text-gray-700">
             For more information about how Razorpay handles your payment information, please refer to <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Razorpay's Privacy Policy</a>.
           </p>

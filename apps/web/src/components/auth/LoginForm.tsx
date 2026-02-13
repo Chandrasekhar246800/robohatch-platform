@@ -230,10 +230,7 @@ export const LoginForm: React.FC = () => {
               <span className="text-sm text-gray-600">Remember me</span>
             </label>
 
-            <Link
-              href="/forgot-password"
-              className="text-sm text-primary hover:text-accent transition-colors"
-            >
+            <Link href="/forgot-password" className="text-sm text-primary hover:text-primary-dark transition-colors">
               Forgot password?
             </Link>
           </motion.div>

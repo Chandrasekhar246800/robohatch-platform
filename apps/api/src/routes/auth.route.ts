@@ -61,6 +61,14 @@ router.put('/profile', authMiddleware, (req, res) => authController.updateProfil
 router.post('/forgot-password', (req, res) => authController.forgotPassword(req, res));
 
 /**
+ * @route   GET /api/auth/verify-reset-token/:token
+ * @desc    Verify if reset token is valid
+ * @access  Public
+ * ✅ NEW: Token verification before reset form
+ */
+router.get('/verify-reset-token/:token', (req, res) => authController.verifyResetToken(req, res));
+
+/**
  * @route   POST /api/auth/reset-password
  * @desc    Reset password with token
  * @access  Public
