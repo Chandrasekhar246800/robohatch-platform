@@ -382,9 +382,6 @@ export default function AccountPage() {
                           <p className="font-medium text-gray-500">
                             No address added yet
                           </p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            Add Address
-                          </Button>
                         </div>
                       </div>
                     </div>

@@ -25,10 +25,6 @@ export const Footer: React.FC = () => {
     support: [
       { name: 'FAQ', href: '/faq' },
       { name: 'Shipping Policy', href: '/shipping' },
-      { 
-        name: 'Track Order', 
-        href: isAuthenticated ? '/account/orders' : '/login?redirect=/account/orders' 
-      },
     ],
     legal: [
       { name: 'Privacy Policy', href: '/privacy' },
