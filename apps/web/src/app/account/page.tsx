@@ -544,9 +544,17 @@ export default function AccountPage() {
                             <MapPin size={16} className="mr-2" />
                             Default Address
                           </label>
-                          <p className="font-medium text-gray-500">
+                          <p className="font-medium text-gray-500 mb-2">
                             No address added yet
                           </p>
+                          <Button 
+                            variant="secondary" 
+                            size="sm"
+                            onClick={() => setActiveTab('addresses')}
+                          >
+                            <Plus size={16} className="mr-2" />
+                            Add Address
+                          </Button>
                         </div>
                       </div>
                     </div>
