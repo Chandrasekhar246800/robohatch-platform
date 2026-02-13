@@ -36,9 +36,11 @@ app.set("trust proxy", 1);
 // ✅ PRODUCTION HARDENING: Initialize Sentry for error tracking
 initSentry(app);
 
-// Sentry request handler must be the first middleware
-app.use(Sentry.Handlers.requestHandler());
-app.use(Sentry.Handlers.tracingHandler());
+// Sentry request handler must be the first middleware (only if configured)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
 
 // Request ID middleware for tracing
 app.use(requestIdMiddleware);
@@ -201,8 +203,10 @@ app.use("/api/admin/categories", categoryRoutes);
 // Rate limit error handler
 app.use(rateLimitErrorHandler);
 
-// ✅ PRODUCTION HARDENING: Sentry error handler (before other error handlers)
-app.use(Sentry.Handlers.errorHandler());
+// ✅ PRODUCTION HARDENING: Sentry error handler (only if configured, before other error handlers)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // 404 handler
 app.use((req, res, next) => {
