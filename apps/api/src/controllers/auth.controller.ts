@@ -126,6 +126,46 @@ export class AuthController {
       });
     }
   }
+
+  /**
+   * Update user profile
+   * PUT /api/auth/profile
+   */
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated',
+        });
+      }
+
+      const { name } = req.body;
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name is required',
+        });
+      }
+
+      const user = await authService.updateProfile(userId, { name: name.trim() });
+
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: user,
+      });
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update profile',
+      });
+    }
+  }
 }
 
 export const authController = new AuthController();

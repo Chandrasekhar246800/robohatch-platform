@@ -45,4 +45,11 @@ router.post('/logout', (req, res) => authController.logout(req, res));
  */
 router.get('/profile', authMiddleware, (req, res) => authController.getProfile(req, res));
 
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile
+ * @access  Private
+ */
+router.put('/profile', authMiddleware, (req, res) => authController.updateProfile(req, res));
+
 export default router;

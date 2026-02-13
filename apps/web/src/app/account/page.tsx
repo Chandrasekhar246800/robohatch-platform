@@ -25,7 +25,7 @@ import { apiClient } from '@/lib/api-client';
 
 export default function AccountPage() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout, setAuth } = useAuthStore();
   const { user, loading, error, refetch } = useUserProfile();
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'uploads'>(
     'profile'
@@ -33,6 +33,11 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const [updateSuccess, setUpdateSuccess] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -68,6 +73,55 @@ export default function AccountPage() {
   const handleLogout = () => {
     logout();
     router.push('/');
+  };
+
+  const handleEditClick = () => {
+    setEditName(user?.name || '');
+    setIsEditing(true);
+    setUpdateError('');
+    setUpdateSuccess('');
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditName('');
+    setUpdateError('');
+    setUpdateSuccess('');
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!editName.trim()) {
+      setUpdateError('Name cannot be empty');
+      return;
+    }
+
+    setUpdateLoading(true);
+    setUpdateError('');
+    setUpdateSuccess('');
+
+    try {
+      const response = await apiClient.updateProfile({ name: editName.trim() });
+      
+      if (response.success && response.data) {
+        // Update auth store with new user data
+        setAuth(response.data, '');
+        setUpdateSuccess('Profile updated successfully!');
+        setIsEditing(false);
+        
+        // Refetch profile to ensure consistency
+        setTimeout(() => {
+          refetch();
+          setUpdateSuccess('');
+        }, 2000);
+      } else {
+        setUpdateError(response.message || 'Failed to update profile');
+      }
+    } catch (err: any) {
+      console.error('Update profile error:', err);
+      setUpdateError('Failed to update profile. Please try again.');
+    } finally {
+      setUpdateLoading(false);
+    }
   };
 
   if (!isAuthenticated) {
@@ -203,17 +257,48 @@ export default function AccountPage() {
                     <div className="flex justify-between items-start mb-6">
                       <h2 className="text-2xl font-bold">Profile Information</h2>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="secondary" 
-                          onClick={refetch}
-                          disabled={loading}
-                        >
-                          {loading ? (
-                            <Loader size={16} className="mr-2 animate-spin" />
-                          ) : null}
-                          Refresh
-                        </Button>
-                        <Button variant="secondary">Edit Profile</Button>
+                        {!isEditing && (
+                          <>
+                            <Button 
+                              variant="secondary" 
+                              onClick={refetch}
+                              disabled={loading}
+                            >
+                              {loading ? (
+                                <Loader size={16} className="mr-2 animate-spin" />
+                              ) : null}
+                              Refresh
+                            </Button>
+                            <Button variant="secondary" onClick={handleEditClick}>
+                              Edit Profile
+                            </Button>
+                          </>
+                        )}
+                        {isEditing && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              onClick={handleCancelEdit}
+                              disabled={updateLoading}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              variant="primary" 
+                              onClick={handleUpdateProfile}
+                              disabled={updateLoading}
+                            >
+                              {updateLoading ? (
+                                <>
+                                  <Loader size={16} className="mr-2 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                'Save Changes'
+                              )}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -227,6 +312,26 @@ export default function AccountPage() {
                       </motion.div>
                     )}
 
+                    {updateError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm"
+                      >
+                        {updateError}
+                      </motion.div>
+                    )}
+
+                    {updateSuccess && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm"
+                      >
+                        {updateSuccess}
+                      </motion.div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
@@ -234,7 +339,18 @@ export default function AccountPage() {
                             <User size={16} className="mr-2" />
                             Full Name
                           </label>
-                          <p className="font-medium">{user.name || 'Not set'}</p>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="Enter your name"
+                              disabled={updateLoading}
+                            />
+                          ) : (
+                            <p className="font-medium">{user.name || 'Not set'}</p>
+                          )}
                         </div>
 
                         <div>
@@ -243,20 +359,21 @@ export default function AccountPage() {
                             Email Address
                           </label>
                           <p className="font-medium">{user.email}</p>
-                        </div>
-
-                        <div>
-                          <label className="flex items-center text-sm text-gray-600 mb-2">
-                            <User size={16} className="mr-2" />
-                            Account Type
-                          </label>
-                          <Badge variant={user.role === 'ADMIN' ? 'danger' : 'success'}>
-                            {user.role}
-                          </Badge>
+                          <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                         </div>
                       </div>
 
                       <div className="space-y-4">
+                        <div>
+                          <label className="flex items-center text-sm text-gray-600 mb-2">
+                            <Calendar size={16} className="mr-2" />
+                            Member Since
+                          </label>
+                          <p className="font-medium">
+                            {formatDate(user.createdAt)}
+                          </p>
+                        </div>
+
                         <div>
                           <label className="flex items-center text-sm text-gray-600 mb-2">
                             <MapPin size={16} className="mr-2" />
@@ -267,19 +384,6 @@ export default function AccountPage() {
                           </p>
                           <Button variant="ghost" size="sm" className="mt-2">
                             Add Address
-                          </Button>
-                        </div>
-
-                        <div>
-                          <label className="flex items-center text-sm text-gray-600 mb-2">
-                            <Phone size={16} className="mr-2" />
-                            Phone Number
-                          </label>
-                          <p className="font-medium text-gray-500">
-                            Not set
-                          </p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            Add Phone
                           </Button>
                         </div>
                       </div>

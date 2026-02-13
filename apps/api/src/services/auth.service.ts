@@ -205,6 +205,41 @@ export class AuthService {
 
     return user;
   }
+
+  async updateProfile(userId: string, data: { name?: string }) {
+    try {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: data.name,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+      });
+
+      console.log('✅ User profile updated:', user.email);
+
+      return user;
+    } catch (error) {
+      console.error('❌ Update profile error:', error);
+      throw new Error('Failed to update profile');
+    }
+  }
+}
+
+export const authService = new AuthService();
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return user;
+  }
 }
 
 export const authService = new AuthService();

@@ -304,6 +304,24 @@ class ApiClient {
     }
   }
 
+  async updateProfile(data: { name: string }) {
+    try {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/profile`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update profile',
+      };
+    }
+  }
+
   async logout(): Promise<void> {
     try {
       // Call backend to clear httpOnly cookie
