@@ -27,6 +27,9 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 4. ✅ Replaced mock orders with real API data in user account
 5. ✅ Integrated WhatsApp notifications for orders and contact forms
 6. ✅ Complete product deletion (Database + S3 cleanup)
+7. ✅ **NEW: Complete Wishlist System** (Backend API + Frontend UI + Header integration)
+8. ✅ **NEW: User Profile Editing** (Edit name field with save/cancel functionality)
+9. ✅ **NEW: Removed Account Type** field from user profile display
 
 ---
 
@@ -80,7 +83,7 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 
 ## 📊 Database Schema Analysis
 
-### **Current Tables (13)**
+### **Current Tables (15)**
 
 1. **User**
    - Fields: id, email, password, name, role, timestamps
@@ -155,6 +158,19 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 14. **Upload**
     - Fields: id, userId, fileName, fileUrl, status, timestamps
     - Statuses: PENDING, APPROVED, REJECTED
+
+15. **Wishlist** ✨ **NEW**
+    - Fields: id, userId (unique), createdAt, updatedAt
+    - Relations: WishlistItems (one-to-many)
+    - Purpose: Store user's saved products for later purchase
+    - One wishlist per user (userId unique constraint)
+
+16. **WishlistItem** ✨ **NEW**
+    - Fields: id, wishlistId, productId, createdAt
+    - Relations: Wishlist (many-to-one), Product (many-to-one)
+    - Unique constraint: [wishlistId, productId] (prevents duplicates)
+    - Indexed on: wishlistId, productId
+    - Cascade delete with wishlist
 
 ---
 
@@ -423,12 +439,14 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
    - ✅ Real order data
 
 8. **User Account** (/account)
-   - Profile tab: user info, stats
+   - Profile tab: user info, editable name field ✨ **NEW**
+   - Edit mode with Save/Cancel buttons ✨ **NEW**
    - Orders tab: order history with real data ✨ **FIXED TODAY**
    - Uploads tab: custom designs (placeholder)
    - Logout functionality
    - ✅ Real API data
    - ✅ No mock data
+   - ✅ Account Type field removed from display
 
 9. **Admin Dashboard** (/admin)
    - Product management table
@@ -464,10 +482,21 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
     - ✅ Stores in database
     - ✅ WhatsApp notification integration
 
+14. **Wishlist** (/wishlist) ✨ **NEW**
+    - Display saved products in grid layout
+    - Product cards with image, name, price
+    - "Add to Cart" button for each product
+    - "Remove" button to delete from wishlist
+    - "Clear All" button to empty wishlist
+    - Empty state with "Browse Products" CTA
+    - Loading state with spinner
+    - Real-time sync with backend
+    - Auth-only feature (redirects to login if not authenticated)
+
 ### **Components:**
-✅ Header with navigation
+✅ Header with navigation (includes wishlist badge) ✨ **UPDATED**
 ✅ Footer with links
-✅ Product card component
+✅ Product card component (with heart icon toggle for wishlist) ✨ **UPDATED**
 ✅ Cart preview dropdown
 ✅ Loading skeletons
 ✅ Toast notifications
@@ -476,6 +505,7 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 ✅ Pagination
 ✅ Empty states
 ✅ Error boundaries
+✅ Wishlist count badges (header desktop, mobile, dropdown) ✨ **NEW**
 
 ### **Responsive Design:**
 ✅ Mobile-first approach
@@ -496,6 +526,7 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
 - `GET /api/auth/profile` - Get current user profile
+- `PUT /api/auth/profile` - Update user profile (name) ✨ **NEW**
 - `POST /api/auth/refresh` - Refresh JWT token
 
 #### **Products**
@@ -532,6 +563,12 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 - `POST /api/payment/failure` - Handle payment failure
 - `GET /api/payment/status/:orderId` - Get payment status
 - `GET /api/payment/order/:orderId` - Get order with payment details
+
+#### **Wishlist** ✨ **NEW**
+- `GET /api/wishlist` - Get user's wishlist with populated products
+- `POST /api/wishlist/items` - Add product to wishlist
+- `DELETE /api/wishlist/items/:itemId` - Remove item from wishlist
+- `DELETE /api/wishlist/clear` - Clear entire wishlist
 
 #### **Custom Designs**
 - `GET /api/custom-designs` - List user's custom designs
@@ -659,6 +696,25 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
    - **Problem:** localStorage had auth data but backend returned 401
    - **Cause:** Token expired but frontend didn't clear state
    - **Fix:** Aggressive logout on ANY profile check failure in providers.tsx
+
+8. ✅ **Wishlist Feature Implementation**
+   - **Feature:** Complete wishlist system like Flipkart/Amazon
+   - **Backend:** Wishlist + WishlistItem models, 4 API endpoints (GET, POST, DELETE item, DELETE clear)
+   - **Frontend:** Zustand store with localStorage persistence, heart icons in ProductCard, functional /wishlist page
+   - **Integration:** Header badge with wishlist count, auto-fetch on auth, optimistic UI updates
+   - **Status:** Fully deployed and functional
+
+9. ✅ **Profile Edit Feature**
+   - **Feature:** User can edit their name in profile page
+   - **Backend:** PUT /api/auth/profile endpoint, auth.service.updateProfile() method
+   - **Frontend:** Edit mode with input field, Save/Cancel buttons, success/error messages
+   - **Integration:** Updates auth store, refetches profile after save
+   - **Status:** Fully deployed and functional
+
+10. ✅ **Removed Account Type Field**
+    - **Change:** Account Type (USER/ADMIN badge) removed from profile display
+    - **Reason:** User requested "no need of account type in profile card"
+    - **Status:** Deployed
 
 ### **Remaining Issues:**
 
@@ -1123,7 +1179,7 @@ PORT=8080
 
 5. **User Experience**
    - Product reviews and ratings
-   - Wishlist functionality (UI exists, backend needed)
+   - ✅ **Wishlist functionality** ✨ **COMPLETED TODAY**
    - Order tracking (shipment tracking)
    - Multiple addresses (save multiple shipping addresses)
    - Forgot password functionality
