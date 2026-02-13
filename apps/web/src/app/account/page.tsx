@@ -370,7 +370,7 @@ export default function AccountPage() {
                             Member Since
                           </label>
                           <p className="font-medium">
-                            {formatDate(user.createdAt)}
+                            {user.createdAt ? formatDate(user.createdAt) : 'Not available'}
                           </p>
                         </div>
 
