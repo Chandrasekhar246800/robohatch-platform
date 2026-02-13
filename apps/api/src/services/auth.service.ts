@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { Response } from 'express';
+import { emailService } from './email.service';
 
 // 🔒 SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
 if (!process.env.JWT_SECRET) {
@@ -229,6 +231,103 @@ export class AuthService {
       console.error('❌ Update profile error:', error);
       throw new Error('Failed to update profile');
     }
+  }
+
+  /**
+   * Initiate password reset process
+   * ✅ SECURITY: Generates secure token and sends email
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const normalizedEmail = email.toLowerCase();
+
+    // Always return success to prevent email enumeration
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      // Don't reveal if email exists - prevents email enumeration attack
+      console.log(`⚠️  Password reset requested for non-existent email: ${normalizedEmail}`);
+      return;
+    }
+
+    // Generate secure random token (32 bytes = 64 hex characters)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Hash token before storing (prevents token theft from database)
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Token expires in 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Delete any existing tokens for this email
+    await prisma.passwordResetToken.deleteMany({
+      where: { email: normalizedEmail },
+    });
+
+    // Store hashed token
+    await prisma.passwordResetToken.create({
+      data: {
+        email: normalizedEmail,
+        token: hashedToken,
+        expiresAt,
+      },
+    });
+
+    // Send email with unhashed token (only seen by user)
+    await emailService.sendPasswordReset(normalizedEmail, resetToken);
+
+    console.log(`✅ Password reset token generated for: ${normalizedEmail}`);
+  }
+
+  /**
+   * Reset password using token
+   * ✅ SECURITY: Validates token, prevents reuse
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Hash the provided token to match database
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find valid token (not used, not expired)
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: {
+        token: hashedToken,
+        used: false,
+        expiresAt: {
+          gt: new Date(), // Token must not be expired
+        },
+      },
+    });
+
+    if (!resetToken) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email: resetToken.email },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    // Update password and mark token as used (atomic transaction)
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { used: true },
+      }),
+    ]);
+
+    console.log(`✅ Password reset successful for: ${user.email}`);
   }
 }
 

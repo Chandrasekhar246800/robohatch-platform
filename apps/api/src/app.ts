@@ -3,6 +3,8 @@ import cors from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import environment from "./config/environment";
+import { initSentry } from "./config/sentry";
+import Sentry from "@sentry/node";
 import {
   securityHeaders,
   generalRateLimiter,
@@ -12,6 +14,7 @@ import {
   productionSecurityHeaders,
   rateLimitErrorHandler,
 } from "./middlewares/security.middleware";
+import { requestIdMiddleware } from "./middlewares/requestId.middleware";
 import testRoutes from "./routes/test.route";
 import authRoutes from "./routes/auth.route";
 import cartRoutes from "./routes/cart.route";
@@ -30,7 +33,15 @@ import addressRoutes from "./routes/address.route";
 const app = express();
 app.set("trust proxy", 1);
 
+// ✅ PRODUCTION HARDENING: Initialize Sentry for error tracking
+initSentry(app);
 
+// Sentry request handler must be the first middleware
+app.use(Sentry.Handlers.requestHandler());
+app.use(Sentry.Handlers.tracingHandler());
+
+// Request ID middleware for tracing
+app.use(requestIdMiddleware);
 
 // Security middleware - Apply first
 app.use(securityHeaders);
@@ -92,13 +103,67 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Handle preflight OPTIONS requests BEFORE rate limiting
 app.options('*', cors());
 
-// Health check endpoint (no rate limiting)
-app.get("/health", (_, res) => {
-  res.status(200).json({ 
+// Enhanced health check endpoint (no rate limiting)
+// ✅ PRODUCTION HARDENING: Comprehensive health checks
+app.get("/health", async (_, res) => {
+  const health: any = {
     status: "OK",
     environment: environment.NODE_ENV,
     timestamp: new Date().toISOString(),
-  });
+    uptime: process.uptime(),
+    checks: {},
+  };
+
+  try {
+    // 1. Database connectivity check
+    const { prisma } = await import('./config/prisma');
+    await prisma.$queryRaw`SELECT 1`;
+    health.checks.database = { status: 'connected', message: 'MySQL connection healthy' };
+  } catch (error: any) {
+    health.checks.database = { status: 'error', message: error.message };
+    health.status = 'DEGRADED';
+  }
+
+  try {
+    // 2. Razorpay credentials check
+    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+      health.checks.razorpay = { status: 'configured', message: 'Payment gateway credentials present' };
+    } else {
+      health.checks.razorpay = { status: 'missing', message: 'Payment gateway not configured' };
+      health.status = 'DEGRADED';
+    }
+  } catch (error: any) {
+    health.checks.razorpay = { status: 'error', message: error.message };
+  }
+
+  try {
+    // 3. S3 connectivity check
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      health.checks.s3 = { status: 'configured', message: 'S3 storage credentials present' };
+    } else {
+      health.checks.s3 = { status: 'missing', message: 'S3 storage not configured' };
+    }
+  } catch (error: any) {
+    health.checks.s3 = { status: 'error', message: error.message };
+  }
+
+  try {
+    // 4. Email service check
+    if (process.env.SENDGRID_API_KEY) {
+      health.checks.email = { status: 'configured', message: 'Email service configured' };
+    } else {
+      health.checks.email = { status: 'missing', message: 'Email service not configured' };
+      if (process.env.NODE_ENV === 'production') {
+        health.status = 'DEGRADED';
+      }
+    }
+  } catch (error: any) {
+    health.checks.email = { status: 'error', message: error.message };
+  }
+
+  // Set HTTP status based on health
+  const httpStatus = health.status === 'OK' ? 200 : 503;
+  res.status(httpStatus).json(health);
 });
 
 // Apply general rate limiting to all API routes
@@ -136,6 +201,9 @@ app.use("/api/admin/categories", categoryRoutes);
 // Rate limit error handler
 app.use(rateLimitErrorHandler);
 
+// ✅ PRODUCTION HARDENING: Sentry error handler (before other error handlers)
+app.use(Sentry.Handlers.errorHandler());
+
 // 404 handler
 app.use((req, res, next) => {
   console.warn(`⚠️  404 - Endpoint not found: ${req.method} ${req.path}`);
@@ -149,9 +217,21 @@ app.use((req, res, next) => {
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Error:', err);
+  console.error(`❌ Error [${(req as any).requestId || 'no-id'}]:`, err.message);
   console.error(`   Path: ${req.method} ${req.path}`);
   console.error(`   Origin: ${req.headers.origin || 'none'}`);
+  
+  // Capture error in Sentry (if not already captured)
+  if (process.env.SENTRY_DSN && !res.headersSent) {
+    Sentry.captureException(err, {
+      extra: {
+        path: req.path,
+        method: req.method,
+        origin: req.headers.origin,
+        requestId: (req as any).requestId,
+      },
+    });
+  }
   
   // Handle CORS errors
   if (err.message === 'Not allowed by CORS') {

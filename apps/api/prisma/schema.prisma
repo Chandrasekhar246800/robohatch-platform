@@ -264,6 +264,20 @@ model WishlistItem {
   @@index([productId])
 }
 
+// ✅ NEW MODEL: Password Reset Token for Forgot Password
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique // Hashed token
+  expiresAt DateTime
+  used      Boolean  @default(false) // Prevent reuse
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+}
+
 
 enum Role {
   USER

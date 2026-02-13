@@ -184,6 +184,7 @@ export class WebhookController {
 
   /**
    * Handle payment.failed event
+   * ✅ CRITICAL FIX: Restore stock when payment fails
    */
   private async handlePaymentFailed(payload: any) {
     try {
@@ -196,9 +197,20 @@ export class WebhookController {
         reason: errorReason,
       });
 
-      // Find payment record
+      // Find payment record with order and items
       const payment = await prisma.payment.findUnique({
         where: { gatewayOrderId: razorpayOrderId },
+        include: {
+          order: {
+            include: {
+              items: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!payment) {
@@ -206,15 +218,38 @@ export class WebhookController {
         return;
       }
 
-      // Update payment status to FAILED
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'FAILED',
-        },
+      // 🔒 PROTECTION: Only restore stock if payment is not already FAILED
+      if (payment.status === 'FAILED') {
+        console.log('✓ Payment already marked as failed (idempotent):', razorpayOrderId);
+        return;
+      }
+
+      // ✅ ATOMIC TRANSACTION: Mark payment as failed + restore stock
+      await prisma.$transaction(async (tx) => {
+        // Update payment status to FAILED
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'FAILED',
+          },
+        });
+
+        // ✅ RESTORE STOCK: Add items back to inventory
+        for (const item of payment.order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+          });
+
+          console.log(`✅ Stock restored: ${item.product.name} +${item.quantity} (Payment Failed)`);
+        }
       });
 
-      console.log('✓ Payment marked as failed via webhook:', razorpayOrderId);
+      console.log('✓ Payment marked as failed and stock restored via webhook:', razorpayOrderId);
     } catch (error: any) {
       console.error('❌ Error handling payment.failed:', error);
       throw error;

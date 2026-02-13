@@ -2,9 +2,16 @@ import sgMail from '@sendgrid/mail';
 import { prisma } from '../config/prisma';
 
 // 🔒 SECURITY: Validate SendGrid credentials at startup
+// ✅ PRODUCTION REQUIREMENT: Fail fast if email not configured in production
 if (!process.env.SENDGRID_API_KEY) {
-  console.error('🚨 WARNING: SENDGRID_API_KEY not set - Email notifications disabled');
-  console.error('   Set SENDGRID_API_KEY environment variable to enable emails');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('🚨 CRITICAL: SENDGRID_API_KEY not set in production!');
+    console.error('   Email notifications are REQUIRED for production.');
+    console.error('   Set SENDGRID_API_KEY environment variable to fix this.');
+    throw new Error('SENDGRID_API_KEY is required in production');
+  } else {
+    console.warn('⚠️  WARNING: SENDGRID_API_KEY not set - Email notifications disabled in development');
+  }
 }
 
 const SENDGRID_ENABLED = !!process.env.SENDGRID_API_KEY;
@@ -16,7 +23,7 @@ if (SENDGRID_ENABLED) {
   console.log('✅ SendGrid email service initialized');
   console.log(`   From: ${FROM_NAME} <${FROM_EMAIL}>`);
 } else {
-  console.warn('⚠️  Email notifications DISABLED - emails will be logged only');
+  console.warn('⚠️  Email notifications DISABLED - emails will be logged only (DEV MODE)');
 }
 
 export class EmailService {
@@ -474,6 +481,190 @@ export class EmailService {
       }
     } catch (error: any) {
       console.error('❌ Failed to send refund email:', error.message);
+    }
+  }
+
+  /**
+   * Send password reset email
+   * ✅ NEW: For forgot password functionality
+   */
+  async sendPasswordReset(email: string, resetToken: string): Promise<void> {
+    try {
+      const resetLink = `https://robohatch.in/reset-password?token=${resetToken}`;
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: #1a1a1a; color: #fff; padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; background: #f9f9f9; }
+            .button { display: inline-block; background: #1a1a1a; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #e5e5e5; }
+            .warning { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Password Reset Request</h1>
+            </div>
+            <div class="content">
+              <p>Hi there,</p>
+              <p>We received a request to reset your RoboHatch account password.</p>
+              <p>Click the button below to reset your password:</p>
+              
+              <div style="text-align: center;">
+                <a href="${resetLink}" class="button">
+                  Reset Password
+                </a>
+              </div>
+              
+              <p style="font-size: 13px; color: #666;">
+                Or copy and paste this link into your browser:<br>
+                <a href="${resetLink}">${resetLink}</a>
+              </p>
+              
+              <div class="warning">
+                <strong>⏱️ Important:</strong><br>
+                • This link will expire in 1 hour<br>
+                • If you didn't request this, please ignore this email<br>
+                • Your password will remain unchanged unless you click the link above
+              </div>
+              
+              <p style="margin-top: 20px; font-size: 13px; color: #666;">
+                If you have any questions or concerns, please contact our support team.
+              </p>
+            </div>
+            <div class="footer">
+              <p><strong>RoboHatch - Premium 3D Printed Products</strong></p>
+              <p>Urbanrise Revolution 1, C-Block - 726, Padur, Chennai-603103</p>
+              <p>📞 +91 95055 51727 | ✉️ founder@robohatch.in</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const msg = {
+        to: email,
+        from: {
+          email: FROM_EMAIL,
+          name: FROM_NAME,
+        },
+        subject: 'Reset Your Password - RoboHatch',
+        html,
+      };
+
+      if (SENDGRID_ENABLED) {
+        await sgMail.send(msg);
+        console.log(`✅ Password reset email sent to ${email}`);
+      } else {
+        console.log(`📧 [MOCK] Password reset email would be sent to ${email}`);
+        console.log(`   Reset link: ${resetLink}`);
+      }
+    } catch (error: any) {
+      console.error('❌ Failed to send password reset email:', error.message);
+      throw error; // Throw here because password reset must complete
+    }
+  }
+
+  /**
+   * Send order cancellation email
+   * ✅ NEW: Notify user when order is cancelled
+   */
+  async sendOrderCancellation(orderId: string, reason?: string): Promise<void> {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          user: true,
+          items: {
+            include: { product: true }
+          },
+          payment: true,
+        }
+      });
+
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      const refundInfo =
+        order.payment && order.payment.status === 'CAPTURED'
+          ? `<div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;">
+              <strong>💰 Refund Information:</strong><br>
+              Your refund of ₹${order.total} will be processed within 5-7 business days.<br>
+              The amount will be credited to your original payment method.
+            </div>`
+          : '';
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: #dc2626; color: #fff; padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; background: #f9f9f9; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #e5e5e5; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>❌ Order Cancelled</h1>
+            </div>
+            <div class="content">
+              <p>Hi <strong>${order.user.name || 'Valued Customer'}</strong>,</p>
+              <p>Your order #${order.id.substring(0, 8)} has been cancelled.</p>
+              
+              ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+              
+              ${refundInfo}
+              
+              <p style="margin-top: 20px;">
+                <strong>Order Total:</strong> ₹${order.total}<br>
+                <strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString('en-IN')}
+              </p>
+              
+              <p>We're sorry to see this order cancelled. If you have any questions or need assistance with a new order, please don't hesitate to contact us.</p>
+              
+              <p style="margin-top: 20px; font-size: 13px; color: #666;">
+                If you didn't request this cancellation, please contact us immediately at:<br>
+                📞 +91 95055 51727 | ✉️ founder@robohatch.in
+              </p>
+            </div>
+            <div class="footer">
+              <p><strong>RoboHatch - Premium 3D Printed Products</strong></p>
+              <p>Urbanrise Revolution 1, C-Block - 726, Padur, Chennai-603103</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const msg = {
+        to: order.user.email,
+        from: {
+          email: FROM_EMAIL,
+          name: FROM_NAME,
+        },
+        subject: `Order Cancelled #${order.id.substring(0, 8)} - RoboHatch`,
+        html,
+      };
+
+      if (SENDGRID_ENABLED) {
+        await sgMail.send(msg);
+        console.log(`✅ Cancellation email sent to ${order.user.email}`);
+      } else {
+        console.log(`📧 [MOCK] Cancellation email would be sent to ${order.user.email}`);
+      }
+    } catch (error: any) {
+      console.error('❌ Failed to send cancellation email:', error.message);
     }
   }
 }

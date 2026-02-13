@@ -145,6 +145,12 @@ class OrderService {
       throw new Error(`Invalid status transition from ${order.status} to ${status}`);
     }
 
+    // ✅ STOCK REVERSAL: If cancelling a paid/processing order, restore stock
+    if (status === OrderStatus.CANCELLED && ['PAID', 'CREATED', 'PROCESSING'].includes(currentStatus)) {
+      await this.restoreStockForOrder(orderId);
+      console.log(`✅ Stock restored for cancelled order: ${orderId}`);
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: { status },
@@ -186,6 +192,88 @@ class OrderService {
       completedOrders,
       totalSpent: totalSpent._sum.total || 0,
     };
+  }
+
+  /**
+   * Restore stock for an order (used for cancellations and failures)
+   * ✅ CRITICAL: Prevents double-restoration with transaction
+   */
+  async restoreStockForOrder(orderId: string) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    // ✅ ATOMIC TRANSACTION: Restore all items
+    await prisma.$transaction(async (tx: any) => {
+      for (const item of order.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+
+        console.log(`📦 Stock restored: ${item.product.name} +${item.quantity} (Order ${orderId} cancelled)`);
+      }
+    });
+  }
+
+  /**
+   * Cancel order (user-facing endpoint)
+   * ✅ CRITICAL: Validates cancellation is allowed and restores stock
+   */
+  async cancelOrder(orderId: string, userId: string, reason?: string) {
+    const order = await this.getOrderById(orderId, userId);
+
+    // Validate order can be cancelled
+    const cancellableStatuses = ['CREATED', 'PENDING', 'PAID', 'PROCESSING'];
+    if (!cancellableStatuses.includes(order.status)) {
+      throw new Error(`Cannot cancel order in ${order.status} status`);
+    }
+
+    // Check if order has been shipped
+    if (order.status === 'SHIPPED' || order.status === 'OUT_FOR_DELIVERY') {
+      throw new Error('Cannot cancel shipped orders. Please contact support.');
+    }
+
+    // Restore stock and update status
+    await this.restoreStockForOrder(orderId);
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.CANCELLED },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    console.log(`✅ Order cancelled: ${orderId}, Reason: ${reason || 'User requested'}`);
+
+    // Send cancellation email (non-blocking)
+    if (emailService && typeof emailService.sendOrderCancellation === 'function') {
+      emailService.sendOrderCancellation(orderId, reason).catch((error: any) => {
+        console.error('⚠️  Cancellation email failed (non-critical):', error.message);
+      });
+    }
+
+    return updatedOrder;
   }
 }
 

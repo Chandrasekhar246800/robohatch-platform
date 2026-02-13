@@ -166,6 +166,76 @@ export class AuthController {
       });
     }
   }
+
+  /**
+   * Request password reset
+   * ✅ NEW: Forgot password functionality
+   */
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required',
+        });
+      }
+
+      // Always return success to prevent email enumeration
+      await authService.forgotPassword(email);
+
+      res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a password reset link.',
+      });
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      // Always return success for security (prevent email enumeration)
+      res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a password reset link.',
+      });
+    }
+  }
+
+  /**
+   * Reset password with token
+   * ✅ NEW: Reset password functionality
+   */
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token and new password are required',
+        });
+      }
+
+      // Validate password strength
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 8 characters long',
+        });
+      }
+
+      await authService.resetPassword(token, password);
+
+      res.json({
+        success: true,
+        message: 'Password reset successful. You can now log in with your new password.',
+      });
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Invalid or expired reset token',
+      });
+    }
+  }
 }
 
 export const authController = new AuthController();

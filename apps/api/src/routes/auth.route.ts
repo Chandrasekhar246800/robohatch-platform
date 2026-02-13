@@ -52,4 +52,20 @@ router.get('/profile', authMiddleware, (req, res) => authController.getProfile(r
  */
 router.put('/profile', authMiddleware, (req, res) => authController.updateProfile(req, res));
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request password reset email
+ * @access  Public
+ * ✅ NEW: Forgot password functionality
+ */
+router.post('/forgot-password', (req, res) => authController.forgotPassword(req, res));
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password with token
+ * @access  Public
+ * ✅ NEW: Reset password functionality
+ */
+router.post('/reset-password', (req, res) => authController.resetPassword(req, res));
+
 export default router;

@@ -46,14 +46,35 @@ server.on('error', (error: NodeJS.ErrnoException) => {
 });
 
 // Graceful shutdown
-const gracefulShutdown = (signal: string) => {
+// ✅ PRODUCTION HARDENING: Enhanced graceful shutdown with database cleanup
+const gracefulShutdown = async (signal: string) => {
   console.log(`\n⚠️  ${signal} received. Starting graceful shutdown...`);
   
+  // Close HTTP server first
   server.close(() => {
     console.log('✅ HTTP server closed');
-    console.log('👋 Shutdown complete');
-    process.exit(0);
   });
+  
+  // Close database connections
+  try {
+    const { prisma } = await import('./config/prisma');
+    await prisma.$disconnect();
+    console.log('✅ Database connections closed');
+  } catch (error) {
+    console.error('❌ Error closing database:', error);
+  }
+  
+  // Close Sentry client
+  try {
+    const Sentry = await import('@sentry/node');
+    await Sentry.close(2000);
+    console.log('✅ Sentry client closed');
+  } catch (error) {
+    // Sentry might not be initialized
+  }
+  
+  console.log('👋 Shutdown complete');
+  process.exit(0);
   
   // Force shutdown after 10 seconds
   setTimeout(() => {
@@ -67,12 +88,25 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+// ✅ PRODUCTION HARDENING: Report to Sentry in production
+process.on('unhandledRejection', async (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise);
   console.error('❌ Reason:', reason);
+  
+  // Report to Sentry if available
+  if (process.env.SENTRY_DSN) {
+    try {
+      const Sentry = await import('@sentry/node');
+      Sentry.captureException(reason, {
+        extra: { type: 'unhandledRejection' },
+      });
+    } catch (e) {
+      // Sentry not available
+    }
+  }
+  
   if (environment.isProduction) {
     // In production, log but don't crash immediately
-    // Consider sending to error tracking service (Sentry)
     console.error('⚠️  Server continuing in production mode');
   } else {
     process.exit(1);
@@ -80,9 +114,24 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+// ✅ PRODUCTION HARDENING: Report to Sentry before exiting
+process.on('uncaughtException', async (error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('❌ Stack:', error.stack);
+  
+  // Report to Sentry if available
+  if (process.env.SENTRY_DSN) {
+    try {
+      const Sentry = await import('@sentry/node');
+      Sentry.captureException(error, {
+        extra: { type: 'uncaughtException' },
+      });
+      await Sentry.close(2000); // Wait 2s for Sentry to send
+    } catch (e) {
+      // Sentry not available
+    }
+  }
+  
   // Always exit on uncaught exceptions
   process.exit(1);
 });
