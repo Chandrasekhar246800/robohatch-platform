@@ -160,7 +160,7 @@ export class ProductController {
       });
 
       // Transform response to include single category instead of categories array
-      const transformedProducts = products.map(product => {
+      const transformedProducts = products.map((product: any) => {
         const transformed = {
           ...product,
           category: product.categories[0]?.category || null,
@@ -382,7 +382,7 @@ export class ProductController {
 
       // Delete images from S3 bucket
       if (product.images && product.images.length > 0) {
-        const deletePromises = product.images.map(async (image) => {
+        const deletePromises = product.images.map(async (image: any) => {
           try {
             // Extract S3 key from URL (e.g., "products/xyz.jpg")
             const url = new URL(image.url);

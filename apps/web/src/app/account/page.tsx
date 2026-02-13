@@ -20,8 +20,8 @@ import {
 import { Button, Badge, Card, CardContent, AccountProfileSkeleton } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { mockOrders } from '@/lib/mock-data';
 import { formatPrice, formatDate } from '@/lib/utils';
+import { apiClient } from '@/lib/api-client';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -30,6 +30,9 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'uploads'>(
     'profile'
   );
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -37,6 +40,30 @@ export default function AccountPage() {
       router.push('/login');
     }
   }, [isAuthenticated, router]);
+
+  // Fetch user orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!isAuthenticated || activeTab !== 'orders') return;
+      
+      setOrdersLoading(true);
+      setOrdersError('');
+      try {
+        const response = await apiClient.getOrders();
+        if (response.success && response.data) {
+          setOrders(response.data);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch orders:', err);
+        setOrdersError('Failed to load orders');
+        setOrders([]);
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [isAuthenticated, activeTab]);
 
   const handleLogout = () => {
     logout();
@@ -265,7 +292,7 @@ export default function AccountPage() {
                   <Card>
                     <CardContent className="p-6 text-center">
                       <div className="text-3xl font-bold text-primary mb-2">
-                        {mockOrders.length}
+                        {orders.length}
                       </div>
                       <p className="text-gray-600">Total Orders</p>
                     </CardContent>
@@ -274,7 +301,7 @@ export default function AccountPage() {
                     <CardContent className="p-6 text-center">
                       <div className="text-3xl font-bold text-primary mb-2">
                         {formatPrice(
-                          mockOrders.reduce((sum, order) => sum + order.total, 0)
+                          orders.reduce((sum, order) => sum + Number(order.total), 0)
                         )}
                       </div>
                       <p className="text-gray-600">Total Spent</p>
@@ -300,67 +327,105 @@ export default function AccountPage() {
                   <CardContent className="p-6">
                     <h2 className="text-2xl font-bold mb-6">Order History</h2>
 
-                    <div className="space-y-4">
-                      {mockOrders.map((order) => (
-                        <div
-                          key={order.id}
-                          className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <p className="font-semibold text-lg">
-                                Order #{order.id.toUpperCase()}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Placed on {formatDate(order.date)}
-                              </p>
-                            </div>
-                            <Badge variant={getStatusColor(order.status) as any}>
-                              {order.status.charAt(0).toUpperCase() +
-                                order.status.slice(1)}
-                            </Badge>
-                          </div>
+                    {ordersLoading && (
+                      <div className="flex justify-center py-12">
+                        <Loader size={32} className="animate-spin text-primary" />
+                      </div>
+                    )}
 
-                          <div className="space-y-2 mb-4">
-                            {order.items.map((item) => (
-                              <div
-                                key={item.productId}
-                                className="flex items-center space-x-3 text-sm"
-                              >
-                                <div className="relative w-12 h-12 bg-gray-100 rounded flex-shrink-0">
-                                  <Image
-                                    src={item.product.images[0]}
-                                    alt={item.product.name}
-                                    fill
-                                    className="object-cover rounded"
-                                  />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium line-clamp-1">
-                                    {item.product.name}
-                                  </p>
-                                  <p className="text-gray-600">Qty: {item.quantity}</p>
-                                </div>
+                    {ordersError && (
+                      <div className="text-center py-12">
+                        <p className="text-red-600 mb-4">{ordersError}</p>
+                        <Button onClick={() => setActiveTab('orders')} variant="secondary">
+                          Try Again
+                        </Button>
+                      </div>
+                    )}
+
+                    {!ordersLoading && !ordersError && orders.length === 0 && (
+                      <div className="text-center py-12">
+                        <Package size={64} className="mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-xl font-semibold mb-2">No Orders Yet</h3>
+                        <p className="text-gray-600 mb-6">
+                          Start shopping to see your orders here
+                        </p>
+                        <Link href="/products">
+                          <Button>Browse Products</Button>
+                        </Link>
+                      </div>
+                    )}
+
+                    {!ordersLoading && !ordersError && orders.length > 0 && (
+                      <div className="space-y-4">
+                        {orders.map((order) => (
+                          <div
+                            key={order.id}
+                            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <p className="font-semibold text-lg">
+                                  Order #{order.id.slice(0, 8).toUpperCase()}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  Placed on {formatDate(order.createdAt)}
+                                </p>
                               </div>
-                            ))}
-                          </div>
+                              <Badge variant={getStatusColor(order.status.toLowerCase()) as any}>
+                                {order.status.charAt(0).toUpperCase() +
+                                  order.status.slice(1).toLowerCase()}
+                              </Badge>
+                            </div>
 
-                          <div className="flex justify-between items-center pt-4 border-t">
-                            <p className="font-bold text-lg">
-                              Total: {formatPrice(order.total)}
-                            </p>
-                            <div className="flex gap-2">
-                              <Button variant="secondary" size="sm">
-                                View Details
-                              </Button>
-                              {order.status === 'delivered' && (
-                                <Button size="sm">Buy Again</Button>
-                              )}
+                            <div className="space-y-2 mb-4">
+                              {order.items && order.items.map((item: any) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center space-x-3 text-sm"
+                                >
+                                  <div className="relative w-12 h-12 bg-gray-100 rounded flex-shrink-0">
+                                    {item.product?.images?.[0]?.url ? (
+                                      <Image
+                                        src={item.product.images[0].url}
+                                        alt={item.product.name}
+                                        fill
+                                        className="object-cover rounded"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded">
+                                        <Package size={24} className="text-gray-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium line-clamp-1">
+                                      {item.product?.name || 'Product'}
+                                    </p>
+                                    <p className="text-gray-600">Qty: {item.quantity} × {formatPrice(Number(item.price))}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex justify-between items-center pt-4 border-t">
+                              <p className="font-bold text-lg">
+                                Total: {formatPrice(Number(order.total))}
+                              </p>
+                              <div className="flex gap-2">
+                                <Link href={`/order/success?orderId=${order.id}`}>
+                                  <Button variant="secondary" size="sm">
+                                    View Details
+                                  </Button>
+                                </Link>
+                                {order.status === 'DELIVERED' && (
+                                  <Button size="sm">Buy Again</Button>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
