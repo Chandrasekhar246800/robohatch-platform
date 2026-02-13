@@ -233,13 +233,3 @@ export class AuthService {
 }
 
 export const authService = new AuthService();
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    return user;
-  }
-}
-
-export const authService = new AuthService();
