@@ -23,6 +23,7 @@ import categoryRoutes from "./routes/category.route";
 import customDesignRoutes from "./routes/customDesign.route";
 import seedRoutes from "./routes/seed.route";
 import adminRoutes from "./routes/admin.route";
+import contactRoutes from "./routes/contact.route";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -111,6 +112,7 @@ app.use("/api/auth", authRoutes);
 // Public endpoints (with general rate limiting)
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Protected routes with sensitive operation limiting
 app.use("/api/cart", cartRoutes);

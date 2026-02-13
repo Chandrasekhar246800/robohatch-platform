@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { prisma, Prisma } from '../config/prisma';
 import { validateShippingAddress, validatePaymentVerification } from '../validators/order.validator';
 import { emailService } from './email.service';
+import whatsappService from './whatsapp.service';
 
 // 🔒 SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -358,6 +359,11 @@ export class PaymentService {
       console.error('⚠️  Email notification failed (non-critical):', error.message);
     });
 
+    // 📱 Send WhatsApp notification (non-blocking)
+    this.sendOrderWhatsAppNotification(payment.orderId).catch(error => {
+      console.error('⚠️  WhatsApp notification failed (non-critical):', error.message);
+    });
+
     return {
       success: true,
       orderId: payment.orderId,
@@ -566,4 +572,71 @@ export class PaymentService {
 
     return order;
   }
+
+  /**
+   * Send WhatsApp notification for paid order (helper method)
+   * @private
+   */
+  private async sendOrderWhatsAppNotification(orderId: string) {
+    try {
+      // Fetch complete order details
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          shippingAddress: true,
+        },
+      });
+
+      if (!order || !order.shippingAddress) {
+        console.error('Order or shipping address not found for WhatsApp notification');
+        return;
+      }
+
+      // Calculate GST breakdown
+      const subtotal = order.items.reduce((sum, item) => {
+        return sum + Number(item.price) * item.quantity;
+      }, 0);
+      const gst = Math.round(subtotal * 0.18);
+
+      // Format items for notification
+      const items = order.items.map(item => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: Number(item.price),
+      }));
+
+      // Format shipping address
+      const address = order.shippingAddress;
+      const shippingAddress = [
+        address.addressLine1,
+        address.addressLine2,
+        `${address.city}, ${address.state} - ${address.postalCode}`,
+        address.country,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      // Send notification
+      await whatsappService.sendOrderNotification({
+        orderId: order.id,
+        customerName: address.fullName,
+        customerPhone: address.phone,
+        customerEmail: address.email,
+        items,
+        subtotal,
+        gst,
+        total: Number(order.total),
+        shippingAddress,
+      });
+    } catch (error: any) {
+      console.error('Failed to send WhatsApp order notification:', error.message);
+      // Don't throw - let the payment succeed even if notification fails
+    }
+  }
 }
+
