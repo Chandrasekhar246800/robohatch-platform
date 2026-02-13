@@ -215,8 +215,8 @@ export default function PrivacyPage() {
             <p className="text-gray-700">
               <strong>RoboHatch</strong><br />
               Email: <a href="mailto:founder@robohatch.in" className="text-primary hover:underline">founder@robohatch.in</a><br />
-              Phone: <a href="tel:+919505551727" className="text-primary hover:underline">+91 95055 51727</a><br />
-              Address: Urbanrise Revolution 1, C-Block - 726, Padur, Chennai-603103, Tamil Nadu, India
+              Phone: <a href="tel:+919505551727" className="text-primary hover:underline">+91 9505551727</a><br />
+              Address: Urbanrise Revolution 1, C-Block 726, Padur, Chennai - 603103, Tamil Nadu, India
             </p>
           </div>
         </section>

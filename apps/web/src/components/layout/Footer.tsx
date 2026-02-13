@@ -145,21 +145,28 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="text-white font-semibold mb-4">Contact</h3>
             <ul className="space-y-3">
+              <li className="flex flex-col space-y-1">
+                <span className="text-sm font-semibold text-white">RoboHatch</span>
+              </li>
               <li className="flex items-start space-x-2">
                 <MapPin size={18} className="mt-0.5 flex-shrink-0" />
                 <span className="text-sm">
-                  Urbanrise Revolution 1<br />
-                  C-Block - 726<br />
-                  Padur, Chennai-603103
+                  Urbanrise Revolution 1,<br />
+                  C-Block 726, Padur,<br />
+                  Chennai - 603103
                 </span>
               </li>
               <li className="flex items-center space-x-2">
                 <Phone size={18} className="flex-shrink-0" />
-                <span className="text-sm">+91 95055 51727</span>
+                <a href="tel:+919505551727" className="text-sm hover:text-primary transition-colors">
+                  +91 9505551727
+                </a>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail size={18} className="flex-shrink-0" />
-                <span className="text-sm">founder@robohatch.in</span>
+                <a href="mailto:founder@robohatch.in" className="text-sm hover:text-primary transition-colors">
+                  founder@robohatch.in
+                </a>
               </li>
             </ul>
           </div>

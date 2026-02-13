@@ -210,7 +210,8 @@ export default function RefundPage() {
             <p className="text-gray-700">
               <strong>RoboHatch Customer Support</strong><br />
               Email: <a href="mailto:founder@robohatch.in" className="text-primary hover:underline">founder@robohatch.in</a><br />
-              Phone: <a href="tel:+919505551727" className="text-primary hover:underline">+91 95055 51727</a><br />
+              Phone: <a href="tel:+919505551727" className="text-primary hover:underline">+91 9505551727</a><br />
+              Address: Urbanrise Revolution 1, C-Block 726, Padur, Chennai - 603103<br />
               Business Hours: Monday - Saturday, 10 AM - 6 PM IST
             </p>
           </div>

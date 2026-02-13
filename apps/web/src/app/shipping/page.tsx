@@ -205,19 +205,30 @@ export default function ShippingPage() {
               Our support team is here to assist you with any shipping queries or concerns.
             </p>
             <div className="space-y-2 text-gray-800">
+              <p className="flex items-start gap-2">
+                <strong>RoboHatch</strong>
+              </p>
               <p className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-primary" />
+                <Mail className="w-4 h-4 text-primary flex-shrink-0" />
                 <strong>Email:</strong>{' '}
                 <a href="mailto:founder@robohatch.in" className="text-primary hover:underline">
                   founder@robohatch.in
                 </a>
               </p>
               <p className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-primary" />
+                <Package className="w-4 h-4 text-primary flex-shrink-0" />
                 <strong>Phone:</strong>{' '}
                 <a href="tel:+919505551727" className="text-primary hover:underline">
-                  +91 95055 51727
+                  +91 9505551727
                 </a>
+              </p>
+              <p className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                <span>
+                  <strong>Address:</strong><br />
+                  Urbanrise Revolution 1, C-Block 726,<br />
+                  Padur, Chennai - 603103, Tamil Nadu, India
+                </span>
               </p>
             </div>
           </section>
