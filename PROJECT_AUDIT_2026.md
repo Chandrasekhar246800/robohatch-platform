@@ -30,6 +30,7 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 7. ✅ **NEW: Complete Wishlist System** (Backend API + Frontend UI + Header integration)
 8. ✅ **NEW: User Profile Editing** (Edit name field with save/cancel functionality)
 9. ✅ **NEW: Removed Account Type** field from user profile display
+10. ✅ **NEW: Complete Address Management System** (Save multiple addresses + Checkout integration)
 
 ---
 
@@ -83,7 +84,7 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 
 ## 📊 Database Schema Analysis
 
-### **Current Tables (15)**
+### **Current Tables (16)**
 
 1. **User**
    - Fields: id, email, password, name, role, timestamps
@@ -171,6 +172,15 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
     - Unique constraint: [wishlistId, productId] (prevents duplicates)
     - Indexed on: wishlistId, productId
     - Cascade delete with wishlist
+
+17. **Address** ✨ **NEW**
+    - Fields: id, userId, fullName, phone, addressLine1, addressLine2, city, state, postalCode, country, isDefault, createdAt, updatedAt
+    - Relations: User (many-to-one)
+    - Purpose: Store user's saved delivery addresses for reuse
+    - Multiple addresses per user
+    - One default address per user (isDefault flag)
+    - Indexed on: userId, isDefault
+    - Cascade delete with user
 
 ---
 
@@ -421,6 +431,9 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
    - Save address to Zustand store
    - Breadcrumb navigation
    - ✅ Field names match backend
+   - ✅ **NEW: Saved addresses dropdown**
+   - ✅ **NEW: Auto-select default address**
+   - ✅ **NEW: Auto-fill form from selected address**
 
 6. **Checkout - Payment** (/checkout/payment)
    - Review shipping address
@@ -443,6 +456,13 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
    - Edit mode with Save/Cancel buttons ✨ **NEW**
    - Orders tab: order history with real data ✨ **FIXED TODAY**
    - Uploads tab: custom designs (placeholder)
+   - Addresses tab: saved address management ✨ **NEW**
+     - List all saved addresses
+     - Add/Edit/Delete addresses
+     - Set default address
+     - Default address badge
+     - Empty state with CTA
+     - Modal form for add/edit
    - Logout functionality
    - ✅ Real API data
    - ✅ No mock data
@@ -569,6 +589,15 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
 - `POST /api/wishlist/items` - Add product to wishlist
 - `DELETE /api/wishlist/items/:itemId` - Remove item from wishlist
 - `DELETE /api/wishlist/clear` - Clear entire wishlist
+
+#### **Addresses** ✨ **NEW**
+- `GET /api/addresses` - Get all user addresses (default address first)
+- `GET /api/addresses/default` - Get user's default address
+- `GET /api/addresses/:id` - Get single address by ID
+- `POST /api/addresses` - Create new address
+- `PUT /api/addresses/:id` - Update address
+- `PUT /api/addresses/:id/default` - Set address as default
+- `DELETE /api/addresses/:id` - Delete address
 
 #### **Custom Designs**
 - `GET /api/custom-designs` - List user's custom designs
@@ -715,6 +744,15 @@ RoboHatch is a full-stack e-commerce platform for selling 3D printed products (i
     - **Change:** Account Type (USER/ADMIN badge) removed from profile display
     - **Reason:** User requested "no need of account type in profile card"
     - **Status:** Deployed
+
+11. ✅ **Address Management System**
+    - **Feature:** Complete address management like Amazon/Flipkart
+    - **Database:** New Address model with multiple addresses per user, default address flag
+    - **Backend:** 7 API methods (CRUD + set default + get default)
+    - **Frontend:** Addresses tab in account page with list, add/edit/delete, set default
+    - **Checkout:** Saved addresses dropdown in checkout with auto-select default
+    - **Features:** Multiple addresses per user, one default address, auto-fill checkout form
+    - **Status:** Fully deployed and functional
 
 ### **Remaining Issues:**
 
@@ -1181,7 +1219,7 @@ PORT=8080
    - Product reviews and ratings
    - ✅ **Wishlist functionality** ✨ **COMPLETED TODAY**
    - Order tracking (shipment tracking)
-   - Multiple addresses (save multiple shipping addresses)
+   - ✅ **Multiple addresses (save multiple shipping addresses)** ✨ **COMPLETED TODAY**
    - Forgot password functionality
 
 ### **Medium Priority (Phase 3):**
