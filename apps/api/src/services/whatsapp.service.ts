@@ -79,7 +79,6 @@ class WhatsAppService {
     customerEmail: string;
     items: Array<{ name: string; quantity: number; price: number }>;
     subtotal: number;
-    gst: number;
     total: number;
     shippingAddress: string;
   }) {
@@ -142,7 +141,6 @@ class WhatsAppService {
     customerEmail: string;
     items: Array<{ name: string; quantity: number; price: number }>;
     subtotal: number;
-    gst: number;
     total: number;
     shippingAddress: string;
   }): string {
@@ -164,7 +162,6 @@ ${itemsList}
 
 💰 *Payment Summary:*
 Subtotal: ₹${data.subtotal}
-GST (18%): ₹${data.gst}
 *Total: ₹${data.total}*
 
 📍 *Shipping Address:*

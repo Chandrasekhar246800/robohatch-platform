@@ -77,11 +77,8 @@ export class PaymentService {
       return sum + Number(item.product.price) * item.quantity;
     }, 0);
 
-    // Calculate GST (18% for India)
-    const gst = Math.round(subtotal * 0.18);
-    
-    // Calculate total including GST
-    const total = subtotal + gst;
+    // Calculate total (no GST - business doesn't have GST number)
+    const total = subtotal;
 
     // ✅ ATOMIC TRANSACTION: Create order + shipping address + reserve stock
     const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -597,11 +594,10 @@ export class PaymentService {
         return;
       }
 
-      // Calculate GST breakdown
+      // Calculate subtotal
       const subtotal = order.items.reduce((sum, item) => {
         return sum + Number(item.price) * item.quantity;
       }, 0);
-      const gst = Math.round(subtotal * 0.18);
 
       // Format items for notification
       const items = order.items.map(item => ({
@@ -621,7 +617,7 @@ export class PaymentService {
         .filter(Boolean)
         .join('\n');
 
-      // Send notification
+      // Send notification (no GST - business doesn't have GST number)
       await whatsappService.sendOrderNotification({
         orderId: order.id,
         customerName: address.fullName,
@@ -629,7 +625,6 @@ export class PaymentService {
         customerEmail: address.email,
         items,
         subtotal,
-        gst,
         total: Number(order.total),
         shippingAddress,
       });

@@ -201,8 +201,7 @@ export default function AddressPage() {
   }
 
   const subtotal = getTotal();
-  const gst = Math.round(subtotal * 0.18);
-  const total = subtotal + gst;
+  const total = subtotal; // No GST - business doesn't have GST number
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -480,10 +479,6 @@ export default function AddressPage() {
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
                   <span>₹{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>GST (18%)</span>
-                  <span>₹{gst.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
                   <span>Total</span>

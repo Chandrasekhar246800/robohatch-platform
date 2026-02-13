@@ -26,16 +26,12 @@ class OrderService {
       return sum + Number(item.product.price) * item.quantity;
     }, 0);
 
-    // Calculate GST (18%)
-    const gst = Math.round(subtotal * 0.18);
-    
-    // Total = Subtotal + GST
-    const total = subtotal + gst;
+    // Total = Subtotal (no GST - business doesn't have GST number)
+    const total = subtotal;
     
     console.log('💰 Real-time order calculation:', {
       items: cart.items.length,
       subtotal: `₹${subtotal}`,
-      gst: `₹${gst} (18%)`,
       total: `₹${total}`,
       breakdown: cart.items.map((item: any) => `${item.product.name}: ₹${item.product.price} × ${item.quantity}`)
     });

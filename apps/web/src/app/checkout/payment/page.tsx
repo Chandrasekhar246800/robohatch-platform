@@ -69,8 +69,7 @@ export default function PaymentPage() {
   }, [shippingAddress, mounted, router]);
 
   const subtotal = getTotal();
-  const gst = Math.round(subtotal * 0.18);
-  const grandTotal = subtotal + gst;
+  const grandTotal = subtotal; // No GST - business doesn't have GST number
 
   /**
    * Step 1: Create order from cart
@@ -386,10 +385,6 @@ export default function PaymentPage() {
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal ({items.length} items)</span>
                   <span>₹{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>GST (18%)</span>
-                  <span>₹{gst.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>

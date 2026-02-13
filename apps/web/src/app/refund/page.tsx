@@ -135,11 +135,6 @@ export default function RefundPage() {
           <p className="text-gray-700 mt-4">
             Refund processing times may vary depending on your bank or payment provider. Please allow up to 10 business days for the refund to reflect in your account.
           </p>
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mt-4">
-            <p className="text-gray-800 font-medium">
-              <strong>Note on GST:</strong> All refunds include the full amount paid including 18% GST. You will receive a complete refund as per our refund policy.
-            </p>
-          </div>
         </section>
 
         {/* Non-Refundable Items */}
