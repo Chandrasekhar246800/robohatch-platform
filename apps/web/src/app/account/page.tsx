@@ -788,7 +788,7 @@ export default function AccountPage() {
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="font-semibold">{address.fullName}</p>
                                   {address.isDefault && (
-                                    <Badge variant="success" size="sm">Default</Badge>
+                                    <Badge variant="success">Default</Badge>
                                   )}
                                 </div>
                                 <p className="text-sm text-gray-600">{address.phone}</p>
