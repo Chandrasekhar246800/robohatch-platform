@@ -24,6 +24,7 @@ model User {
   payments      Payment[]
   uploads       Upload[]
   wishlist      Wishlist?
+  addresses     Address[]
 }
 
 model Product {
@@ -127,6 +128,27 @@ model ShippingAddress {
 
   @@index([orderId])
   @@index([postalCode]) // For regional queries
+}
+
+// ✅ NEW MODEL: User Saved Addresses
+model Address {
+  id           String   @id @default(uuid())
+  userId       String
+  fullName     String   @db.VarChar(100)
+  phone        String   @db.VarChar(20)
+  addressLine1 String   @db.VarChar(255)
+  addressLine2 String?  @db.VarChar(255)
+  city         String   @db.VarChar(100)
+  state        String   @db.VarChar(100)
+  postalCode   String   @db.VarChar(10)
+  country      String   @default("India") @db.VarChar(100)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isDefault])
 }
 
 model Payment {

@@ -529,6 +529,165 @@ class ApiClient {
     }
   }
 
+  // Address API methods
+  async getAddresses() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get addresses error:', error);
+      throw error;
+    }
+  }
+
+  async getAddressById(addressId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get address error:', error);
+      throw error;
+    }
+  }
+
+  async createAddress(addressData: {
+    fullName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+    isDefault?: boolean;
+  }) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(addressData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Create address error:', error);
+      throw error;
+    }
+  }
+
+  async updateAddress(addressId: string, addressData: {
+    fullName?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  }) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(addressData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Update address error:', error);
+      throw error;
+    }
+  }
+
+  async deleteAddress(addressId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Delete address error:', error);
+      throw error;
+    }
+  }
+
+  async setDefaultAddress(addressId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}/default`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Set default address error:', error);
+      throw error;
+    }
+  }
+
+  async getDefaultAddress() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/addresses/default`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get default address error:', error);
+      throw error;
+    }
+  }
+
   // Order API methods
   async createOrder() {
     try {

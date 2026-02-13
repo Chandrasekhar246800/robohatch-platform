@@ -16,6 +16,11 @@ import {
   Phone,
   Calendar,
   Loader,
+  Plus,
+  Edit2,
+  Trash2,
+  Check,
+  X,
 } from 'lucide-react';
 import { Button, Badge, Card, CardContent, AccountProfileSkeleton } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
@@ -27,7 +32,7 @@ export default function AccountPage() {
   const router = useRouter();
   const { isAuthenticated, logout, setAuth } = useAuthStore();
   const { user, loading, error, refetch } = useUserProfile();
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'uploads'>(
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'uploads' | 'addresses'>(
     'profile'
   );
   const [orders, setOrders] = useState<any[]>([]);
@@ -38,6 +43,25 @@ export default function AccountPage() {
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState('');
   const [updateSuccess, setUpdateSuccess] = useState('');
+  // Address management state
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState('');
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<any>(null);
+  const [addressFormData, setAddressFormData] = useState({
+    fullName: '',
+    phone: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'India',
+    isDefault: false,
+  });
+  const [addressFormLoading, setAddressFormLoading] = useState(false);
+  const [addressFormError, setAddressFormError] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -68,6 +92,30 @@ export default function AccountPage() {
     };
 
     fetchOrders();
+  }, [isAuthenticated, activeTab]);
+
+  // Fetch user addresses
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!isAuthenticated || activeTab !== 'addresses') return;
+      
+      setAddressesLoading(true);
+      setAddressesError('');
+      try {
+        const response = await apiClient.getAddresses();
+        if (response.success && response.data) {
+          setAddresses(response.data);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch addresses:', err);
+        setAddressesError('Failed to load addresses');
+        setAddresses([]);
+      } finally {
+        setAddressesLoading(false);
+      }
+    };
+
+    fetchAddresses();
   }, [isAuthenticated, activeTab]);
 
   const handleLogout = () => {
@@ -121,6 +169,112 @@ export default function AccountPage() {
       setUpdateError('Failed to update profile. Please try again.');
     } finally {
       setUpdateLoading(false);
+    }
+  };
+
+  // Address management handlers
+  const handleAddAddress = () => {
+    setEditingAddress(null);
+    setAddressFormData({
+      fullName: user?.name || '',
+      phone: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: 'India',
+      isDefault: addresses.length === 0,
+    });
+    setAddressFormError('');
+    setShowAddressModal(true);
+  };
+
+  const handleEditAddress = (address: any) => {
+    setEditingAddress(address);
+    setAddressFormData({
+      fullName: address.fullName,
+      phone: address.phone,
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2 || '',
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country,
+      isDefault: address.isDefault,
+    });
+    setAddressFormError('');
+    setShowAddressModal(true);
+  };
+
+  const handleSaveAddress = async () => {
+    // Validation
+    if (!addressFormData.fullName.trim() || !addressFormData.phone.trim() || 
+        !addressFormData.addressLine1.trim() || !addressFormData.city.trim() || 
+        !addressFormData.state.trim() || !addressFormData.postalCode.trim()) {
+      setAddressFormError('Please fill in all required fields');
+      return;
+    }
+
+    setAddressFormLoading(true);
+    setAddressFormError('');
+
+    try {
+      if (editingAddress) {
+        // Update existing address
+        const response = await apiClient.updateAddress(editingAddress.id, addressFormData);
+        if (response.success) {
+          setAddresses(addresses.map(addr => 
+            addr.id === editingAddress.id ? response.data : addr
+          ));
+          setShowAddressModal(false);
+        } else {
+          setAddressFormError(response.message || 'Failed to update address');
+        }
+      } else {
+        // Create new address
+        const response = await apiClient.createAddress(addressFormData);
+        if (response.success) {
+          setAddresses([...addresses, response.data]);
+          setShowAddressModal(false);
+        } else {
+          setAddressFormError(response.message || 'Failed to add address');
+        }
+      }
+    } catch (err: any) {
+      console.error('Save address error:', err);
+      setAddressFormError('Failed to save address. Please try again.');
+    } finally {
+      setAddressFormLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!confirm('Are you sure you want to delete this address?')) return;
+
+    try {
+      const response = await apiClient.deleteAddress(addressId);
+      if (response.success) {
+        setAddresses(addresses.filter(addr => addr.id !== addressId));
+      }
+    } catch (err: any) {
+      console.error('Delete address error:', err);
+      alert('Failed to delete address');
+    }
+  };
+
+  const handleSetDefaultAddress = async (addressId: string) => {
+    try {
+      const response = await apiClient.setDefaultAddress(addressId);
+      if (response.success) {
+        setAddresses(addresses.map(addr => ({
+          ...addr,
+          isDefault: addr.id === addressId
+        })));
+      }
+    } catch (err: any) {
+      console.error('Set default address error:', err);
+      alert('Failed to set default address');
     }
   };
 
@@ -227,6 +381,17 @@ export default function AccountPage() {
                   >
                     <Upload size={20} />
                     <span>My Uploads</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('addresses')}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                      activeTab === 'addresses'
+                        ? 'bg-primary text-white'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <MapPin size={20} />
+                    <span>Addresses</span>
                   </button>
                   <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100">
                     <Settings size={20} />
@@ -561,6 +726,310 @@ export default function AccountPage() {
                     </div>
                   </CardContent>
                 </Card>
+              </motion.div>
+            )}
+
+            {/* Addresses Tab */}
+            {activeTab === 'addresses' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-bold">Saved Addresses</h2>
+                      <Button onClick={handleAddAddress} size="sm">
+                        <Plus size={16} className="mr-2" />
+                        Add Address
+                      </Button>
+                    </div>
+
+                    {addressesLoading && (
+                      <div className="flex justify-center py-12">
+                        <Loader size={32} className="animate-spin text-primary" />
+                      </div>
+                    )}
+
+                    {addressesError && (
+                      <div className="text-center py-12">
+                        <p className="text-red-600 mb-4">{addressesError}</p>
+                        <Button onClick={() => setActiveTab('addresses')} variant="secondary">
+                          Try Again
+                        </Button>
+                      </div>
+                    )}
+
+                    {!addressesLoading && !addressesError && addresses.length === 0 && (
+                      <div className="text-center py-12">
+                        <MapPin size={64} className="mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-xl font-semibold mb-2">No Addresses Saved</h3>
+                        <p className="text-gray-600 mb-6">
+                          Add your delivery address for faster checkout
+                        </p>
+                        <Button onClick={handleAddAddress}>
+                          <Plus size={16} className="mr-2" />
+                          Add Your First Address
+                        </Button>
+                      </div>
+                    )}
+
+                    {!addressesLoading && !addressesError && addresses.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {addresses.map((address) => (
+                          <div
+                            key={address.id}
+                            className={`border rounded-lg p-4 ${
+                              address.isDefault ? 'border-primary bg-primary/5' : 'border-gray-200'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-semibold">{address.fullName}</p>
+                                  {address.isDefault && (
+                                    <Badge variant="success" size="sm">Default</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600">{address.phone}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEditAddress(address)}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                  title="Edit address"
+                                >
+                                  <Edit2 size={16} className="text-gray-600" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAddress(address.id)}
+                                  className="p-1 hover:bg-red-50 rounded"
+                                  title="Delete address"
+                                >
+                                  <Trash2 size={16} className="text-red-600" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-700 mb-3">
+                              <p>{address.addressLine1}</p>
+                              {address.addressLine2 && <p>{address.addressLine2}</p>}
+                              <p>{address.city}, {address.state} {address.postalCode}</p>
+                              <p>{address.country}</p>
+                            </div>
+                            {!address.isDefault && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleSetDefaultAddress(address.id)}
+                                className="w-full"
+                              >
+                                Set as Default
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Address Modal */}
+                {showAddressModal && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                    >
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-2xl font-bold">
+                          {editingAddress ? 'Edit Address' : 'Add New Address'}
+                        </h3>
+                        <button
+                          onClick={() => setShowAddressModal(false)}
+                          className="p-2 hover:bg-gray-100 rounded-full"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+
+                      {addressFormError && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                          {addressFormError}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Full Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.fullName}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, fullName: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Phone Number <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            value={addressFormData.phone}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, phone: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Address Line 1 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.addressLine1}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, addressLine1: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="House no., Street name"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Address Line 2
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.addressLine2}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, addressLine2: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Landmark, Area (optional)"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            City <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.city}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, city: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            State <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.state}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, state: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Postal Code <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.postalCode}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, postalCode: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Country <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={addressFormData.country}
+                            onChange={(e) =>
+                              setAddressFormData({ ...addressFormData, country: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={addressFormLoading}
+                          />
+                        </div>
+
+                        {!editingAddress && addresses.length > 0 && (
+                          <div className="md:col-span-2">
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={addressFormData.isDefault}
+                                onChange={(e) =>
+                                  setAddressFormData({ ...addressFormData, isDefault: e.target.checked })
+                                }
+                                className="mr-2"
+                                disabled={addressFormLoading}
+                              />
+                              <span className="text-sm text-gray-700">Set as default address</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3 mt-6">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setShowAddressModal(false)}
+                          disabled={addressFormLoading}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleSaveAddress}
+                          disabled={addressFormLoading}
+                          className="flex-1"
+                        >
+                          {addressFormLoading ? (
+                            <>
+                              <Loader size={16} className="mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Check size={16} className="mr-2" />
+                              Save Address
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>

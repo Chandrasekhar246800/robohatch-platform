@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/cart.store';
 import { useCheckoutStore, ShippingAddress } from '@/store/checkout.store';
 import { useAuthStore } from '@/store/auth.store';
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps';
+import { apiClient } from '@/lib/api-client';
 
 export default function AddressPage() {
   const router = useRouter();
@@ -28,6 +29,9 @@ export default function AddressPage() {
   });
   const [errors, setErrors] = useState<Partial<ShippingAddress>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -52,6 +56,65 @@ export default function AddressPage() {
       setFormData(shippingAddress);
     }
   }, [shippingAddress]);
+
+  // Fetch saved addresses
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await apiClient.getAddresses();
+        if (response.success && response.data) {
+          setSavedAddresses(response.data);
+          // Auto-select default address
+          const defaultAddress = response.data.find((addr: any) => addr.isDefault);
+          if (defaultAddress && !shippingAddress) {
+            handleSelectAddress(defaultAddress.id, response.data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch addresses:', err);
+      } finally {
+        setLoadingAddresses(false);
+      }
+    };
+
+    fetchAddresses();
+  }, [isAuthenticated]);
+
+  const handleSelectAddress = (addressId: string, addresses: any[] = savedAddresses) => {
+    setSelectedAddressId(addressId);
+    if (addressId === 'new') {
+      // Clear form for new address
+      setFormData({
+        fullName: '',
+        phone: '',
+        email: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'India',
+      });
+    } else {
+      // Fill form with selected address
+      const address = addresses.find((addr: any) => addr.id === addressId);
+      if (address) {
+        setFormData({
+          fullName: address.fullName,
+          phone: address.phone,
+          email: formData.email || '', // Keep email from form if exists
+          addressLine1: address.addressLine1,
+          addressLine2: address.addressLine2 || '',
+          city: address.city,
+          state: address.state,
+          postalCode: address.postalCode,
+          country: address.country,
+        });
+      }
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -161,6 +224,28 @@ export default function AddressPage() {
                 <MapPin className="w-6 h-6 text-primary mr-3" />
                 <h2 className="text-2xl font-semibold text-gray-900">Shipping Address</h2>
               </div>
+
+              {/* Saved Addresses Dropdown */}
+              {!loadingAddresses && savedAddresses.length > 0 && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select a saved address or enter a new one
+                  </label>
+                  <select
+                    value={selectedAddressId}
+                    onChange={(e) => handleSelectAddress(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="new">Enter new address</option>
+                    {savedAddresses.map((address) => (
+                      <option key={address.id} value={address.id}>
+                        {address.fullName} - {address.addressLine1}, {address.city}, {address.state} {address.postalCode}
+                        {address.isDefault && ' (Default)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Full Name */}
