@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
+import { useWishlistStore } from '@/store/wishlist.store';
 import { apiClient } from '@/lib/api-client';
 
 const queryClient = new QueryClient({
@@ -18,6 +19,7 @@ const queryClient = new QueryClient({
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, setAuth, logout, user, _lastLoginTime } = useAuthStore();
   const syncWithBackend = useCartStore((state) => state.syncWithBackend);
+  const { fetchWishlist, reset: resetWishlist } = useWishlistStore();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -40,16 +42,25 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
             syncWithBackend(true).catch(err => {
               console.error('Background cart sync failed:', err);
             });
+            // Fetch wishlist data (non-blocking)
+            fetchWishlist(true).catch(err => {
+              console.error('Background wishlist fetch failed:', err);
+            });
           } else {
             // Token invalid, logout
             console.warn('Profile validation failed, logging out');
             logout();
+            resetWishlist();
           }
         } catch (error: any) {
           // Logout on ANY error - don't keep stale auth state
           console.warn('Auth validation failed, logging out:', error.message);
           logout();
+          resetWishlist();
         }
+      } else {
+        // User not authenticated, reset wishlist
+        resetWishlist();
       }
     };
 

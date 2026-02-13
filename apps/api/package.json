@@ -38,6 +38,7 @@
     "mysql2": "^3.16.2",
     "prisma": "^5.22.0",
     "razorpay": "^2.9.6",
+    "react-hot-toast": "^2.6.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

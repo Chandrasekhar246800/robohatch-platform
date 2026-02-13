@@ -429,6 +429,88 @@ class ApiClient {
     }
   }
 
+  // Wishlist API methods
+  async getWishlist() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wishlist`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Get wishlist error:', error);
+      throw error;
+    }
+  }
+
+  async addToWishlist(productId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wishlist/items`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
+        body: JSON.stringify({ productId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Add to wishlist error:', error);
+      throw error;
+    }
+  }
+
+  async removeFromWishlist(itemId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wishlist/items/${itemId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Remove from wishlist error:', error);
+      throw error;
+    }
+  }
+
+  async clearWishlist() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wishlist/clear`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include', // Send cookies for authentication
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Clear wishlist error:', error);
+      throw error;
+    }
+  }
+
   // Order API methods
   async createOrder() {
     try {

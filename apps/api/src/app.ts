@@ -24,6 +24,7 @@ import customDesignRoutes from "./routes/customDesign.route";
 import seedRoutes from "./routes/seed.route";
 import adminRoutes from "./routes/admin.route";
 import contactRoutes from "./routes/contact.route";
+import wishlistRoutes from "./routes/wishlist.route";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -116,6 +117,7 @@ app.use("/api/contact", contactRoutes);
 
 // Protected routes with sensitive operation limiting
 app.use("/api/cart", cartRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/orders", sensitiveOperationLimiter, orderRoutes);
 app.use("/api/payment", sensitiveOperationLimiter, paymentRoutes);
 app.use("/api/custom-designs", customDesignRoutes);

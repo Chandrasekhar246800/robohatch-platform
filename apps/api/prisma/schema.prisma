@@ -23,21 +23,23 @@ model User {
   orders        Order[]
   payments      Payment[]
   uploads       Upload[]
+  wishlist      Wishlist?
 }
 
 model Product {
-  id          String            @id @default(uuid())
-  name        String
-  description String            @db.Text
-  price       Decimal
-  stock       Int               @default(0) // ✅ NEW: Inventory management
-  isActive    Boolean           @default(true)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  categories  ProductCategory[]
-  images      ProductImage[]
+  id            String            @id @default(uuid())
+  name          String
+  description   String            @db.Text
+  price         Decimal
+  stock         Int               @default(0) // ✅ NEW: Inventory management
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  categories    ProductCategory[]
+  images        ProductImage[]
+  wishlistItems WishlistItem[]
 
   @@index([stock]) // Index for stock queries
 }
@@ -218,6 +220,28 @@ model ContactSubmission {
   @@index([createdAt])
   @@index([email])
 }
+model Wishlist {
+  id        String         @id @default(uuid())
+  userId    String         @unique
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+}
+
+model WishlistItem {
+  id         String   @id @default(uuid())
+  wishlistId String
+  productId  String
+  createdAt  DateTime @default(now())
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+  @@index([wishlistId])
+  @@index([productId])
+}
+
 
 enum Role {
   USER

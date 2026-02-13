@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Search, ShoppingCart, User, Menu, X, LogOut, Package, Heart, ChevronDown, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useCartStore } from '@/store/cart.store';
+import { useWishlistStore } from '@/store/wishlist.store';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +22,7 @@ export const Header: React.FC = () => {
   const profileRef = useRef<HTMLDivElement>(null);
   
   const itemCount = useCartStore((state) => state.getItemCount());
+  const wishlistCount = useWishlistStore((state) => state.count);
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useUIStore();
   const { user, isAuthenticated, logout } = useAuthStore();
 
@@ -132,6 +134,27 @@ export const Header: React.FC = () => {
               <Search size={22} />
             </button>
 
+            {/* Wishlist (Only show if authenticated) */}
+            {mounted && isAuthenticated && (
+              <Link
+                href="/wishlist"
+                className="relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 flex items-center space-x-1"
+                aria-label="Wishlist"
+              >
+                <Heart size={22} />
+                <span className="hidden sm:inline text-sm font-medium">Wishlist</span>
+                {wishlistCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md"
+                  >
+                    {wishlistCount > 9 ? '9+' : wishlistCount}
+                  </motion.span>
+                )}
+              </Link>
+            )}
+
             {/* Cart */}
             <Link
               href="/cart"
@@ -203,7 +226,14 @@ export const Header: React.FC = () => {
                         className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <Heart size={18} />
-                        <span>Wishlist</span>
+                        <div className="flex items-center justify-between flex-1">
+                          <span>Wishlist</span>
+                          {wishlistCount > 0 && (
+                            <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                              {wishlistCount > 9 ? '9+' : wishlistCount}
+                            </span>
+                          )}
+                        </div>
                       </Link>
                       
                       <Link
@@ -347,7 +377,14 @@ export const Header: React.FC = () => {
                     className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
                   >
                     <Heart size={18} />
-                    <span>Wishlist</span>
+                    <div className="flex items-center justify-between flex-1">
+                      <span>Wishlist</span>
+                      {wishlistCount > 0 && (
+                        <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          {wishlistCount > 9 ? '9+' : wishlistCount}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                   
                   <button
