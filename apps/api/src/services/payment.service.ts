@@ -4,6 +4,7 @@ import { prisma, Prisma } from '../config/prisma';
 import { validateShippingAddress, validatePaymentVerification } from '../validators/order.validator';
 import { emailService } from './email.service';
 import whatsappService from './whatsapp.service';
+import { StockManager } from '../utils/stock-manager';
 
 // 🔒 SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -80,9 +81,43 @@ export class PaymentService {
     // Calculate total (no GST - business doesn't have GST number)
     const total = subtotal;
 
-    // ✅ ATOMIC TRANSACTION: Create order + shipping address + reserve stock
+    // ✅ ATOMIC TRANSACTION: Reserve stock FIRST, then create order
+    // Why this order? Fail fast before any DB writes. More efficient.
     const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Create order
+      // STEP 1: Reserve stock for ALL items FIRST (fails early, no wasted writes)
+      for (const cartItem of cart.items) {
+        const reservationResult = await StockManager.reserveStock(
+          tx,
+          cartItem.productId,
+          cartItem.quantity
+        );
+
+        // ❌ FAILURE: Stock reservation failed - transaction will rollback
+        if (!reservationResult.success) {
+          console.error(
+            `❌ STOCK RESERVATION FAILED (Order not created):`,
+            {
+              product: cartItem.product.name,
+              productId: cartItem.productId,
+              requested: cartItem.quantity,
+              available: reservationResult.availableStock,
+              errorCode: reservationResult.errorCode,
+              userId,
+              timestamp: new Date().toISOString(),
+            }
+          );
+
+          // Throw user-friendly error message (no order was created)
+          throw new Error(reservationResult.error);
+        }
+
+        // ✅ SUCCESS: Stock reserved atomically
+        console.log(
+          `✅ Stock reserved: ${cartItem.product.name} -${cartItem.quantity}`
+        );
+      }
+
+      // STEP 2: All stock reserved successfully → NOW create order
       const newOrder = await tx.order.create({
         data: {
           userId,
@@ -91,7 +126,7 @@ export class PaymentService {
         },
       });
 
-      // Create order items
+      // STEP 3: Create order items (stock already reserved above)
       for (const cartItem of cart.items) {
         await tx.orderItem.create({
           data: {
@@ -101,28 +136,6 @@ export class PaymentService {
             price: cartItem.product.price,
           },
         });
-
-        // ✅ RESERVE STOCK: Conditional decrement prevents negative stock
-        const stockUpdate = await tx.product.updateMany({
-          where: {
-            id: cartItem.productId,
-            stock: { gte: cartItem.quantity }, // Only update if sufficient stock
-          },
-          data: {
-            stock: {
-              decrement: cartItem.quantity,
-            },
-          },
-        });
-
-        // Verify stock was actually decremented
-        if (stockUpdate.count === 0) {
-          throw new Error(
-            `Insufficient stock for ${cartItem.product.name}. ` +
-            `Available: ${cartItem.product.stock}, Requested: ${cartItem.quantity}. ` +
-            `Please reduce quantity or remove from cart.`
-          );
-        }
       }
 
       // ✅ CRITICAL FIX: Store shipping address
@@ -509,14 +522,21 @@ export class PaymentService {
 
       // ✅ RESTORE STOCK: Payment failed, release reserved stock
       for (const item of payment.order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              increment: item.quantity,
-            },
-          },
-        });
+        const restorationResult = await StockManager.restoreStock(
+          tx,
+          item.productId,
+          item.quantity
+        );
+
+        if (!restorationResult.success) {
+          console.warn(
+            `⚠️ Failed to restore stock for product ${item.productId}: ${restorationResult.error}`
+          );
+        } else {
+          console.log(
+            `✅ Stock restored: ${item.product.name} +${item.quantity} (Failed payment: ${payment.id})`
+          );
+        }
       }
     });
 

@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma';
 import { OrderStatus } from '@prisma/client';
 import { emailService } from './email.service';
+import { StockManager } from '../utils/stock-manager';
 
 class OrderService {
   // Create order from cart
@@ -213,16 +214,21 @@ class OrderService {
     // ✅ ATOMIC TRANSACTION: Restore all items
     await prisma.$transaction(async (tx: any) => {
       for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              increment: item.quantity,
-            },
-          },
-        });
+        const result = await StockManager.restoreStock(
+          tx,
+          item.productId,
+          item.quantity
+        );
 
-        console.log(`📦 Stock restored: ${item.product.name} +${item.quantity} (Order ${orderId} cancelled)`);
+        if (!result.success) {
+          console.warn(
+            `⚠️ Failed to restore stock for product ${item.productId}: ${result.error}`
+          );
+        } else {
+          console.log(
+            `📦 Stock restored: ${item.product.name} +${item.quantity} (Order ${orderId} cancelled)`
+          );
+        }
       }
     });
   }
