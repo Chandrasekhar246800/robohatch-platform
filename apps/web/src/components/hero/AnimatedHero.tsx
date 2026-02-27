@@ -110,10 +110,10 @@ export const AnimatedHero: React.FC = () => {
         />
       ))}
 
-      <div className="container-custom relative z-10 text-center">
+      <div className="container-custom relative z-10 text-center px-4">
         {/* Brand Name with Letter Animation */}
         <div className="mb-8">
-          <div className="flex justify-center items-center space-x-1 md:space-x-2">
+          <div className="flex justify-center items-center gap-x-0.5 sm:gap-x-1 md:gap-x-2">
             {brandName.split('').map((letter, i) => (
               <motion.span
                 key={i}
@@ -121,7 +121,7 @@ export const AnimatedHero: React.FC = () => {
                 initial="hidden"
                 animate="visible"
                 variants={letterVariants}
-                className="text-6xl md:text-8xl lg:text-9xl font-bold text-white relative inline-block"
+                className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-bold text-white relative inline-block whitespace-nowrap"
                 style={{ perspective: '1000px' }}
               >
                 {letter}
@@ -199,26 +199,6 @@ export const AnimatedHero: React.FC = () => {
                 Upload Design
               </AnimatedButton>
             </Link>
-          </motion.div>
-        </motion.div>
-
-        {/* Scroll Indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2, duration: 1 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-6 h-10 border-2 border-secondary-peach rounded-full flex justify-center"
-          >
-            <motion.div
-              animate={{ y: [0, 12, 0], opacity: [0, 1, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="w-1.5 h-1.5 bg-secondary-peach rounded-full mt-2"
-            />
           </motion.div>
         </motion.div>
       </div>

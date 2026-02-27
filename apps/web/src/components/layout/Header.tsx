@@ -207,7 +207,7 @@ export const Header: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-xl font-black text-black hidden sm:inline">
+            <span className="text-xl font-black text-black">
               ROBOHATCH
             </span>
           </Link>
@@ -300,20 +300,20 @@ export const Header: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
-            {/* Search Icon (Mobile) */}
+            {/* Search Icon (Desktop Only) */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="md:hidden p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
+              className="hidden md:block p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
               aria-label="Search"
             >
               <Search size={22} />
             </button>
 
-            {/* Wishlist (Only show if authenticated) */}
+            {/* Wishlist (Desktop Only, Only show if authenticated) */}
             {mounted && isAuthenticated && (
               <Link
                 href="/wishlist"
-                className="relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 flex items-center space-x-1"
+                className="hidden sm:flex relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 items-center space-x-1"
                 aria-label="Wishlist"
               >
                 <Heart size={22} />
@@ -330,10 +330,12 @@ export const Header: React.FC = () => {
               </Link>
             )}
 
-            {/* Cart */}
+            {/* Cart - Show on mobile only when authenticated */}
             <Link
               href="/cart"
-              className="relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 flex items-center space-x-1"
+              className={`relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 items-center space-x-1 ${
+                mounted && !isAuthenticated ? 'hidden sm:flex' : 'flex'
+              }`}
               aria-label="Shopping Cart"
             >
               <ShoppingCart size={22} />
@@ -351,15 +353,15 @@ export const Header: React.FC = () => {
 
             {/* Auth Section */}
             {mounted && isAuthenticated ? (
-              // Logged In: Profile Dropdown
-              <div className="relative hidden sm:block" ref={profileRef}>
+              // Logged In: Profile Icon (Mobile) / Profile Dropdown (Desktop)
+              <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 font-medium"
+                  className="flex items-center space-x-2 px-2 sm:px-4 py-2 text-gray-700 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 font-medium"
                 >
                   <User size={20} />
-                  <span className="text-sm">{user?.name || 'My Account'}</span>
-                  <ChevronDown size={16} className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                  <span className="text-sm hidden sm:inline">{user?.name || 'My Account'}</span>
+                  <ChevronDown size={16} className={`transition-transform hidden sm:inline ${isProfileOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -443,28 +445,19 @@ export const Header: React.FC = () => {
                 </AnimatePresence>
               </div>
             ) : mounted ? (
-              // Not Logged In: Login Button
-              <Link href="/login" className="hidden sm:block">
+              // Not Logged In: Login Button (Show on mobile and desktop)
+              <Link href="/login">
                 <Button 
                   variant="primary" 
                   size="sm"
-                  className="px-6 font-medium shadow-sm hover:shadow-md transition-shadow"
+                  className="px-4 sm:px-6 font-medium shadow-sm hover:shadow-md transition-shadow"
                 >
                   Login
                 </Button>
               </Link>
             ) : (
-              <div className="hidden sm:block w-20 h-9"></div>
+              <div className="w-16 sm:w-20 h-9"></div>
             )}
-
-            {/* Mobile Menu Toggle */}
-            <button
-              className="md:hidden p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
-              onClick={toggleMobileMenu}
-              aria-label="Toggle Menu"
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
           </div>
         </div>
 

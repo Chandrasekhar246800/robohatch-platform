@@ -292,15 +292,15 @@ function ProductsContent() {
           </aside>
 
           <div className="flex-1">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <p className="text-gray-600">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <p className="text-gray-600 text-sm sm:text-base">
                 {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
               </p>
 
-              <div className="flex gap-4 w-full sm:w-auto">
+              <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="lg:hidden flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="lg:hidden flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
                 >
                   <SlidersHorizontal size={18} />
                   <span>Filters</span>
@@ -309,7 +309,7 @@ function ProductsContent() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary flex-1 sm:flex-none"
+                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary flex-1 sm:flex-none text-sm"
                 >
                   <option value="newest">Newest First</option>
                   <option value="rating">Highest Rated</option>
