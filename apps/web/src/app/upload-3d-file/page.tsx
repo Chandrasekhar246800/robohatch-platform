@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
@@ -23,11 +23,11 @@ const ALLOWED_FILE_TYPES = ['.stl', '.3mf', '.obj', '.gcode'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 const materials = [
-  { id: 'pla', name: 'PLA', price: 0 },
-  { id: 'abs', name: 'ABS', price: 50 },
-  { id: 'petg', name: 'PETG', price: 75 },
-  { id: 'tpu', name: 'TPU', price: 100 },
-  { id: 'resin', name: 'Resin', price: 150 },
+  { id: 'pla', name: 'PLA', description: 'Standard, eco-friendly' },
+  { id: 'abs', name: 'ABS', description: 'Durable, heat-resistant' },
+  { id: 'petg', name: 'PETG', description: 'Strong, flexible' },
+  { id: 'tpu', name: 'TPU', description: 'Flexible, rubber-like' },
+  { id: 'resin', name: 'Resin (SLA)', description: 'High detail printing' },
 ];
 
 const colors = [
@@ -43,15 +43,16 @@ const colors = [
 export default function Upload3DFilePage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // STL Analysis state
-  const [accuratePrice, setAccuratePrice] = useState<number | null>(null);
+  // Backend pricing data
+  const [backendPrice, setBackendPrice] = useState<number | null>(null);
+  const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
   const [printTimeSeconds, setPrintTimeSeconds] = useState<number | null>(null);
   
@@ -102,15 +103,6 @@ export default function Upload3DFilePage() {
           name: selectedFile.name.replace(/\.[^/.]+$/, '') 
         });
       }
-      
-      // Auto-analyze STL files immediately after selection
-      const fileExtension = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
-      if (fileExtension === '.stl') {
-        // Delay slightly to allow UI to update
-        setTimeout(() => {
-          analyzeSTLFileAuto(selectedFile);
-        }, 100);
-      }
     }
   };
 
@@ -139,83 +131,20 @@ export default function Upload3DFilePage() {
           name: droppedFile.name.replace(/\.[^/.]+$/, '') 
         });
       }
-      
-      // Auto-analyze STL files immediately after drop
-      const fileExtension = '.' + droppedFile.name.split('.').pop()?.toLowerCase();
-      if (fileExtension === '.stl') {
-        setTimeout(() => {
-          analyzeSTLFileAuto(droppedFile);
-        }, 100);
-      }
     }
   }, [formData]);
 
   const removeFile = () => {
     setFile(null);
     setErrors({});
-    setAccuratePrice(null);
+    setBackendPrice(null);
+    setPricingAccurate(false);
     setFilamentGrams(null);
     setPrintTimeSeconds(null);
-  };
-
-  /**
-   * Auto-analyze STL file immediately after upload
-   */
-  const analyzeSTLFileAuto = async (fileToAnalyze: File) => {
-    setIsAnalyzing(true);
-    const analyzeToast = toast.loading('Analyzing 3D model with PrusaSlicer... Please wait');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', fileToAnalyze);
-
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setAccuratePrice(result.price_inr);
-        setFilamentGrams(result.filament_grams);
-        setPrintTimeSeconds(result.print_time_seconds);
-        
-        const hours = Math.floor(result.print_time_seconds / 3600);
-        const minutes = Math.floor((result.print_time_seconds % 3600) / 60);
-        
-        toast.success(
-          `✓ Analysis complete! ${result.filament_grams.toFixed(1)}g filament, ${hours}h ${minutes}m, ₹${result.price_inr}`,
-          { id: analyzeToast, duration: 6000 }
-        );
-      } else {
-        throw new Error(result.error || 'Analysis failed');
-      }
-    } catch (error: any) {
-      console.error('Analysis failed:', error);
-      toast.error(
-        'PrusaSlicer analysis failed. Using estimated price instead.',
-        { id: analyzeToast, duration: 4000 }
-      );
-      // Don't block the user - they can still proceed with estimated price
-    } finally {
-      setIsAnalyzing(false);
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
-  };
-
-  /**
-   * Manual re-analyze button (if user wants to recalculate)
-   */
-  const reAnalyzeSTLFile = async () => {
-    if (!file) return;
-    
-    // Reset current analysis
-    setAccuratePrice(null);
-    setFilamentGrams(null);
-    setPrintTimeSeconds(null);
-    
-    // Analyze again
-    await analyzeSTLFileAuto(file);
   };
 
   const handleSubmit = async () => {
@@ -261,7 +190,23 @@ export default function Upload3DFilePage() {
       setUploadProgress(100);
 
       if (result.success) {
-        toast.success('3D design uploaded successfully! We\'ll review it and send you a quote.', {
+        // Store pricing data from backend
+        if (result.pricing) {
+          setBackendPrice(result.pricing.final_price);
+          setPricingAccurate(result.pricing.accurate);
+          if (result.pricing.filament_grams) {
+            setFilamentGrams(result.pricing.filament_grams);
+          }
+          if (result.pricing.print_time_seconds) {
+            setPrintTimeSeconds(result.pricing.print_time_seconds);
+          }
+        }
+
+        const successMsg = result.pricing?.accurate
+          ? `3D design uploaded with accurate pricing! Final price: ₹${result.pricing.final_price}`
+          : '3D design uploaded successfully! We\'ll review it and send you a quote.';
+        
+        toast.success(successMsg, {
           id: uploadToast,
           duration: 5000,
         });
@@ -284,18 +229,6 @@ export default function Upload3DFilePage() {
     }
   };
 
-  const calculateEstimatedPrice = () => {
-    // Use accurate PrusaSlicer analysis if available
-    if (accuratePrice !== null) {
-      return accuratePrice * formData.quantity;
-    }
-    
-    // Otherwise use simple estimation
-    const materialPrice = materials.find(m => m.id === formData.material)?.price || 0;
-    const basePrice = 300;
-    return (basePrice + materialPrice) * formData.quantity;
-  };
-
   if (!isAuthenticated) {
     return null;
   }
@@ -309,16 +242,16 @@ export default function Upload3DFilePage() {
             Have your own 3D design? Upload your STL or 3MF file and we'll print it for you!
           </p>
           
-          {/* STL Auto-Analysis Info Banner */}
+          {/* STL Analysis Info Banner */}
           <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="mt-0.5">
                 <CheckCircle className="text-blue-600" size={20} />
               </div>
               <div>
-                <p className="font-medium text-blue-900">Automatic STL Analysis</p>
+                <p className="font-medium text-blue-900">Backend STL Analysis</p>
                 <p className="text-sm text-blue-700 mt-1">
-                  Upload an STL file and we'll automatically analyze it with PrusaSlicer to calculate accurate pricing based on filament usage and print time.
+                  Upload your STL file and our backend will automatically analyze it with PrusaSlicer to calculate accurate pricing based on filament usage and print time.
                 </p>
               </div>
             </div>
@@ -349,17 +282,19 @@ export default function Upload3DFilePage() {
                       Drag and drop your 3D file here
                     </p>
                     <p className="text-sm text-gray-500 mb-4">or</p>
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        onChange={handleFileChange}
-                        accept={ALLOWED_FILE_TYPES.join(',')}
-                        className="hidden"
-                      />
-                      <span className="inline-block">
-                        <Button type="button">Browse Files</Button>
-                      </span>
-                    </label>
+                    <Button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Browse Files
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileChange}
+                      accept={ALLOWED_FILE_TYPES.join(',')}
+                      className="hidden"
+                    />
                     <p className="text-xs text-gray-500 mt-4">
                       Supported formats: STL, 3MF, OBJ, GCODE (Max 50MB)
                     </p>
@@ -386,55 +321,38 @@ export default function Upload3DFilePage() {
                       </button>
                     </div>
 
-                    {/* STL Analysis Status - Automatic */}
-                    {file.name.toLowerCase().endsWith('.stl') && (
-                      <div className="mt-4">
-                        {isAnalyzing ? (
-                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="animate-spin">
-                                <Info className="text-blue-600" size={20} />
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-medium text-blue-900">Analyzing with PrusaSlicer...</p>
-                                <p className="text-sm text-blue-700 mt-1">
-                                  Calculating accurate filament usage and print time
-                                </p>
-                              </div>
+                    {/* Backend Pricing Display */}
+                    {backendPrice !== null && (
+                      <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="text-green-600" size={20} />
+                          <p className="font-medium text-green-900">
+                            {pricingAccurate ? 'Accurate Pricing Applied' : 'Estimate Provided'}
+                          </p>
+                        </div>
+                        {pricingAccurate && filamentGrams && printTimeSeconds && (
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <p className="text-gray-600">Filament</p>
+                              <p className="font-medium text-lg">{filamentGrams.toFixed(1)}g</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Print Time</p>
+                              <p className="font-medium text-lg">
+                                {Math.floor(printTimeSeconds / 3600)}h {Math.floor((printTimeSeconds % 3600) / 60)}m
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Total Price</p>
+                              <p className="font-medium text-lg text-green-700">₹{backendPrice}</p>
                             </div>
                           </div>
-                        ) : accuratePrice !== null ? (
-                          <div className="p-4 bg-green-50 border border-green-300 rounded-lg">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle className="text-green-600" size={20} />
-                                <p className="font-medium text-green-900">Accurate Analysis Complete</p>
-                              </div>
-                              <button
-                                onClick={reAnalyzeSTLFile}
-                                className="text-sm text-blue-600 hover:text-blue-800 underline"
-                              >
-                                Re-analyze
-                              </button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-gray-600">Filament</p>
-                                <p className="font-medium text-lg">{filamentGrams?.toFixed(1)}g</p>
-                              </div>
-                              <div>
-                                <p className="text-gray-600">Print Time</p>
-                                <p className="font-medium text-lg">
-                                  {Math.floor((printTimeSeconds || 0) / 3600)}h {Math.floor(((printTimeSeconds || 0) % 3600) / 60)}m
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-gray-600">Unit Price</p>
-                                <p className="font-medium text-lg text-green-700">₹{accuratePrice}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ) : null}
+                        )}
+                        {!pricingAccurate && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            Estimated price: ₹{backendPrice}
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -527,9 +445,7 @@ export default function Upload3DFilePage() {
                           onClick={() => setFormData({ ...formData, material: material.id })}
                         >
                           <p className="font-medium">{material.name}</p>
-                          <p className="text-xs text-gray-600">
-                            {material.price > 0 ? `+₹${material.price}` : 'Base'}
-                          </p>
+                          <p className="text-xs text-gray-600">{material.description}</p>
                         </div>
                       ))}
                     </div>
@@ -614,58 +530,42 @@ export default function Upload3DFilePage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Price Estimate</h2>
+                <h2 className="text-xl font-semibold mb-4">Price Summary</h2>
                 
-                <div className="space-y-3 text-sm mb-6">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Base Price:</span>
-                    <span className="font-medium">₹300</span>
+                {backendPrice !== null ? (
+                  <>
+                    <div className="border-t border-b py-4 mb-6">
+                      <div className="flex justify-between text-xl font-bold">
+                        <span>Total:</span>
+                        <span className="text-primary">₹{backendPrice}</span>
+                      </div>
+                      {pricingAccurate ? (
+                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                          <CheckCircle className="inline" size={12} /> 
+                          Accurate pricing from STL analysis
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                          <Info className="inline" size={12} /> 
+                          Estimated price (final quote after review)
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    <Info size={32} className="mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm">Upload and submit to get pricing</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Material ({formData.material.toUpperCase()}):</span>
-                    <span className="font-medium">
-                      ₹{materials.find(m => m.id === formData.material)?.price || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Quantity:</span>
-                    <span className="font-medium">×{formData.quantity}</span>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 mb-6">
-                  <div className="flex justify-between text-xl font-bold">
-                    <span>Total:</span>
-                    <span className="text-primary">₹{calculateEstimatedPrice()}</span>
-                  </div>
-                  {accuratePrice !== null ? (
-                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                      <CheckCircle className="inline" size={12} /> 
-                      Accurate price from STL analysis
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                      <Info className="inline" size={12} /> 
-                      {file?.name.toLowerCase().endsWith('.stl') 
-                        ? 'Estimated price (click Analyze for accuracy)'
-                        : 'Final price after file review'}
-                    </p>
-                  )}
-                </div>
+                )}
 
                 <Button
                   onClick={handleSubmit}
-                  disabled={!file || isUploading || isAnalyzing}
+                  disabled={!file || isUploading}
                   className="w-full"
                 >
-                  {isUploading ? 'Uploading...' : isAnalyzing ? 'Analyzing STL...' : 'Submit Print Request'}
+                  {isUploading ? 'Uploading...' : 'Submit Print Request'}
                 </Button>
-
-                {isAnalyzing && (
-                  <p className="text-blue-600 text-sm mt-3 text-center">
-                    ⏳ Please wait for analysis to complete...
-                  </p>
-                )}
 
                 {errors.submit && (
                   <p className="text-red-500 text-sm mt-3">{errors.submit}</p>
@@ -680,7 +580,7 @@ export default function Upload3DFilePage() {
                   </p>
                   <p className="flex items-center gap-2">
                     <CheckCircle size={14} className="text-green-500" />
-                    {accuratePrice ? 'Accurate price calculated' : 'Detailed quote provided'}
+                    Accurate pricing calculation
                   </p>
                   <p className="flex items-center gap-2">
                     <CheckCircle size={14} className="text-green-500" />

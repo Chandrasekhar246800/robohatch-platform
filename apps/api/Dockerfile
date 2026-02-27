@@ -24,14 +24,25 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 2: Production
-FROM node:20-alpine AS production
+FROM node:20 AS production
+
+# Install PrusaSlicer and dependencies for STL analysis
+RUN apt-get update && apt-get install -y \
+    prusa-slicer \
+    wget \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify PrusaSlicer installation
+RUN prusa-slicer --version || echo "WARNING: PrusaSlicer not found in PATH"
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
 
 # Create app user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nodejs
 
 # Set working directory
 WORKDIR /app
@@ -48,6 +59,11 @@ RUN npm install --production --workspace=@robohatch/api
 COPY --chown=nodejs:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=nodejs:nodejs --from=builder /app/apps/api/node_modules/.prisma ./apps/api/node_modules/.prisma
 COPY --chown=nodejs:nodejs --from=builder /app/apps/api/prisma ./apps/api/prisma
+
+# Create temp directory for STL analysis
+RUN mkdir -p /tmp/stl-uploads && \
+    chown -R nodejs:nodejs /tmp/stl-uploads && \
+    chmod 755 /tmp/stl-uploads
 
 # Switch to non-root user
 USER nodejs

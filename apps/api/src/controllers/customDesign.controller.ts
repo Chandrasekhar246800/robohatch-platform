@@ -3,7 +3,12 @@ import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
 import { stlAnalysisService } from '../services/stlAnalysis.service';
+import { s3 } from '../config/s3';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 
 // Note: CustomDesignStatus will be available after running the migration
 const CustomDesignStatus = {
@@ -16,8 +21,76 @@ const CustomDesignStatus = {
 } as const;
 
 /**
- * Calculate estimated price based on 3D design parameters
- * This is a simplified calculation - in production, you'd parse STL file for exact volume
+ * Download file from S3 to temporary location
+ */
+const downloadFromS3 = async (s3Key: string): Promise<string> => {
+  const tempDir = process.env.UPLOAD_DIR || '/tmp/stl-uploads';
+  await fs.promises.mkdir(tempDir, { recursive: true });
+
+  const uniqueId = crypto.randomUUID();
+  const ext = path.extname(s3Key);
+  const tempPath = path.join(tempDir, `${uniqueId}${ext}`);
+
+  try {
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: s3Key,
+    });
+
+    const response = await s3.send(command);
+    const stream = response.Body as Readable;
+
+    const writeStream = fs.createWriteStream(tempPath);
+    await new Promise((resolve, reject) => {
+      stream.pipe(writeStream);
+      stream.on('error', reject);
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    return tempPath;
+  } catch (error: any) {
+    console.error('Failed to download from S3:', error);
+    throw new Error(`S3 download failed: ${error.message}`);
+  }
+};
+
+/**
+ * Extract S3 key from S3 URL/location
+ */
+const getS3KeyFromUrl = (s3Url: string): string => {
+  // Handle different S3 URL formats:
+  // https://bucket.s3.region.amazonaws.com/key
+  // https://s3.region.amazonaws.com/bucket/key
+  // or just the key itself if using multer-s3 key property
+  
+  if (s3Url.includes('amazonaws.com')) {
+    const parts = s3Url.split('.amazonaws.com/');
+    if (parts.length > 1) {
+      return parts[1].split('?')[0]; // Remove query params
+    }
+  }
+  
+  // Assume it's already a key
+  return s3Url.replace(/^https?:\/\/[^\/]+\//, '');
+};
+
+/**
+ * Get material cost per gram for FDM materials
+ */
+const getMaterialCostPerGram = (material: string): number => {
+  const costs: Record<string, number> = {
+    pla: 1.2,
+    abs: 1.5,
+    petg: 1.8,
+    tpu: 2.5,
+  };
+  return costs[material] || 1.2; // Default to PLA cost
+};
+
+/**
+ * Calculate estimated price based on 3D design parameters (fallback)
+ * Used when STL analysis fails or for non-STL files
  */
 const calculateEstimatedPrice = (params: {
   fileSize: number; // in bytes
@@ -27,37 +100,54 @@ const calculateEstimatedPrice = (params: {
   layerHeight?: number;
 }): number => {
   const { fileSize, material, quantity, infillPercentage = 20, layerHeight = 0.2 } = params;
+  const materialLower = material.toLowerCase();
 
   // Base price calculation
-  const basePrice = 300; // Base printing fee
+  const basePrice = 300;
 
-  // Material pricing
+  // Special handling for resin (volume-based estimate)
+  if (materialLower === 'resin') {
+    // Rough estimate: 1MB file ≈ 10cm³ volume
+    const estimatedVolumeCm3 = (fileSize / (1024 * 1024)) * 10;
+    const resinCostPerCm3 = 3.5;
+    const machineCostPerHour = 30;
+    const electricityCostPerHour = 6;
+    
+    // Estimate print time (rough): 1cm³ ≈ 10 minutes
+    const estimatedPrintTimeHours = (estimatedVolumeCm3 * 10) / 60;
+    
+    const materialCost = estimatedVolumeCm3 * resinCostPerCm3;
+    const machineCost = estimatedPrintTimeHours * machineCostPerHour;
+    const electricityCost = estimatedPrintTimeHours * electricityCostPerHour;
+    
+    const baseCost = materialCost + machineCost + electricityCost;
+    const priceWithProfit = baseCost * 1.45; // 45% profit margin
+    
+    return Math.round(priceWithProfit * quantity);
+  }
+
+  // FDM material pricing
   const materialPrices: Record<string, number> = {
     pla: 0,
     abs: 50,
     petg: 75,
     tpu: 100,
-    resin: 150,
   };
-  const materialPrice = materialPrices[material.toLowerCase()] || 0;
+  const materialPrice = materialPrices[materialLower] || 0;
 
-  // File size factor (as proxy for model complexity/volume)
-  // Assuming 1MB = ~₹100 in material and time cost
+  // File size factor
   const fileSizeFactor = Math.round((fileSize / (1024 * 1024)) * 100);
 
-  // Infill percentage factor (higher infill = more material/time)
+  // Infill percentage factor
   const infillFactor = Math.round((infillPercentage / 20) * 50);
 
-  // Layer height factor (lower layer = higher quality = more time)
+  // Layer height factor
   const layerHeightFactor = layerHeight === 0.1 ? 100 : layerHeight === 0.2 ? 50 : 25;
 
   // Calculate total per unit
   const pricePerUnit = basePrice + materialPrice + fileSizeFactor + infillFactor + layerHeightFactor;
 
-  // Apply quantity
-  const totalPrice = pricePerUnit * quantity;
-
-  return Math.round(totalPrice);
+  return Math.round(pricePerUnit * quantity);
 };
 
 export const createCustomDesign = async (req: AuthRequest, res: Response) => {
@@ -102,44 +192,115 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     // Determine if file is STL for accurate analysis
     const fileExtension = path.extname(file.originalname).toLowerCase();
     const isSTLFile = fileExtension === '.stl';
+    const materialLower = material.toLowerCase();
+    const quantityInt = parseInt(quantity) || 1;
 
     let estimatedPrice: number;
-    let analysisData = null;
+    let pricingData: {
+      accurate: boolean;
+      filament_grams?: number;
+      print_time_seconds?: number;
+      final_price: number;
+    } = {
+      accurate: false,
+      final_price: 0,
+    };
 
-    // For STL files, use accurate PrusaSlicer analysis if available
-    // Note: This requires the file to be accessible locally
-    // Current implementation uses simple calculation as files are uploaded directly to S3
-    // For production: Consider downloading from S3, analyzing, then deleting temp file
-    if (isSTLFile && process.env.ENABLE_STL_ANALYSIS === 'true') {
-      console.log('🔬 STL file detected - attempting accurate analysis...');
-      
-      // TODO: Implement S3 download for analysis
-      // const s3File = await downloadFromS3(file.location);
-      // const analysis = await stlAnalysisService.analyzeSTLFromPath(s3File);
-      // if (analysis.success) {
-      //   estimatedPrice = analysis.price_inr || 0;
-      //   analysisData = analysis;
-      // }
-      
-      // Fallback to simple calculation for now
-      estimatedPrice = calculateEstimatedPrice({
-        fileSize: file.size,
-        material,
-        quantity: parseInt(quantity) || 1,
-        infillPercentage: parseInt(infillPercentage),
-        layerHeight: parseFloat(layerHeight),
-      });
-      
-      console.log('⚠️  Using simple file-size estimation. Enable STL analysis by downloading from S3.');
-    } else {
-      // Use simple file-size based calculation for non-STL or when analysis is disabled
-      estimatedPrice = calculateEstimatedPrice({
-        fileSize: file.size,
-        material,
-        quantity: parseInt(quantity) || 1,
-        infillPercentage: parseInt(infillPercentage),
-        layerHeight: parseFloat(layerHeight),
-      });
+    let tempFilePath: string | null = null;
+
+    try {
+      // For STL files, use accurate PrusaSlicer analysis
+      if (isSTLFile) {
+        console.log('🔬 STL file detected - attempting accurate analysis...');
+        
+        try {
+          // Step 1: Download file from S3 to temp location
+          const s3Key = getS3KeyFromUrl(file.key || file.location);
+          console.log(`📥 Downloading file from S3: ${s3Key}`);
+          tempFilePath = await downloadFromS3(s3Key);
+          console.log(`✓ Downloaded to: ${tempFilePath}`);
+
+          // Step 2: Build custom pricing based on material
+          const customPricing = materialLower === 'resin' ? {
+            // Resin pricing (volume-based, not filament)
+            // Note: PrusaSlicer outputs filament for FDM
+            // For resin, we'll use file analysis differently
+            materialCostPerGram: 0, // Not used for resin
+            machineCostPerHour: 30,
+            electricityCostPerHour: 6,
+            profitMarginPercent: 45,
+          } : {
+            // FDM material pricing
+            materialCostPerGram: getMaterialCostPerGram(materialLower),
+            machineCostPerHour: 25,
+            electricityCostPerHour: 5,
+            profitMarginPercent: 40,
+          };
+
+          // Step 3: Analyze with PrusaSlicer
+          console.log('⏳ Analyzing with PrusaSlicer...');
+          const analysis = await stlAnalysisService.analyzeSTLFromPath(
+            tempFilePath,
+            customPricing
+          );
+
+          // Step 4: Use accurate price if analysis succeeded
+          if (analysis.success && analysis.price_inr) {
+            estimatedPrice = Math.round(analysis.price_inr * quantityInt);
+            pricingData = {
+              accurate: true,
+              filament_grams: analysis.filament_grams,
+              print_time_seconds: analysis.print_time_seconds,
+              final_price: estimatedPrice,
+            };
+            console.log(`✅ Accurate analysis complete: ₹${estimatedPrice}`);
+          } else {
+            throw new Error(analysis.error || 'Analysis returned no price');
+          }
+        } catch (analysisError: any) {
+          console.error('⚠️  STL analysis failed:', analysisError.message);
+          console.log('Falling back to file-size estimation...');
+          
+          // Fallback to simple calculation
+          estimatedPrice = calculateEstimatedPrice({
+            fileSize: file.size,
+            material: materialLower,
+            quantity: quantityInt,
+            infillPercentage: parseInt(infillPercentage) || 20,
+            layerHeight: parseFloat(layerHeight) || 0.2,
+          });
+          
+          pricingData = {
+            accurate: false,
+            final_price: estimatedPrice,
+          };
+        }
+      } else {
+        // Non-STL files: use file-size estimation
+        console.log(`📄 Non-STL file (${fileExtension}) - using estimation`);
+        estimatedPrice = calculateEstimatedPrice({
+          fileSize: file.size,
+          material: materialLower,
+          quantity: quantityInt,
+          infillPercentage: parseInt(infillPercentage) || 20,
+          layerHeight: parseFloat(layerHeight) || 0.2,
+        });
+        
+        pricingData = {
+          accurate: false,
+          final_price: estimatedPrice,
+        };
+      }
+    } finally {
+      // Step 5: Cleanup temp file
+      if (tempFilePath) {
+        try {
+          await fs.promises.unlink(tempFilePath);
+          console.log(`🗑️  Cleaned up temp file: ${path.basename(tempFilePath)}`);
+        } catch (cleanupError: any) {
+          console.error('Failed to cleanup temp file:', cleanupError.message);
+        }
+      }
     }
 
     const customDesign = await prisma.customDesign.create({
@@ -150,7 +311,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         material,
         color,
         size,
-        quantity: parseInt(quantity) || 1,
+        quantity: quantityInt,
         fileUrl: file.location, // S3 URL from multer-s3
         status: CustomDesignStatus.PENDING,
         estimatedPrice,
@@ -164,7 +325,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       designName: name,
       material,
       color,
-      quantity: parseInt(quantity) || 1,
+      quantity: quantityInt,
       fileUrl: file.location,
       fileName: file.originalname,
       fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
@@ -178,7 +339,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     res.status(201).json({
       success: true,
       message: 'Custom design request submitted successfully',
-      data: { customDesign },
+      customDesign,
+      pricing: pricingData,
     });
   } catch (error) {
     console.error('Create custom design error:', error);
