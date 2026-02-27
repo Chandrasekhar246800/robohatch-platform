@@ -300,7 +300,8 @@ Stock locked forever ❌
 - Runs every 5 minutes
 - Finds orders older than 15 minutes with status = CREATED
 - Restores stock atomically
-- Marks orders as EXPIRED
+- Marks orders as CANCELLED (expired status)
+- Marks payments as FAILED
 
 **Configuration:**
 ```typescript

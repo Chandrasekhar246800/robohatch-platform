@@ -15,7 +15,8 @@
  * This worker runs every 5 minutes and:
  * 1. Finds orders older than 15 minutes with status = CREATED
  * 2. Restores their stock
- * 3. Marks them as EXPIRED
+ * 3. Marks them as CANCELLED (expired orders)
+ * 4. Marks their payments as FAILED
  * 
  * @author RoboHatch Backend Team
  * @version 1.0.0
@@ -47,13 +48,16 @@ export async function expireAbandonedOrders() {
         createdAt: {
           lt: expirationThreshold,
         },
-        payment: {
-          OR: [
-            { status: 'PENDING' },
-            { status: 'CREATED' },
-            { status: { equals: null } }, // No payment record at all
-          ],
-        },
+        OR: [
+          {
+            payment: {
+              status: { in: ['PENDING', 'CREATED'] },
+            },
+          },
+          {
+            payment: null, // No payment record at all
+          },
+        ],
       },
       include: {
         items: {
@@ -99,20 +103,20 @@ export async function expireAbandonedOrders() {
               console.warn(`⚠️  Failed to restore stock for ${result.productId}: ${result.error}`);
             });
 
-          // Mark order as EXPIRED
+          // Mark order as CANCELLED (expired orders are treated as cancelled)
           await tx.order.update({
             where: { id: order.id },
             data: {
-              status: 'EXPIRED',
+              status: 'CANCELLED',
             },
           });
 
-          // Mark payment as EXPIRED if exists
+          // Mark payment as FAILED if exists (expired payments are treated as failed)
           if (order.payment) {
             await tx.payment.update({
               where: { id: order.payment.id },
               data: {
-                status: 'EXPIRED',
+                status: 'FAILED',
               },
             });
           }
@@ -197,16 +201,16 @@ export async function manuallyExpireOrder(orderId: string, reason?: string) {
       }))
     );
 
-    // Mark as expired
+    // Mark as expired (using CANCELLED status)
     await tx.order.update({
       where: { id: orderId },
-      data: { status: 'EXPIRED' },
+      data: { status: 'CANCELLED' },
     });
 
     if (order.payment) {
       await tx.payment.update({
         where: { id: order.payment.id },
-        data: { status: 'EXPIRED' },
+        data: { status: 'FAILED' },
       });
     }
   });
