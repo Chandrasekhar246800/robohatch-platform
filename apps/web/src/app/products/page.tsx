@@ -25,7 +25,7 @@ function ProductsContent() {
     categoryParam || 'all'
   );
   const [sortBy, setSortBy] = useState<string>('newest');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([30, 10000]);
   const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -174,7 +174,7 @@ function ProductsContent() {
                 <button
                   onClick={() => {
                     setSelectedCategory('all');
-                    setPriceRange([0, 10000]);
+                    setPriceRange([30, 10000]);
                     setSortBy('newest');
                   }}
                   className="text-sm text-primary hover:underline"
@@ -261,7 +261,7 @@ function ProductsContent() {
                   </div>
                   <input
                     type="range"
-                    min="0"
+                    min="30"
                     max="10000"
                     step="100"
                     value={priceRange[1]}
@@ -272,7 +272,7 @@ function ProductsContent() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => setPriceRange([0, 500])}
+                      onClick={() => setPriceRange([30, 500])}
                       className="text-xs"
                     >
                       Under ₹500
@@ -280,7 +280,7 @@ function ProductsContent() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => setPriceRange([0, 2000])}
+                      onClick={() => setPriceRange([30, 2000])}
                       className="text-xs"
                     >
                       Under ₹2000
@@ -341,7 +341,7 @@ function ProductsContent() {
                 <button
                   onClick={() => {
                     setSelectedCategory('all');
-                    setPriceRange([0, 10000]);
+                    setPriceRange([30, 10000]);
                   }}
                   className="mt-4 text-primary hover:underline"
                 >
