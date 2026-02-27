@@ -143,7 +143,7 @@ export const LoginForm: React.FC = () => {
             transition={{ delay: 0.2 }}
           >
             <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-            <p className="text-secondary-peach">Login to your Robohatch account</p>
+            <p className="text-secondary-peach">Login to your ROBOHATCH account</p>
           </motion.div>
         </div>
 

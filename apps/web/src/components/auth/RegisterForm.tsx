@@ -132,7 +132,7 @@ export const RegisterForm: React.FC = () => {
             transition={{ delay: 0.2 }}
           >
             <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-            <p className="text-secondary-peach">Join Robohatch today</p>
+            <p className="text-secondary-peach">Join ROBOHATCH today</p>
           </motion.div>
         </div>
 

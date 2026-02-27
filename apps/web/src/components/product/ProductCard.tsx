@@ -24,9 +24,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist, items: wishlistItems } = useWishlistStore();
   const [isAdding, setIsAdding] = React.useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = React.useState(false);
+  const wishlistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const inWishlist = isInWishlist(product.id);
   const cartQuantity = getItemQuantity(product.id);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (wishlistTimeoutRef.current) {
+        clearTimeout(wishlistTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -35,9 +45,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setTimeout(() => setIsAdding(false), 1000);
   };
 
-  const handleWishlistToggle = async (e: React.MouseEvent) => {
+  const handleWishlistToggle = async (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Prevent double-clicks/taps
+    if (isWishlistLoading) {
+      return;
+    }
 
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
@@ -46,6 +61,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
 
     setIsWishlistLoading(true);
+
+    // Clear any existing timeout
+    if (wishlistTimeoutRef.current) {
+      clearTimeout(wishlistTimeoutRef.current);
+    }
 
     try {
       if (inWishlist) {
@@ -57,8 +77,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       } else {
         await addToWishlist(product.id, product.name);
       }
+    } catch (error) {
+      console.error('Wishlist toggle error:', error);
     } finally {
-      setIsWishlistLoading(false);
+      // Add small delay to prevent rapid clicking
+      wishlistTimeoutRef.current = setTimeout(() => {
+        setIsWishlistLoading(false);
+      }, 300);
     }
   };
 
@@ -107,13 +132,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             />
             
             {/* Wishlist Heart Button */}
-            {/* Wishlist Heart Button */}
             <button
               onClick={handleWishlistToggle}
+              onTouchEnd={handleWishlistToggle}
               disabled={isWishlistLoading}
-              className={`absolute top-3 left-3 p-2 rounded-full bg-white shadow-md hover:scale-110 transition-all duration-200 ${
+              className={`absolute top-3 left-3 p-2.5 rounded-full bg-white shadow-md hover:scale-110 active:scale-95 transition-all duration-200 touch-manipulation ${
                 isWishlistLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
+              style={{ WebkitTapHighlightColor: 'transparent' }}
               aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
             >
               <Heart

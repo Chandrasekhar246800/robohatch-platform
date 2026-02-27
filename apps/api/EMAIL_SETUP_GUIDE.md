@@ -1,13 +1,21 @@
 # Email Notification System - Setup Guide
 
 ## Overview
-RoboHatch now has a complete email notification system integrated with SendGrid. The system sends 5 types of transactional emails:
+RoboHatch now has a complete email notification system integrated with SendGrid. The system sends 9 types of emails with department-specific routing:
 
-1. **Order Confirmation** - Sent when order is created
-2. **Payment Success** - Sent when payment is captured  
+### **Customer Emails** (Sent from: founder@robohatch.in)
+1. **Order Confirmation** - Sent to customer when order is created
+2. **Payment Success** - Sent to customer when payment is captured  
 3. **Shipping Notification** - Sent when order status changes to SHIPPED
 4. **Refund Confirmation** - Sent when refund is processed
-5. **Order Status Updates** - Future enhancement for custom updates
+5. **Order Cancellation** - Sent when order is cancelled
+6. **Password Reset** - Sent when user requests password reset
+7. **Contact Form Confirmation** - Thank you message to customer
+
+### **Admin Notifications** (Department-Specific)
+- **Order Notifications** → robohatchorders@gmail.com (all order details)
+- **3D Design Upload** → robohatchorders@gmail.com (custom 3D print requests)
+- **Contact Form Submissions** → robohatchofficial@gmail.com (customer inquiries)
 
 ---
 
@@ -53,12 +61,18 @@ Add to your `.env` file:
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 SENDGRID_FROM_EMAIL=noreply@robohatch.in
 SENDGRID_FROM_NAME=RoboHatch
+
+# Department Email Addresses
+ORDERS_EMAIL=robohatchorders@gmail.com
+CONTACT_EMAIL=robohatchofficial@gmail.com
 ```
 
 **Environment Variable Details:**
 - `SENDGRID_API_KEY` - Your SendGrid API key (required)
 - `SENDGRID_FROM_EMAIL` - Verified sender email address
 - `SENDGRID_FROM_NAME` - Display name for sender (e.g., "RoboHatch")
+- `ORDERS_EMAIL` - Email address to receive order notifications (defaults to robohatchorders@gmail.com)
+- `CONTACT_EMAIL` - Email address to receive contact form submissions and support inquiries (defaults to robohatchofficial@gmail.com)
 
 ### Step 5: Test Email System
 ```bash

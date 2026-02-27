@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, AuthenticationError, NetworkError } from '@/lib/api-client';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,9 +24,9 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       if (isAuthenticated && user) {
-        // Skip validation if login happened within last 3 seconds (cookie propagation time)
+        // Skip validation if login happened within last 5 seconds (cookie propagation time)
         const timeSinceLogin = Date.now() - _lastLoginTime;
-        if (timeSinceLogin < 3000) {
+        if (timeSinceLogin < 5000) {
           console.log('[AuthInitializer] Skipping validation - login too recent:', timeSinceLogin, 'ms');
           return;
         }
@@ -47,16 +47,29 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
               console.error('Background wishlist fetch failed:', err);
             });
           } else {
-            // Token invalid, logout
-            console.warn('Profile validation failed, logging out');
+            // Profile fetch succeeded but returned invalid data - logout
+            console.warn('Profile validation failed (invalid response), logging out');
             logout();
             resetWishlist();
           }
         } catch (error: any) {
-          // Logout on ANY error - don't keep stale auth state
-          console.warn('Auth validation failed, logging out:', error.message);
-          logout();
-          resetWishlist();
+          // Handle different error types
+          if (error instanceof AuthenticationError) {
+            // Authentication failed (401) - token is invalid, logout required
+            console.warn('Authentication failed (token invalid/expired), logging out:', error.message);
+            logout();
+            resetWishlist();
+            apiClient.handleAuthenticationFailure(error.message);
+          } else if (error instanceof NetworkError) {
+            // Network error - don't logout, keep existing session
+            // User might be temporarily offline or API might be down
+            console.warn('Network error during auth validation, keeping session:', error.message);
+            console.log('User can continue using cached data. Will retry validation on next navigation.');
+          } else {
+            // Unknown error - be conservative and keep the session
+            // This could be a temporary issue
+            console.error('Unknown error during auth validation, keeping session:', error);
+          }
         }
       } else {
         // User not authenticated, reset wishlist
@@ -64,10 +77,10 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Wait longer to allow cookie to propagate across domains (Vercel -> Railway)
+    // Wait for cookie propagation across domains (Vercel -> Railway)
     const timer = setTimeout(() => {
       initAuth();
-    }, 2000); // Increased to 2000ms for cross-domain cookie propagation
+    }, 3000); // Increased to 3000ms for better cross-domain cookie propagation
 
     return () => clearTimeout(timer);
   }, [isAuthenticated, user?.id, _lastLoginTime]); // Re-run when auth status, user ID, or login time changes

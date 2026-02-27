@@ -3,6 +3,8 @@
 import type { Metadata } from 'next';
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import { useState } from 'react';
+import { apiClient } from '@/lib/api-client';
+import toast from 'react-hot-toast';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -12,13 +14,38 @@ export default function ContactPage() {
     subject: '',
     message: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Form submission logic would go here
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+
+    try {
+      await apiClient.submitContactForm(formData);
+      
+      setSubmitted(true);
+      toast.success('Message sent successfully! We\'ll get back to you within 24-48 hours.');
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: '',
+      });
+      
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (error: any) {
+      console.error('Contact form error:', error);
+      toast.error(error.message || 'Failed to send message. Please try again or email us directly.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -199,10 +226,11 @@ export default function ContactPage() {
 
             <button
               type="submit"
-              className="w-full bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-accent transition-colors flex items-center justify-center"
+              disabled={isSubmitting}
+              className="w-full bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-accent transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-5 h-5 mr-2" />
-              Send Message
+              {isSubmitting ? 'Sending...' : 'Send Message'}
             </button>
           </form>
         </section>

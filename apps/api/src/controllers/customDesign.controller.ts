@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
+import { emailService } from '../services/email.service';
 
 // Note: CustomDesignStatus will be available after running the migration
 const CustomDesignStatus = {
@@ -12,13 +13,69 @@ const CustomDesignStatus = {
   REJECTED: 'REJECTED',
 } as const;
 
+/**
+ * Calculate estimated price based on 3D design parameters
+ * This is a simplified calculation - in production, you'd parse STL file for exact volume
+ */
+const calculateEstimatedPrice = (params: {
+  fileSize: number; // in bytes
+  material: string;
+  quantity: number;
+  infillPercentage?: number;
+  layerHeight?: number;
+}): number => {
+  const { fileSize, material, quantity, infillPercentage = 20, layerHeight = 0.2 } = params;
+
+  // Base price calculation
+  const basePrice = 300; // Base printing fee
+
+  // Material pricing
+  const materialPrices: Record<string, number> = {
+    pla: 0,
+    abs: 50,
+    petg: 75,
+    tpu: 100,
+    resin: 150,
+  };
+  const materialPrice = materialPrices[material.toLowerCase()] || 0;
+
+  // File size factor (as proxy for model complexity/volume)
+  // Assuming 1MB = ~₹100 in material and time cost
+  const fileSizeFactor = Math.round((fileSize / (1024 * 1024)) * 100);
+
+  // Infill percentage factor (higher infill = more material/time)
+  const infillFactor = Math.round((infillPercentage / 20) * 50);
+
+  // Layer height factor (lower layer = higher quality = more time)
+  const layerHeightFactor = layerHeight === 0.1 ? 100 : layerHeight === 0.2 ? 50 : 25;
+
+  // Calculate total per unit
+  const pricePerUnit = basePrice + materialPrice + fileSizeFactor + infillFactor + layerHeightFactor;
+
+  // Apply quantity
+  const totalPrice = pricePerUnit * quantity;
+
+  return Math.round(totalPrice);
+};
+
 export const createCustomDesign = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
+    const userEmail = req.user?.email;
+    
     if (!userId) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized',
+      });
+    }
+
+    // Get uploaded file from multer-s3
+    const file = req.file as Express.MulterS3.File;
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: '3D file upload is required',
       });
     }
 
@@ -29,7 +86,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       color,
       size,
       quantity,
-      fileUrl,
+      infillPercentage,
+      layerHeight,
     } = req.body;
 
     if (!name || !material || !color) {
@@ -39,6 +97,15 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Calculate estimated price based on file and parameters
+    const estimatedPrice = calculateEstimatedPrice({
+      fileSize: file.size,
+      material,
+      quantity: parseInt(quantity) || 1,
+      infillPercentage: parseInt(infillPercentage),
+      layerHeight: parseFloat(layerHeight),
+    });
+
     const customDesign = await prisma.customDesign.create({
       data: {
         userId,
@@ -47,10 +114,29 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         material,
         color,
         size,
-        quantity: quantity || 1,
-        fileUrl,
+        quantity: parseInt(quantity) || 1,
+        fileUrl: file.location, // S3 URL from multer-s3
         status: CustomDesignStatus.PENDING,
+        estimatedPrice,
       },
+    });
+
+    // Send email notification to admin (non-blocking)
+    emailService.send3DDesignNotification({
+      customerName: userEmail || 'Customer',
+      customerEmail: userEmail || '',
+      designName: name,
+      material,
+      color,
+      quantity: parseInt(quantity) || 1,
+      fileUrl: file.location,
+      fileName: file.originalname,
+      fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      estimatedPrice,
+      infillPercentage: parseInt(infillPercentage) || 20,
+      layerHeight: parseFloat(layerHeight) || 0.2,
+    }).catch(error => {
+      console.error('Failed to send 3D design notification email:', error);
     });
 
     res.status(201).json({

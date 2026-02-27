@@ -40,15 +40,15 @@ export const Footer: React.FC = () => {
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center space-x-2 mb-4 group">
-              <div className="w-10 h-10 flex items-center justify-center transform group-hover:scale-110 transition-all duration-300">
+              <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center transform group-hover:scale-110 transition-all duration-300">
                 <img 
                   src="/logo.jpeg" 
                   alt="RoboHatch Logo" 
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-xl font-bold text-white">
-                Robo<span className="text-primary">hatch</span>
+              <span className="text-xl font-black text-primary">
+                ROBOHATCH
               </span>
             </Link>
             <p className="text-sm mb-4">
@@ -142,7 +142,7 @@ export const Footer: React.FC = () => {
             <h3 className="text-white font-semibold mb-4">Contact</h3>
             <ul className="space-y-3">
               <li className="flex flex-col space-y-1">
-                <span className="text-sm font-semibold text-white">RoboHatch</span>
+                <span className="text-sm font-black text-primary">ROBOHATCH</span>
               </li>
               <li className="flex items-start space-x-2">
                 <MapPin size={18} className="mt-0.5 flex-shrink-0" />
@@ -173,7 +173,7 @@ export const Footer: React.FC = () => {
         <div className="mt-12 pt-8 border-t border-dark-brown">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-sm">
-              © {currentYear} Robohatch. All rights reserved.
+              © {currentYear} <span className="font-black text-primary">ROBOHATCH</span>. All rights reserved.
             </p>
             <div className="flex space-x-6">
               {footerLinks.legal.map((link) => (

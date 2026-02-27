@@ -230,7 +230,7 @@ export default function FAQPage() {
             </a>
             <a
               href="tel:+919505551727"
-              className="px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-orange-50 transition-colors"
+              className="px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-orange-50 transition-colors whitespace-nowrap"
             >
               Call +91 95055 51727
             </a>

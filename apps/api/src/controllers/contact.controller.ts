@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import whatsappService from '../services/whatsapp.service';
+import { emailService } from '../services/email.service';
 
 /**
  * Contact form submission schema
@@ -32,6 +33,18 @@ export class ContactController {
           subject: validatedData.subject,
           message: validatedData.message,
         },
+      });
+
+      // Send email notification to admin (non-blocking)
+      emailService.sendContactFormNotification({
+        name: validatedData.name,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        subject: validatedData.subject,
+        message: validatedData.message,
+        timestamp: contact.createdAt,
+      }).catch(error => {
+        console.error('⚠️  Email notification failed (non-critical):', error.message);
       });
 
       // Send WhatsApp notification (non-blocking)

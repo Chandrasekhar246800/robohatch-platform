@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button, Input, Card, CardContent } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { apiClient } from '@/lib/api-client';
+import toast from 'react-hot-toast';
 
 const ALLOWED_FILE_TYPES = ['.stl', '.3mf', '.obj', '.gcode'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -144,24 +146,55 @@ export default function Upload3DFilePage() {
     setIsUploading(true);
     setErrors({});
 
-    try {
-      // TODO: Implement actual file upload to S3/server
-      // Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setUploadProgress(i);
-      }
+    const uploadToast = toast.loading('Uploading your 3D design...');
 
-      console.log('Uploading design:', { file, ...formData });
-      
-      // Redirect to orders page
-      router.push('/orders?new=3d-file');
-    } catch (error) {
+    try {
+      // Simulate upload progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 300);
+
+      const result = await apiClient.upload3DDesign({
+        file,
+        name: formData.name,
+        description: formData.description,
+        material: formData.material,
+        color: formData.color,
+        quantity: formData.quantity,
+        infillPercentage: formData.infillPercentage,
+        layerHeight: formData.layerHeight,
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (result.success) {
+        toast.success('3D design uploaded successfully! We\'ll review it and send you a quote.', {
+          id: uploadToast,
+          duration: 5000,
+        });
+        
+        // Redirect after a short delay
+        setTimeout(() => {
+          router.push('/orders');
+        }, 1500);
+      } else {
+        throw new Error(result.message || 'Upload failed');
+      }
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      setErrors({ submit: 'Failed to upload file. Please try again.' });
+      const errorMessage = error.message || 'Failed to upload file. Please try again.';
+      setErrors({ submit: errorMessage });
+      toast.error(errorMessage, { id: uploadToast });
+      setUploadProgress(0);
     } finally {
       setIsUploading(false);
-      setUploadProgress(0);
     }
   };
 

@@ -1,5 +1,21 @@
 import { useAuthStore } from '@/store/auth.store';
 
+// Custom error class for authentication failures
+export class AuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+// Custom error class for network failures
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
 // Ensure API_URL is an absolute URL
 const getApiUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -119,16 +135,16 @@ class ApiClient {
       
       // Timeout error
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout: Server took too long to respond');
+        throw new NetworkError('Request timeout: Server took too long to respond');
       }
       
       // Network connection error (DNS, offline, server down)
       if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-        throw new Error('Network error: Cannot reach API server. Check your internet connection or API URL.');
+        throw new NetworkError('Network error: Cannot reach API server. Check your internet connection or API URL.');
       }
       
       // Other errors
-      throw error;
+      throw new NetworkError(error.message || 'Network error occurred');
     }
   }
 
@@ -195,13 +211,9 @@ class ApiClient {
     // Handle 401 - Unauthorized (token expired or invalid)
     // Skip redirect during login/register attempts
     if (response.status === 401 && !skipAuthRedirect) {
-      // Clear auth state (httpOnly cookie cleared by backend)
-      useAuthStore.getState().logout();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
       const errorMsg = data.error || data.message || 'Session expired';
-      throw new Error(errorMsg);
+      // Throw AuthenticationError - let caller decide whether to logout
+      throw new AuthenticationError(errorMsg);
     }
 
     // Handle other HTTP error responses (400, 403, 500, etc.)
@@ -344,6 +356,22 @@ class ApiClient {
     return useAuthStore.getState().isAuthenticated;
   }
 
+  /**
+   * Handle authentication failure - logout and redirect to login
+   * Call this when catching AuthenticationError in components
+   */
+  handleAuthenticationFailure(errorMessage?: string): void {
+    console.warn('Authentication failure:', errorMessage || 'Session expired');
+    
+    // Clear local auth state
+    useAuthStore.getState().logout();
+    
+    // Redirect to login page
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = '/login';
+    }
+  }
+
   // Cart API methods
   async getCart() {
     try {
@@ -450,10 +478,9 @@ class ApiClient {
   // Wishlist API methods
   async getWishlist() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wishlist`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/wishlist`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -462,18 +489,20 @@ class ApiClient {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Get wishlist error:', error);
-      throw error;
+      if (error instanceof NetworkError) {
+        throw error;
+      }
+      throw new Error(error.message || 'Failed to get wishlist');
     }
   }
 
   async addToWishlist(productId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wishlist/items`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/wishlist/items`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ productId }),
       });
 
@@ -483,18 +512,20 @@ class ApiClient {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add to wishlist error:', error);
-      throw error;
+      if (error instanceof NetworkError) {
+        throw error;
+      }
+      throw new Error(error.message || 'Failed to add to wishlist');
     }
   }
 
   async removeFromWishlist(itemId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wishlist/items/${itemId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/wishlist/items/${itemId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -503,18 +534,20 @@ class ApiClient {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Remove from wishlist error:', error);
-      throw error;
+      if (error instanceof NetworkError) {
+        throw error;
+      }
+      throw new Error(error.message || 'Failed to remove from wishlist');
     }
   }
 
   async clearWishlist() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wishlist/clear`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/wishlist/clear`, {
         method: 'DELETE',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
       });
 
       if (!response.ok) {
@@ -523,9 +556,12 @@ class ApiClient {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Clear wishlist error:', error);
-      throw error;
+      if (error instanceof NetworkError) {
+        throw error;
+      }
+      throw new Error(error.message || 'Failed to clear wishlist');
     }
   }
 
@@ -1053,6 +1089,84 @@ class ApiClient {
     } catch (error: any) {
       console.error('Delete product error:', error);
       return { success: false, message: error.message || 'Network error' };
+    }
+  }
+
+  /**
+   * Submit contact form
+   */
+  async submitContactForm(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    subject: string;
+    message: string;
+  }) {
+    try {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/contact`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      const result = await this.handleResponse(response, true);
+      return result;
+    } catch (error: any) {
+      console.error('Submit contact form error:', error);
+      if (error instanceof NetworkError) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Upload 3D design file with specifications
+   */
+  async upload3DDesign(data: {
+    file: File;
+    name: string;
+    description?: string;
+    material: string;
+    color: string;
+    quantity: number;
+    infillPercentage: number;
+    layerHeight: number;
+  }) {
+    try {
+      const formData = new FormData();
+      formData.append('file', data.file);
+      formData.append('name', data.name);
+      if (data.description) {
+        formData.append('description', data.description);
+      }
+      formData.append('material', data.material);
+      formData.append('color', data.color);
+      formData.append('quantity', data.quantity.toString());
+      formData.append('infillPercentage', data.infillPercentage.toString());
+      formData.append('layerHeight', data.layerHeight.toString());
+
+      const token = process.browser ? localStorage.getItem('token') : null;
+
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/custom-designs`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // Don't set Content-Type - browser will set it with boundary for multipart/form-data
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+      const result = await this.handleResponse(response, true);
+      return result;
+    } catch (error: any) {
+      console.error('Upload 3D design error:', error);
+      if (error instanceof NetworkError) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      throw error;
     }
   }
 }

@@ -365,6 +365,7 @@ export class PaymentService {
     Promise.all([
       emailService.sendOrderConfirmation(payment.orderId),
       emailService.sendPaymentSuccess(payment.orderId, razorpay_payment_id),
+      emailService.sendAdminOrderNotification(payment.orderId),
     ]).catch(error => {
       console.error('⚠️  Email notification failed (non-critical):', error.message);
     });
