@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search, ShoppingCart, User, Menu, X, LogOut, Package, Heart, ChevronDown, Sparkles, Upload, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, LogOut, Package, Heart, ChevronDown, Upload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
@@ -191,7 +191,6 @@ export const Header: React.FC = () => {
     { name: 'Home', href: '/', hideForAdmin: true },
     { name: 'Products', href: '/products', hideForAdmin: true },
     { name: 'Categories', href: '/products', hideForAdmin: true },
-    { name: 'Custom Design', href: '/custom-design', hideForAdmin: true },
   ];
 
   return (
@@ -411,15 +410,6 @@ export const Header: React.FC = () => {
                             </span>
                           )}
                         </div>
-                      </Link>
-                      
-                      <Link
-                        href="/custom-design"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <Sparkles size={18} />
-                        <span>Custom Design</span>
                       </Link>
                       
                       <Link

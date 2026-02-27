@@ -21,8 +21,11 @@ function ProductsContent() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ExtendedCategory[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam || 'all'
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    categoryParam ? [categoryParam] : []
+  );
+  const [tempSelectedCategories, setTempSelectedCategories] = useState<string[]>(
+    categoryParam ? [categoryParam] : []
   );
   const [sortBy, setSortBy] = useState<string>('newest');
   const [priceRange, setPriceRange] = useState<[number, number]>([30, 10000]);
@@ -113,9 +116,9 @@ function ProductsContent() {
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
 
-    if (selectedCategory !== 'all') {
+    if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) => 
-        p.category.id === selectedCategory || p.category.slug === selectedCategory
+        selectedCategories.includes(p.category.id) || selectedCategories.includes(p.category.slug)
       );
     }
 
@@ -141,11 +144,29 @@ function ProductsContent() {
     }
 
     return filtered;
-  }, [products, selectedCategory, sortBy, priceRange]);
+  }, [products, selectedCategories, sortBy, priceRange]);
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setTempSelectedCategories(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleApplyFilters = () => {
+    setSelectedCategories(tempSelectedCategories);
+  };
+
+  const handleClearCategories = () => {
+    setTempSelectedCategories([]);
+    setSelectedCategories([]);
+  };
 
   useEffect(() => {
     if (categoryParam) {
-      setSelectedCategory(categoryParam);
+      setSelectedCategories([categoryParam]);
+      setTempSelectedCategories([categoryParam]);
     }
   }, [categoryParam]);
 
@@ -173,7 +194,7 @@ function ProductsContent() {
                 <h2 className="font-bold text-lg">Filters</h2>
                 <button
                   onClick={() => {
-                    setSelectedCategory('all');
+                    handleClearCategories();
                     setPriceRange([30, 10000]);
                     setSortBy('newest');
                   }}
@@ -185,36 +206,22 @@ function ProductsContent() {
 
               <div className="mb-6">
                 <h3 className="font-semibold mb-3 text-sm uppercase text-gray-600">
-                  Category
+                  Categories ({tempSelectedCategories.length} selected)
                 </h3>
                 <div className="space-y-2">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="category"
-                      value="all"
-                      checked={selectedCategory === 'all'}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium">All Products</span>
-                  </label>
-                  
                   {/* CUSTOM Categories Section */}
                   {categories.filter(c => c.type === 'CUSTOM').length > 0 && (
                     <>
-                      <div className="pt-3 pb-1">
+                      <div className="pt-1 pb-1">
                         <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">CUSTOM</span>
                       </div>
                       {categories.filter(c => c.type === 'CUSTOM').map((category) => (
                         <label key={category.id} className="flex items-center space-x-2 cursor-pointer pl-2">
                           <input
-                            type="radio"
-                            name="category"
-                            value={category.id}
-                            checked={selectedCategory === category.id}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="text-primary focus:ring-primary"
+                            type="checkbox"
+                            checked={tempSelectedCategories.includes(category.id)}
+                            onChange={() => handleCategoryToggle(category.id)}
+                            className="text-primary focus:ring-primary rounded"
                           />
                           <span className="text-sm">{category.name}</span>
                         </label>
@@ -231,12 +238,10 @@ function ProductsContent() {
                       {categories.filter(c => c.type === 'DEFAULT').map((category) => (
                         <label key={category.id} className="flex items-center space-x-2 cursor-pointer pl-2">
                           <input
-                            type="radio"
-                            name="category"
-                            value={category.id}
-                            checked={selectedCategory === category.id}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="text-primary focus:ring-primary"
+                            type="checkbox"
+                            checked={tempSelectedCategories.includes(category.id)}
+                            onChange={() => handleCategoryToggle(category.id)}
+                            className="text-primary focus:ring-primary rounded"
                           />
                           <span className="text-sm">{category.name}</span>
                         </label>
@@ -246,6 +251,26 @@ function ProductsContent() {
                   
                   {categories.length === 0 && (
                     <p className="text-xs text-gray-400 italic py-2">No categories available</p>
+                  )}
+                </div>
+
+                {/* Apply Filters Button */}
+                <div className="mt-4 space-y-2">
+                  <Button
+                    onClick={handleApplyFilters}
+                    className="w-full"
+                    size="sm"
+                    variant="primary"
+                  >
+                    Apply Filters
+                  </Button>
+                  {tempSelectedCategories.length > 0 && (
+                    <button
+                      onClick={handleClearCategories}
+                      className="w-full text-sm text-gray-600 hover:text-primary transition-colors"
+                    >
+                      Clear Categories
+                    </button>
                   )}
                 </div>
               </div>
@@ -340,7 +365,7 @@ function ProductsContent() {
                 <p className="text-gray-600">No products match your filters</p>
                 <button
                   onClick={() => {
-                    setSelectedCategory('all');
+                    handleClearCategories();
                     setPriceRange([30, 10000]);
                   }}
                   className="mt-4 text-primary hover:underline"
