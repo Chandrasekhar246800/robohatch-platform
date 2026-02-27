@@ -200,15 +200,15 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Left: Logo */}
           <Link href="/" className="flex items-center space-x-2 group flex-shrink-0">
-            <div className="w-10 h-10 flex items-center justify-center transform group-hover:scale-110 transition-all duration-300">
+            <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center transform group-hover:scale-110 transition-all duration-300">
               <img 
                 src="/logo.jpeg" 
                 alt="RoboHatch Logo" 
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-xl font-bold text-gray-900 hidden sm:inline">
-              Robo<span className="text-primary">Hatch</span>
+            <span className="text-xl font-black text-black hidden sm:inline">
+              ROBOHATCH
             </span>
           </Link>
 

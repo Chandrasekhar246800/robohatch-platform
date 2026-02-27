@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Star, Heart } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Plus, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Product } from '@/types';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
@@ -19,13 +19,14 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
-  const addItem = useCartStore((state) => state.addItem);
+  const { addItem, updateQuantity, removeItem, getItemQuantity, items } = useCartStore();
   const { isAuthenticated } = useAuthStore();
-  const { isInWishlist, addToWishlist, removeFromWishlist, items } = useWishlistStore();
+  const { isInWishlist, addToWishlist, removeFromWishlist, items: wishlistItems } = useWishlistStore();
   const [isAdding, setIsAdding] = React.useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = React.useState(false);
 
   const inWishlist = isInWishlist(product.id);
+  const cartQuantity = getItemQuantity(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -49,7 +50,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     try {
       if (inWishlist) {
         // Find the wishlist item ID
-        const wishlistItem = items.find((item) => item.productId === product.id);
+        const wishlistItem = wishlistItems.find((item) => item.productId === product.id);
         if (wishlistItem) {
           await removeFromWishlist(wishlistItem.id, product.name);
         }
@@ -58,6 +59,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       }
     } finally {
       setIsWishlistLoading(false);
+    }
+  };
+
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateQuantity(product.id, cartQuantity + 1, isAuthenticated);
+  };
+
+  const handleDecrement = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (cartQuantity > 1) {
+      updateQuantity(product.id, cartQuantity - 1, isAuthenticated);
+    } else {
+      removeItem(product.id, isAuthenticated);
     }
   };
 
@@ -156,22 +173,45 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </div>
             </div>
 
-            {/* Add to Cart Button */}
-            <Button
-              onClick={handleAddToCart}
-              disabled={!product.inStock || isAdding}
-              className="w-full"
-              size="sm"
-            >
-              {isAdding ? (
-                'Added!'
-              ) : (
-                <>
-                  <ShoppingCart size={16} className="mr-2" />
-                  Add to Cart
-                </>
-              )}
-            </Button>
+            {/* Add to Cart Button or Quantity Controls */}
+            {cartQuantity > 0 ? (
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={handleDecrement}
+                  className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus size={18} className="text-gray-700" />
+                </button>
+                <span className="flex-1 text-center font-semibold text-lg">
+                  {cartQuantity}
+                </span>
+                <button
+                  onClick={handleIncrement}
+                  disabled={!product.inStock}
+                  className="flex items-center justify-center w-10 h-10 bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Increase quantity"
+                >
+                  <Plus size={18} className="text-white" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleAddToCart}
+                disabled={!product.inStock || isAdding}
+                className="w-full"
+                size="sm"
+              >
+                {isAdding ? (
+                  'Added!'
+                ) : (
+                  <>
+                    <ShoppingCart size={16} className="mr-2" />
+                    Add to Cart
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </Link>
