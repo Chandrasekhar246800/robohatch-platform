@@ -51,6 +51,14 @@ router.delete(
 router.get('/all', (req, res) => productController.getAllProducts(req, res));
 
 /**
+ * @route   GET /api/products/search
+ * @desc    Search products by name or description
+ * @access  Public
+ * @query   q - search query string
+ */
+router.get('/search', (req, res) => productController.searchProducts(req, res));
+
+/**
  * @route   GET /api/products/:id
  * @desc    Get product by ID
  * @access  Public

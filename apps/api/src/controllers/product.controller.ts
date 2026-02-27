@@ -184,6 +184,84 @@ export class ProductController {
     }
   }
 
+  async searchProducts(req: Request, res: Response) {
+    try {
+      const { q } = req.query;
+
+      if (!q || typeof q !== 'string' || q.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Search query is required',
+          data: [],
+        });
+      }
+
+      const searchTerm = q.trim();
+
+      // Search products by name or description
+      // MySQL search is case-insensitive by default for contains
+      const products = await prisma.product.findMany({
+        where: {
+          AND: [
+            { isActive: true }, // Only show active products
+            {
+              OR: [
+                {
+                  name: {
+                    contains: searchTerm,
+                  },
+                },
+                {
+                  description: {
+                    contains: searchTerm,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        include: {
+          images: true,
+          categories: {
+            include: {
+              category: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 20, // Limit to 20 results for performance
+      });
+
+      // Transform response to include single category instead of categories array
+      const transformedProducts = products.map((product: any) => {
+        const transformed = {
+          ...product,
+          category: product.categories[0]?.category || null,
+          categoryId: product.categories[0]?.categoryId || null,
+        };
+        delete (transformed as any).categories;
+        return transformed;
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: transformedProducts,
+        count: transformedProducts.length,
+        query: q,
+      });
+    } catch (error: any) {
+      console.error('Search products error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Search failed',
+        error: error.message,
+        data: [],
+      });
+    }
+  }
+
   async getProductById(req: Request, res: Response) {
     try {
       const { id } = req.params;

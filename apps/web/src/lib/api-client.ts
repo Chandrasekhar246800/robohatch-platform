@@ -977,6 +977,27 @@ class ApiClient {
     }
   }
 
+  async searchProducts(query: string) {
+    try {
+      const response = await this.fetchWithTimeout(
+        `${this.baseUrl}/api/products/search?q=${encodeURIComponent(query)}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        return { success: false, message: 'Search failed', data: [] };
+      }
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      console.error('Search products error:', error);
+      return { success: false, message: error.message || 'Network error', data: [] };
+    }
+  }
+
   async getProductById(id: string) {
     try {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/products/${id}`, {

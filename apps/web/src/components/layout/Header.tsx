@@ -1,15 +1,26 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search, ShoppingCart, User, Menu, X, LogOut, Package, Heart, ChevronDown, Sparkles, Upload } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, LogOut, Package, Heart, ChevronDown, Sparkles, Upload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useUIStore } from '@/store/ui.store';
 import { useAuthStore } from '@/store/auth.store';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiClient } from '@/lib/api-client';
+import { formatPrice } from '@/lib/utils';
+
+interface SearchResult {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  category?: { name: string };
+}
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
@@ -19,7 +30,13 @@ export const Header: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const itemCount = useCartStore((state) => state.getItemCount());
   const wishlistCount = useWishlistStore((state) => state.count);
@@ -57,14 +74,28 @@ export const Header: React.FC = () => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsProfileOpen(false);
+        setShowDropdown(false);
+        setIsSearchOpen(false);
       }
     };
 
-    if (isProfileOpen) {
-      document.addEventListener('keydown', handleEsc);
-    }
+    document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isProfileOpen]);
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
 
   const handleLogout = () => {
     logout();
@@ -72,14 +103,89 @@ export const Header: React.FC = () => {
     router.push('/');
   };
 
+  // Debounced search function
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowDropdown(true);
+
+    try {
+      const response = await apiClient.searchProducts(query);
+      if (response.success && response.data) {
+        setSearchResults(response.data.slice(0, 5)); // Show max 5 suggestions
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Handle search input change with debouncing
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    // Clear previous timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer for debounced search (300ms)
+    debounceTimerRef.current = setTimeout(() => {
+      performSearch(value);
+    }, 300);
+  };
+
+  // Handle search form submit (Enter key or search button)
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
+      setSearchResults([]);
+      setShowDropdown(false);
+      setIsSearchOpen(false);
+      searchInputRef.current?.blur();
+    }
+  };
+
+  // Handle clicking on a search result
+  const handleResultClick = (productId: string) => {
+    router.push(`/product/${productId}`);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowDropdown(false);
+    setIsSearchOpen(false);
+  };
+
+  // View all results
+  const handleViewAllResults = () => {
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+      setSearchResults([]);
+      setShowDropdown(false);
       setIsSearchOpen(false);
     }
   };
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const navigation = [
     { name: 'Home', href: '/', hideForAdmin: true },
@@ -107,21 +213,90 @@ export const Header: React.FC = () => {
           </Link>
 
           {/* Center: Search Bar (Desktop) */}
-          <form 
-            onSubmit={handleSearch}
-            className="hidden md:flex flex-1 max-w-2xl mx-4"
-          >
-            <div className="relative w-full">
-              <input
-                type="text"
-                placeholder="Search for products, brands and more"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2.5 pl-12 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            </div>
-          </form>
+          <div ref={searchRef} className="hidden md:flex flex-1 max-w-2xl mx-4 relative">
+            <form onSubmit={handleSearch} className="w-full">
+              <div className="relative w-full">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search for products, brands and more"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowDropdown(true)}
+                  className="w-full px-4 py-2.5 pl-12 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
+                  autoComplete="off"
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                {isSearching && (
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary animate-spin" size={18} />
+                )}
+              </div>
+            </form>
+
+            {/* Search Results Dropdown */}
+            <AnimatePresence>
+              {showDropdown && (searchResults.length > 0 || (searchQuery.length >= 2 && !isSearching)) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-96 overflow-y-auto z-50"
+                >
+                  {searchResults.length > 0 ? (
+                    <>
+                      <div className="p-2">
+                        {searchResults.map((product) => (
+                          <button
+                            key={product.id}
+                            onClick={() => handleResultClick(product.id)}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+                          >
+                            <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
+                              {product.images && product.images.length > 0 ? (
+                                <Image
+                                  src={product.images[0]}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <Package size={20} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-sm font-semibold text-primary">{formatPrice(product.price)}</p>
+                                {product.category && (
+                                  <span className="text-xs text-gray-500">• {product.category.name}</span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="border-t border-gray-200 p-2">
+                        <button
+                          onClick={handleViewAllResults}
+                          className="w-full px-4 py-2 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                        >
+                          View all results for "{searchQuery}"
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Package className="mx-auto mb-3 text-gray-400" size={32} />
+                      <p className="text-sm font-medium text-gray-900">No products found</p>
+                      <p className="text-xs text-gray-500 mt-1">Try different keywords</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Right: Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
@@ -308,11 +483,15 @@ export const Header: React.FC = () => {
                     type="text"
                     placeholder="Search for products, brands and more"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                     className="w-full px-4 py-2.5 pl-12 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
                     autoFocus
+                    autoComplete="off"
                   />
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  {isSearching && (
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary animate-spin" size={18} />
+                  )}
                 </div>
               </form>
             </motion.div>

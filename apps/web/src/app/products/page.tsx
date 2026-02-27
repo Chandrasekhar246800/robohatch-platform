@@ -17,6 +17,7 @@ interface ExtendedCategory extends Category {
 function ProductsContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const searchParam = searchParams.get('search');
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ExtendedCategory[]>([]);
@@ -33,11 +34,16 @@ function ProductsContent() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Fetch products and categories from API
-        const [productsResponse, categoriesResponse] = await Promise.all([
-          apiClient.getProducts(),
-          apiClient.getCategories(),
-        ]);
+        // If search param exists, use search API instead
+        let productsResponse;
+        if (searchParam && searchParam.trim()) {
+          productsResponse = await apiClient.searchProducts(searchParam.trim());
+        } else {
+          productsResponse = await apiClient.getProducts();
+        }
+
+        // Fetch categories
+        const categoriesResponse = await apiClient.getCategories();
 
         let productsData = [];
         let categoriesData = [];
@@ -102,7 +108,7 @@ function ProductsContent() {
     };
 
     loadData();
-  }, []);
+  }, [searchParam]);
 
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
@@ -147,9 +153,14 @@ function ProductsContent() {
     <div className="py-8">
       <div className="container-custom">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">All Products</h1>
+          <h1 className="text-4xl font-bold mb-2">
+            {searchParam ? `Search Results for "${searchParam}"` : 'All Products'}
+          </h1>
           <p className="text-gray-600">
-            Discover our complete collection of premium 3D printed items
+            {searchParam 
+              ? `Found ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`
+              : 'Discover our complete collection of premium 3D printed items'
+            }
           </p>
         </div>
 
