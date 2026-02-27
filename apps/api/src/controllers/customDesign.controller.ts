@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
+import { stlAnalysisService } from '../services/stlAnalysis.service';
+import path from 'path';
 
 // Note: CustomDesignStatus will be available after running the migration
 const CustomDesignStatus = {
@@ -97,14 +99,48 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Calculate estimated price based on file and parameters
-    const estimatedPrice = calculateEstimatedPrice({
-      fileSize: file.size,
-      material,
-      quantity: parseInt(quantity) || 1,
-      infillPercentage: parseInt(infillPercentage),
-      layerHeight: parseFloat(layerHeight),
-    });
+    // Determine if file is STL for accurate analysis
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    const isSTLFile = fileExtension === '.stl';
+
+    let estimatedPrice: number;
+    let analysisData = null;
+
+    // For STL files, use accurate PrusaSlicer analysis if available
+    // Note: This requires the file to be accessible locally
+    // Current implementation uses simple calculation as files are uploaded directly to S3
+    // For production: Consider downloading from S3, analyzing, then deleting temp file
+    if (isSTLFile && process.env.ENABLE_STL_ANALYSIS === 'true') {
+      console.log('🔬 STL file detected - attempting accurate analysis...');
+      
+      // TODO: Implement S3 download for analysis
+      // const s3File = await downloadFromS3(file.location);
+      // const analysis = await stlAnalysisService.analyzeSTLFromPath(s3File);
+      // if (analysis.success) {
+      //   estimatedPrice = analysis.price_inr || 0;
+      //   analysisData = analysis;
+      // }
+      
+      // Fallback to simple calculation for now
+      estimatedPrice = calculateEstimatedPrice({
+        fileSize: file.size,
+        material,
+        quantity: parseInt(quantity) || 1,
+        infillPercentage: parseInt(infillPercentage),
+        layerHeight: parseFloat(layerHeight),
+      });
+      
+      console.log('⚠️  Using simple file-size estimation. Enable STL analysis by downloading from S3.');
+    } else {
+      // Use simple file-size based calculation for non-STL or when analysis is disabled
+      estimatedPrice = calculateEstimatedPrice({
+        fileSize: file.size,
+        material,
+        quantity: parseInt(quantity) || 1,
+        infillPercentage: parseInt(infillPercentage),
+        layerHeight: parseFloat(layerHeight),
+      });
+    }
 
     const customDesign = await prisma.customDesign.create({
       data: {
