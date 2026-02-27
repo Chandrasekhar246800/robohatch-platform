@@ -44,7 +44,7 @@ const downloadFromS3 = async (s3Key: string): Promise<string> => {
     await new Promise((resolve, reject) => {
       stream.pipe(writeStream);
       stream.on('error', reject);
-      writeStream.on('finish', resolve);
+      writeStream.on('finish', () => resolve(undefined));
       writeStream.on('error', reject);
     });
 
