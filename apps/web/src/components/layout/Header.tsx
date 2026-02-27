@@ -149,7 +149,7 @@ export const Header: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
       setSearchResults([]);
       setShowDropdown(false);
@@ -170,7 +170,7 @@ export const Header: React.FC = () => {
   // View all results
   const handleViewAllResults = () => {
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
       setSearchResults([]);
       setShowDropdown(false);
