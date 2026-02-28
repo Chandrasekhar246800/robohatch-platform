@@ -325,9 +325,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         fileUrl: file.location, // S3 URL from multer-s3
         status: CustomDesignStatus.PENDING,
         estimatedPrice: finalEstimatedPrice,
-        // TODO: Uncomment after running WEIGHT_TRACKING_MIGRATION.sql
-        // filamentGrams: pricingData?.filament_grams || null,
-        // printTimeSeconds: pricingData?.print_time_seconds || null,
+        // filamentGrams: pricingData?.filament_grams || null, // Uncomment after migration
+        // printTimeSeconds: pricingData?.print_time_seconds || null, // Uncomment after migration
       },
     });
 
@@ -341,8 +340,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         price: finalEstimatedPrice,
         stock: quantityInt, // Each custom design is unique, stock = quantity ordered
         isActive: true,
-        // TODO: Uncomment after running WEIGHT_TRACKING_MIGRATION.sql
-        // weight: pricingData?.filament_grams ? `${pricingData.filament_grams.toFixed(1)}g` : null,
+        // weight: pricingData?.filament_grams ? `${pricingData.filament_grams.toFixed(1)}g` : null, // Uncomment after migration
       },
     });
 
