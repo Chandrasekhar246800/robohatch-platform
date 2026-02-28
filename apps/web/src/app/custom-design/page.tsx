@@ -72,6 +72,9 @@ export default function CustomDesignPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Store backend-calculated weight for display
+  const [weight, setWeight] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login?redirect=/custom-design');
@@ -147,6 +150,14 @@ export default function CustomDesignPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Store weight for display if available
+        if (data.customDesign && data.customDesign.filamentGrams) {
+          setWeight(`${parseFloat(data.customDesign.filamentGrams).toFixed(1)}g`);
+        } else if (data.pricing && data.pricing.filament_grams) {
+          setWeight(`${parseFloat(data.pricing.filament_grams).toFixed(1)}g`);
+        } else {
+          setWeight(null);
+        }
         // Success - redirect to orders page
         router.push('/orders?new=custom-design');
       } else {
@@ -369,13 +380,13 @@ export default function CustomDesignPage() {
     >
       <h2 className="text-2xl font-bold mb-6">Review & Submit</h2>
       
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Order Summary */}
         <div>
           <Card>
             <CardContent className="p-6 space-y-4">
               <h3 className="text-xl font-semibold mb-4">Order Summary</h3>
-              
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Category:</span>
@@ -409,8 +420,13 @@ export default function CustomDesignPage() {
                   <span className="text-gray-600">Quantity:</span>
                   <span className="font-medium">{formData.quantity}</span>
                 </div>
+                {weight && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Weight:</span>
+                    <span className="font-medium">{weight}</span>
+                  </div>
+                )}
               </div>
-
               <div className="border-t pt-4">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Estimated Price:</span>
