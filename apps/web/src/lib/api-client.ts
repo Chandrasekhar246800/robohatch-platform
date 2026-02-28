@@ -1169,6 +1169,44 @@ class ApiClient {
       throw error;
     }
   }
+
+  /**
+   * Get user addresses
+   */
+  async getUserAddresses() {
+    try {
+      const response = await this.fetchWithAuth(`${this.baseUrl}/api/addresses`);
+      return this.handleResponse(response);
+    } catch (error: any) {
+      console.error('Get addresses error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add new address
+   */
+  async addAddress(address: {
+    name: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    pincode: string;
+  }) {
+    try {
+      const response = await this.fetchWithAuth(`${this.baseUrl}/api/addresses`, {
+        method: 'POST',
+        body: JSON.stringify(address),
+      });
+      return this.handleResponse(response, true);
+    } catch (error: any) {
+      console.error('Add address error:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiClient = new ApiClient();
+

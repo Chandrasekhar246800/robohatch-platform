@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button, Input, Card, CardContent } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { useCartStore } from '@/store/cart.store';
+import { Product } from '@/types';
 import { apiClient } from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
@@ -43,6 +45,7 @@ const colors = [
 export default function Upload3DFilePage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { addItem } = useCartStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -55,6 +58,8 @@ export default function Upload3DFilePage() {
   const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
   const [printTimeSeconds, setPrintTimeSeconds] = useState<number | null>(null);
+  const [customDesignId, setCustomDesignId] = useState<string | null>(null);
+  const [uploadComplete, setUploadComplete] = useState<boolean>(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -202,19 +207,21 @@ export default function Upload3DFilePage() {
           }
         }
 
+        // Store custom design ID for checkout
+        if (result.customDesign?.id) {
+          setCustomDesignId(result.customDesign.id);
+        }
+
+        setUploadComplete(true);
+        
         const successMsg = result.pricing?.accurate
-          ? `3D design uploaded with accurate pricing! Final price: ₹${result.pricing.final_price}`
-          : '3D design uploaded successfully! We\'ll review it and send you a quote.';
+          ? `Analysis complete! Price: ₹${result.pricing.final_price}`
+          : 'Upload successful! Estimated price calculated.';
         
         toast.success(successMsg, {
           id: uploadToast,
           duration: 5000,
         });
-        
-        // Redirect after a short delay
-        setTimeout(() => {
-          router.push('/orders');
-        }, 1500);
       } else {
         throw new Error(result.message || 'Upload failed');
       }
@@ -559,13 +566,85 @@ export default function Upload3DFilePage() {
                   </div>
                 )}
 
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!file || isUploading}
-                  className="w-full"
-                >
-                  {isUploading ? 'Uploading...' : 'Submit Print Request'}
-                </Button>
+                {!uploadComplete ? (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!file || isUploading}
+                    className="w-full"
+                  >
+                    {isUploading ? 'Uploading...' : 'Analyze & Get Price'}
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <Button
+                      onClick={async () => {
+                        if (!backendPrice || !customDesignId) return;
+                        
+                        // Convert custom design to Product format for cart
+                        const customProduct: Product = {
+                          id: customDesignId,
+                          name: formData.name,
+                          description: formData.description || 'Custom 3D Printed Design',
+                          price: backendPrice,
+                          stock: 999,
+                          images: ['/placeholder-3d.png'],
+                          category: { 
+                            id: 'custom', 
+                            name: 'Custom 3D Prints', 
+                            slug: 'custom-3d-prints', 
+                            description: null, 
+                            image: null, 
+                            isActive: true, 
+                            createdAt: new Date(), 
+                            updatedAt: new Date() 
+                          },
+                          rating: 5,
+                          reviews: 0,
+                          inStock: true,
+                          featured: false,
+                          customizable: true,
+                          material: formData.material,
+                          tags: ['custom-design', '3d-print'],
+                          isActive: true,
+                          createdAt: new Date(),
+                        };
+                        
+                        try {
+                          await addItem(customProduct, formData.quantity, isAuthenticated);
+                          toast.success('Added to cart! Proceed to checkout.');
+                          router.push('/cart');
+                        } catch (error) {
+                          toast.error('Failed to add to cart');
+                        }
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      Add to Cart →
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setUploadComplete(false);
+                        setFile(null);
+                        setBackendPrice(null);
+                        setCustomDesignId(null);
+                        setUploadProgress(0);
+                        setFormData({
+                          name: '',
+                          description: '',
+                          material: 'pla',
+                          color: 'white',
+                          quantity: 1,
+                          infillPercentage: 20,
+                          layerHeight: 0.2,
+                        });
+                      }}
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      Upload Another Design
+                    </Button>
+                  </div>
+                )}
 
                 {errors.submit && (
                   <p className="text-red-500 text-sm mt-3">{errors.submit}</p>
