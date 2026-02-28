@@ -26,16 +26,30 @@ RUN npm run build
 # Stage 2: Production
 FROM node:20 AS production
 
-# Install PrusaSlicer and dependencies for STL analysis
+
+# Install OrcaSlicer CLI and dependencies for STL/3MF analysis
 RUN apt-get update && apt-get install -y \
-    prusa-slicer \
     wget \
     curl \
     ca-certificates \
+    libglu1-mesa \
+    libxrender1 \
+    libxi6 \
+    libxrandr2 \
+    libxcursor1 \
+    libxinerama1 \
+    libsm6 \
+    libxext6 \
+    libfreetype6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Verify PrusaSlicer installation
-RUN prusa-slicer --version || echo "WARNING: PrusaSlicer not found in PATH"
+# Download and install OrcaSlicer CLI (headless)
+RUN wget -O /tmp/orcaslicer.deb https://github.com/SoftFever/OrcaSlicer/releases/download/v2.0.0/OrcaSlicer-2.0.0-linux.deb \
+    && dpkg -i /tmp/orcaslicer.deb || apt-get install -f -y \
+    && rm /tmp/orcaslicer.deb
+
+# Verify OrcaSlicer installation
+RUN orcaslicer --version || echo "WARNING: OrcaSlicer not found in PATH"
 
 # Install dumb-init for proper signal handling
 RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*

@@ -20,8 +20,6 @@ const materials = [
   { id: 'abs', name: 'ABS', description: 'Durable, heat-resistant', price: 50 },
   { id: 'petg', name: 'PETG', description: 'Strong, flexible', price: 75 },
   { id: 'tpu', name: 'TPU', description: 'Flexible, rubber-like', price: 100 },
-  { id: 'wood-pla', name: 'Wood PLA', description: 'Wood-infused filament', price: 125 },
-  { id: 'resin', name: 'Resin', description: 'High detail, smooth finish', price: 150 },
 ];
 
 const colors = [

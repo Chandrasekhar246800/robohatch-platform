@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
-import { stlAnalysisService } from '../services/stlAnalysis.service';
+import { OrcaSlicerService } from '../services/slicer.service';
 import { s3 } from '../config/s3';
 import path from 'path';
 import fs from 'fs';
@@ -105,25 +105,10 @@ const calculateEstimatedPrice = (params: {
   // Base price calculation
   const basePrice = 300;
 
-  // Special handling for resin (volume-based estimate)
-  if (materialLower === 'resin') {
-    // Rough estimate: 1MB file ≈ 10cm³ volume
-    const estimatedVolumeCm3 = (fileSize / (1024 * 1024)) * 10;
-    const resinCostPerCm3 = 3.5;
-    const machineCostPerHour = 30;
-    const electricityCostPerHour = 6;
-    
-    // Estimate print time (rough): 1cm³ ≈ 10 minutes
-    const estimatedPrintTimeHours = (estimatedVolumeCm3 * 10) / 60;
-    
-    const materialCost = estimatedVolumeCm3 * resinCostPerCm3;
-    const machineCost = estimatedPrintTimeHours * machineCostPerHour;
-    const electricityCost = estimatedPrintTimeHours * electricityCostPerHour;
-    
-    const baseCost = materialCost + machineCost + electricityCost;
-    const priceWithProfit = baseCost * 1.45; // 45% profit margin
-    
-    return Math.round(priceWithProfit * quantity);
+  // Only allow FDM materials
+  const allowed = ['pla', 'abs', 'petg', 'tpu'];
+  if (!allowed.includes(materialLower)) {
+    throw new Error('Only PLA, ABS, PETG, TPU are supported');
   }
 
   // FDM material pricing
@@ -219,13 +204,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           tempFilePath = await downloadFromS3(s3Key);
           console.log(`✓ Downloaded to: ${tempFilePath}`);
 
-          // Step 2: Build custom pricing (kept for interface compatibility)
-          const customPricing = materialLower === 'resin' ? {
-            materialCostPerGram: 0,
-            machineCostPerHour: 30,
-            electricityCostPerHour: 6,
-            profitMarginPercent: 45,
-          } : {
+          // Step 2: Build custom pricing (FDM only)
+          const customPricing = {
             materialCostPerGram: 4.5,
             machineCostPerHour: 0,
             electricityCostPerHour: 0,
@@ -234,9 +214,14 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
 
           // Step 3: Analyze with new 3D file analysis
           console.log('⏳ Analyzing with 3D file analysis...');
-          const analysis = await stlAnalysisService.analyze3DFileFromPath(
+          const analysis = await OrcaSlicerService.analyze3DFileFromPath(
             tempFilePath,
-            customPricing
+            {
+              material: materialLower,
+              infill: parseInt(infillPercentage) || 20,
+              layerHeight: parseFloat(layerHeight) || 0.2,
+              quantity: quantityInt,
+            }
           );
 
           // Step 4: Use accurate price if analysis succeeded

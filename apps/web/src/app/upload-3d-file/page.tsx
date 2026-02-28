@@ -29,7 +29,6 @@ const materials = [
   { id: 'abs', name: 'ABS', description: 'Durable, heat-resistant' },
   { id: 'petg', name: 'PETG', description: 'Strong, flexible' },
   { id: 'tpu', name: 'TPU', description: 'Flexible, rubber-like' },
-  { id: 'resin', name: 'Resin (SLA)', description: 'High detail printing' },
 ];
 
 const colors = [
