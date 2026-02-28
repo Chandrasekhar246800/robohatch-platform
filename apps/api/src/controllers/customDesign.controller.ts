@@ -189,9 +189,10 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Determine if file is STL for accurate analysis
+
+    // Determine file extension and type
     const fileExtension = path.extname(file.originalname).toLowerCase();
-    const isSTLFile = fileExtension === '.stl';
+    const is3DFile = ['.stl', '.3mf', '.obj', '.gcode'].includes(fileExtension);
     const materialLower = material.toLowerCase();
     const quantityInt = parseInt(quantity) || 1;
 
@@ -209,10 +210,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     let tempFilePath: string | null = null;
 
     try {
-      // For STL files, use accurate PrusaSlicer analysis
-      if (isSTLFile) {
-        console.log('🔬 STL file detected - attempting accurate analysis...');
-        
+      if (is3DFile) {
+        console.log(`🔬 3D file detected (${fileExtension}) - attempting accurate analysis...`);
         try {
           // Step 1: Download file from S3 to temp location
           const s3Key = getS3KeyFromUrl(file.key || file.location);
@@ -220,27 +219,22 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           tempFilePath = await downloadFromS3(s3Key);
           console.log(`✓ Downloaded to: ${tempFilePath}`);
 
-          // Step 2: Build custom pricing (maintained for interface compatibility)
-          // Note: Actual pricing now uses simplified formula: weight (grams) × ₹4.5
+          // Step 2: Build custom pricing (kept for interface compatibility)
           const customPricing = materialLower === 'resin' ? {
-            // Resin pricing (volume-based, not filament)
-            // Note: PrusaSlicer outputs filament for FDM
-            // For resin, we'll use file analysis differently
-            materialCostPerGram: 0, // Not used for resin
+            materialCostPerGram: 0,
             machineCostPerHour: 30,
             electricityCostPerHour: 6,
             profitMarginPercent: 45,
           } : {
-            // FDM material pricing - uses simplified formula: weight × ₹4.5
             materialCostPerGram: 4.5,
             machineCostPerHour: 0,
             electricityCostPerHour: 0,
             profitMarginPercent: 0,
           };
 
-          // Step 3: Analyze with PrusaSlicer
-          console.log('⏳ Analyzing with PrusaSlicer...');
-          const analysis = await stlAnalysisService.analyzeSTLFromPath(
+          // Step 3: Analyze with new 3D file analysis
+          console.log('⏳ Analyzing with 3D file analysis...');
+          const analysis = await stlAnalysisService.analyze3DFileFromPath(
             tempFilePath,
             customPricing
           );
@@ -259,9 +253,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             throw new Error(analysis.error || 'Analysis returned no price');
           }
         } catch (analysisError: any) {
-          console.error('⚠️  STL analysis failed:', analysisError.message);
+          console.error('⚠️  3D file analysis failed:', analysisError.message);
           console.log('Falling back to file-size estimation...');
-          
           // Fallback to simple calculation
           estimatedPrice = calculateEstimatedPrice({
             fileSize: file.size,
@@ -270,15 +263,14 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             infillPercentage: parseInt(infillPercentage) || 20,
             layerHeight: parseFloat(layerHeight) || 0.2,
           });
-          
           pricingData = {
             accurate: false,
             final_price: estimatedPrice,
           };
         }
       } else {
-        // Non-STL files: use file-size estimation
-        console.log(`📄 Non-STL file (${fileExtension}) - using estimation`);
+        // Non-3D files: use file-size estimation
+        console.log(`📄 Non-3D file (${fileExtension}) - using estimation`);
         estimatedPrice = calculateEstimatedPrice({
           fileSize: file.size,
           material: materialLower,
@@ -286,7 +278,6 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           infillPercentage: parseInt(infillPercentage) || 20,
           layerHeight: parseFloat(layerHeight) || 0.2,
         });
-        
         pricingData = {
           accurate: false,
           final_price: estimatedPrice,
@@ -304,6 +295,24 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Ensure estimatedPrice is set
+    if (!estimatedPrice || estimatedPrice === 0) {
+      console.log('⚠️  No price calculated - using fallback estimation');
+      estimatedPrice = calculateEstimatedPrice({
+        fileSize: file.size,
+        material: materialLower,
+        quantity: quantityInt,
+        infillPercentage: parseInt(infillPercentage) || 20,
+        layerHeight: parseFloat(layerHeight) || 0.2,
+      });
+      pricingData.final_price = estimatedPrice;
+    }
+
+    console.log('💰 Final pricing:', { estimatedPrice, pricingData });
+
+    // Ensure price is a valid number
+    const finalEstimatedPrice = estimatedPrice || 0;
+
     const customDesign = await prisma.customDesign.create({
       data: {
         userId,
@@ -315,7 +324,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         quantity: quantityInt,
         fileUrl: file.location, // S3 URL from multer-s3
         status: CustomDesignStatus.PENDING,
-        estimatedPrice,
+        estimatedPrice: finalEstimatedPrice,
         // TODO: Uncomment after running WEIGHT_TRACKING_MIGRATION.sql
         // filamentGrams: pricingData?.filament_grams || null,
         // printTimeSeconds: pricingData?.print_time_seconds || null,
@@ -329,7 +338,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       data: {
         name: `Custom 3D Print: ${name}`,
         description: `[CUSTOM_DESIGN:${customDesign.id}] ${description || `Custom 3D printed design in ${material} (${color})`}${weightInfo}`,
-        price: estimatedPrice,
+        price: finalEstimatedPrice,
         stock: quantityInt, // Each custom design is unique, stock = quantity ordered
         isActive: true,
         // TODO: Uncomment after running WEIGHT_TRACKING_MIGRATION.sql
@@ -348,7 +357,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       fileUrl: file.location,
       fileName: file.originalname,
       fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-      estimatedPrice,
+      estimatedPrice: finalEstimatedPrice,
       infillPercentage: parseInt(infillPercentage) || 20,
       layerHeight: parseFloat(layerHeight) || 0.2,
     }).catch(error => {
@@ -364,11 +373,17 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       },
       pricing: pricingData,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create custom design error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to create custom design request',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

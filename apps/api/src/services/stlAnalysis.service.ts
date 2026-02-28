@@ -74,10 +74,10 @@ export class STLAnalysisService {
    * Validate STL file
    * @security Prevents path traversal and validates file type
    */
-  private validateSTLFile(filename: string): boolean {
-    // Check file extension
+  private validate3DFile(filename: string): boolean {
+    // Allow .stl, .3mf, .obj, .gcode
     const ext = path.extname(filename).toLowerCase();
-    if (ext !== '.stl') {
+    if (!['.stl', '.3mf', '.obj', '.gcode'].includes(ext)) {
       return false;
     }
 
@@ -267,20 +267,20 @@ export class STLAnalysisService {
    * @param customPricing - Optional custom pricing configuration
    * @returns Analysis result with filament, time, and price
    */
-  async analyzeSTL(
+  async analyze3DFile(
     fileBuffer: Buffer,
     originalFilename: string,
     customPricing?: Partial<PricingConfig>
   ): Promise<STLAnalysisResult> {
-    let stlPath: string | null = null;
+    let tempPath: string | null = null;
     let gcodePath: string | null = null;
 
     try {
       // Validate file type
-      if (!this.validateSTLFile(originalFilename)) {
+      if (!this.validate3DFile(originalFilename)) {
         return {
           success: false,
-          error: 'Invalid file type. Only .stl files are allowed',
+          error: 'Invalid file type. Only .stl, .3mf, .obj, .gcode files are allowed',
         };
       }
 
@@ -294,41 +294,56 @@ export class STLAnalysisService {
       }
 
       // Save file temporarily
-      stlPath = await this.saveTemporaryFile(fileBuffer, originalFilename);
-      console.log(`✓ Saved STL file: ${path.basename(stlPath)}`);
+      tempPath = await this.saveTemporaryFile(fileBuffer, originalFilename);
+      console.log(`✓ Saved 3D file: ${path.basename(tempPath)}`);
 
-      // Slice with PrusaSlicer
-      console.log('⏳ Slicing with PrusaSlicer...');
-      gcodePath = await this.sliceSTL(stlPath);
-      console.log(`✓ Slicing complete: ${path.basename(gcodePath)}`);
+      const ext = path.extname(originalFilename).toLowerCase();
+      if (['.stl', '.3mf', '.obj'].includes(ext)) {
+        // Slice with PrusaSlicer
+        console.log('⏳ Slicing with PrusaSlicer...');
+        gcodePath = await this.sliceSTL(tempPath);
+        console.log(`✓ Slicing complete: ${path.basename(gcodePath)}`);
 
-      // Parse G-code
-      console.log('⏳ Parsing G-code...');
-      const { filamentGrams, printTimeSeconds } = await this.parseGCode(gcodePath);
-      console.log(`✓ Extracted: ${filamentGrams}g filament, ${Math.round(printTimeSeconds / 60)} minutes`);
+        // Parse G-code
+        console.log('⏳ Parsing G-code...');
+        const { filamentGrams, printTimeSeconds } = await this.parseGCode(gcodePath);
+        console.log(`✓ Extracted: ${filamentGrams}g filament, ${Math.round(printTimeSeconds / 60)} minutes`);
 
-      // Calculate price
-      const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
-      console.log(`✓ Calculated price: ₹${priceInr}`);
+        // Calculate price
+        const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
+        console.log(`✓ Calculated price: ₹${priceInr}`);
 
-      // Cleanup files
-      await this.cleanup([stlPath, gcodePath]);
+        // Cleanup files
+        await this.cleanup([tempPath, gcodePath]);
 
-      return {
-        success: true,
-        filament_grams: filamentGrams,
-        print_time_seconds: printTimeSeconds,
-        price_inr: priceInr,
-      };
+        return {
+          success: true,
+          filament_grams: filamentGrams,
+          print_time_seconds: printTimeSeconds,
+          price_inr: priceInr,
+        };
+      } else if (ext === '.gcode') {
+        // Directly parse G-code
+        console.log('⏳ Parsing uploaded G-code...');
+        const { filamentGrams, printTimeSeconds } = await this.parseGCode(tempPath);
+        const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
+        await this.cleanup([tempPath]);
+        return {
+          success: true,
+          filament_grams: filamentGrams,
+          print_time_seconds: printTimeSeconds,
+          price_inr: priceInr,
+        };
+      } else {
+        throw new Error('Unsupported file extension');
+      }
     } catch (error: any) {
-      console.error('❌ STL analysis failed:', error.message);
-
+      console.error('❌ 3D file analysis failed:', error.message);
       // Cleanup on error
-      const filesToClean = [stlPath, gcodePath].filter(Boolean) as string[];
+      const filesToClean = [tempPath, gcodePath].filter(Boolean) as string[];
       if (filesToClean.length > 0) {
         await this.cleanup(filesToClean);
       }
-
       return {
         success: false,
         error: error.message || 'Analysis failed',
@@ -339,56 +354,61 @@ export class STLAnalysisService {
   /**
    * Analyze STL from file path (for use with already uploaded files)
    */
-  async analyzeSTLFromPath(
-    stlPath: string,
+  async analyze3DFileFromPath(
+    filePath: string,
     customPricing?: Partial<PricingConfig>
   ): Promise<STLAnalysisResult> {
     let gcodePath: string | null = null;
-
     try {
       // Verify file exists and is readable
-      await fsPromises.access(stlPath, fs.constants.R_OK);
-
-      // Validate it's an STL file
-      const filename = path.basename(stlPath);
-      if (!filename.toLowerCase().endsWith('.stl')) {
+      await fsPromises.access(filePath, fs.constants.R_OK);
+      const ext = path.extname(filePath).toLowerCase();
+      if (!['.stl', '.3mf', '.obj', '.gcode'].includes(ext)) {
         return {
           success: false,
-          error: 'File must have .stl extension',
+          error: 'File must have .stl, .3mf, .obj, or .gcode extension',
         };
       }
-
-      // Slice with PrusaSlicer
-      console.log('⏳ Slicing with PrusaSlicer...');
-      gcodePath = await this.sliceSTL(stlPath);
-      console.log(`✓ Slicing complete: ${path.basename(gcodePath)}`);
-
-      // Parse G-code
-      console.log('⏳ Parsing G-code...');
-      const { filamentGrams, printTimeSeconds } = await this.parseGCode(gcodePath);
-      console.log(`✓ Extracted: ${filamentGrams}g filament, ${Math.round(printTimeSeconds / 60)} minutes`);
-
-      // Calculate price
-      const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
-      console.log(`✓ Calculated price: ₹${priceInr}`);
-
-      // Cleanup only G-code (keep original STL)
-      await this.cleanup([gcodePath]);
-
-      return {
-        success: true,
-        filament_grams: filamentGrams,
-        print_time_seconds: printTimeSeconds,
-        price_inr: priceInr,
-      };
+      if (['.stl', '.3mf', '.obj'].includes(ext)) {
+        // Slice with PrusaSlicer
+        console.log('⏳ Slicing with PrusaSlicer...');
+        gcodePath = await this.sliceSTL(filePath);
+        console.log(`✓ Slicing complete: ${path.basename(gcodePath)}`);
+        // Parse G-code
+        console.log('⏳ Parsing G-code...');
+        const { filamentGrams, printTimeSeconds } = await this.parseGCode(gcodePath);
+        console.log(`✓ Extracted: ${filamentGrams}g filament, ${Math.round(printTimeSeconds / 60)} minutes`);
+        // Calculate price
+        const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
+        console.log(`✓ Calculated price: ₹${priceInr}`);
+        // Cleanup only G-code (keep original file)
+        await this.cleanup([gcodePath]);
+        return {
+          success: true,
+          filament_grams: filamentGrams,
+          print_time_seconds: printTimeSeconds,
+          price_inr: priceInr,
+        };
+      } else if (ext === '.gcode') {
+        // Directly parse G-code
+        console.log('⏳ Parsing uploaded G-code...');
+        const { filamentGrams, printTimeSeconds } = await this.parseGCode(filePath);
+        const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
+        return {
+          success: true,
+          filament_grams: filamentGrams,
+          print_time_seconds: printTimeSeconds,
+          price_inr: priceInr,
+        };
+      } else {
+        throw new Error('Unsupported file extension');
+      }
     } catch (error: any) {
-      console.error('❌ STL analysis failed:', error.message);
-
+      console.error('❌ 3D file analysis failed:', error.message);
       // Cleanup G-code on error
       if (gcodePath) {
         await this.cleanup([gcodePath]);
       }
-
       return {
         success: false,
         error: error.message || 'Analysis failed',
