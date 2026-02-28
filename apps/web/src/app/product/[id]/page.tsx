@@ -371,11 +371,11 @@ export default function ProductDetailPage() {
         // Find the wishlist item ID
         const wishlistItem = wishlistItems.find((item: any) => item.product.id === productId);
         if (wishlistItem) {
-          await removeFromWishlist(wishlistItem.id, isAuthenticated);
+          await removeFromWishlist(wishlistItem.id, product?.name);
           toast.success('Removed from wishlist');
         }
       } else {
-        await addToWishlist(productId, isAuthenticated);
+        await addToWishlist(productId, product?.name);
         toast.success('Added to wishlist');
       }
     } catch (error) {
