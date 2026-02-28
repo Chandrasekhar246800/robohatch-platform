@@ -25,7 +25,9 @@ import { apiClient } from '@/lib/api-client';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useWishlistStore } from '@/store/wishlist.store';
 import { getProductById, getRelatedProducts } from '@/lib/mock-data';
+import toast from 'react-hot-toast';
 
 interface ProductImage {
   id: string;
@@ -68,10 +70,12 @@ export default function ProductDetailPage() {
 
   const addItem = useCartStore((state) => state.addItem);
   const { isAuthenticated } = useAuthStore();
+  const { isInWishlist, addToWishlist, removeFromWishlist, items: wishlistItems } = useWishlistStore();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
+  const [isWishlistLoading, setIsWishlistLoading] = useState(false);
   const [customText, setCustomText] = useState('');
   const [customFile, setCustomFile] = useState<File | null>(null);
   const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
@@ -345,6 +349,41 @@ export default function ProductDetailPage() {
 
   const decrementQuantity = () => {
     if (quantity > 1) setQuantity(quantity - 1);
+  };
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to add items to wishlist');
+      router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
+      return;
+    }
+
+    if (isWishlistLoading) {
+      return;
+    }
+
+    setIsWishlistLoading(true);
+
+    try {
+      const inWishlist = isInWishlist(productId);
+      
+      if (inWishlist) {
+        // Find the wishlist item ID
+        const wishlistItem = wishlistItems.find((item: any) => item.product.id === productId);
+        if (wishlistItem) {
+          await removeFromWishlist(wishlistItem.id, isAuthenticated);
+          toast.success('Removed from wishlist');
+        }
+      } else {
+        await addToWishlist(productId, isAuthenticated);
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      console.error('Wishlist toggle error:', error);
+      toast.error('Failed to update wishlist');
+    } finally {
+      setIsWishlistLoading(false);
+    }
   };
 
   return (
@@ -637,8 +676,17 @@ export default function ProductDetailPage() {
                   </>
                 )}
               </Button>
-              <Button variant="secondary" size="lg" className="px-6">
-                <Heart size={20} />
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                className="px-6"
+                onClick={handleWishlistToggle}
+                disabled={isWishlistLoading}
+              >
+                <Heart 
+                  size={20} 
+                  className={isInWishlist(productId) ? 'fill-red-500 text-red-500' : ''}
+                />
               </Button>
             </div>
 
