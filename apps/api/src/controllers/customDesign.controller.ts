@@ -220,7 +220,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           tempFilePath = await downloadFromS3(s3Key);
           console.log(`✓ Downloaded to: ${tempFilePath}`);
 
-          // Step 2: Build custom pricing based on material
+          // Step 2: Build custom pricing (maintained for interface compatibility)
+          // Note: Actual pricing now uses simplified formula: weight (grams) × ₹4.5
           const customPricing = materialLower === 'resin' ? {
             // Resin pricing (volume-based, not filament)
             // Note: PrusaSlicer outputs filament for FDM
@@ -230,11 +231,11 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             electricityCostPerHour: 6,
             profitMarginPercent: 45,
           } : {
-            // FDM material pricing
-            materialCostPerGram: getMaterialCostPerGram(materialLower),
-            machineCostPerHour: 25,
-            electricityCostPerHour: 5,
-            profitMarginPercent: 40,
+            // FDM material pricing - uses simplified formula: weight × ₹4.5
+            materialCostPerGram: 4.5,
+            machineCostPerHour: 0,
+            electricityCostPerHour: 0,
+            profitMarginPercent: 0,
           };
 
           // Step 3: Analyze with PrusaSlicer

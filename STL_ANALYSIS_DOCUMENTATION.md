@@ -142,15 +142,8 @@ Expected response:
 filament_grams = 98.2
 print_time_seconds = 12252
 
-// Calculate costs
-print_time_hours = print_time_seconds / 3600
-material_cost = filament_grams × 1.2       // ₹1.2 per gram
-machine_cost = print_time_hours × 25       // ₹25 per hour
-electricity_cost = print_time_hours × 5    // ₹5 per hour
-
-// Total
-base_cost = material_cost + machine_cost + electricity_cost
-final_price = base_cost × 1.40             // 40% profit margin
+// Simplified pricing calculation
+final_price = filament_grams × 4.5         // ₹4.5 per gram
 ```
 
 ### Example Calculation:
@@ -160,19 +153,17 @@ Input:
 - Print time: 3h 24m (12,252 seconds)
 
 Calculation:
-- Material: 98.2 × ₹1.2 = ₹117.84
-- Machine: 3.4 × ₹25 = ₹85
-- Electricity: 3.4 × ₹5 = ₹17
-- Base: ₹219.84
-- Final: ₹219.84 × 1.40 = ₹308 (rounded)
+- Price: 98.2 × ₹4.5 = ₹442 (rounded)
 ```
 
 ### Custom Pricing:
 ```typescript
+// Note: Custom pricing parameters are maintained for interface compatibility
+// but actual calculation now uses simplified formula: weight × ₹4.5
 const customPricing = {
-  materialCostPerGram: 1.5,      // ₹1.5 per gram
-  machineCostPerHour: 30,        // ₹30 per hour
-  electricityCostPerHour: 7,     // ₹7 per hour
+  materialCostPerGram: 4.5,      // ₹4.5 per gram (simplified)
+  machineCostPerHour: 0,         // Not used
+  electricityCostPerHour: 0,     // Not used
   profitMarginPercent: 50,       // 50% profit
 };
 

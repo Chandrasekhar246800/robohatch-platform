@@ -368,11 +368,8 @@ Response:
 
 **Pricing Formula:**
 ```typescript
-materialCost = filamentGrams ✕ ₹1.2/g
-machineCost = printTimeHours ✕ ₹25/hr
-electricityCost = printTimeHours ✕ ₹5/hr
-baseCost = materialCost + machineCost + electricityCost
-finalPrice = baseCost ✕ 1.4 (40% profit margin)
+// Simplified pricing formula
+finalPrice = filamentGrams ✕ ₹4.5/g
 ```
 
 **Environment Variables:**

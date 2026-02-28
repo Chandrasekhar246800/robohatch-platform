@@ -410,33 +410,19 @@ if (result.success) {
 ### FDM Materials (PLA, ABS, PETG, TPU)
 
 ```typescript
-// Per-gram costs
-const costs = {
-  pla: ₹1.2/g,
-  abs: ₹1.5/g,
-  petg: ₹1.8/g,
-  tpu: ₹2.5/g,
-};
+// Simplified pricing for FDM materials
+// Single multiplier for all materials
 
 // Cost calculation
-materialCost = filamentGrams × materialCostPerGram;
-machineCost = printTimeHours × ₹25/hr;
-electricityCost = printTimeHours × ₹5/hr;
-
-baseCost = materialCost + machineCost + electricityCost;
-finalPrice = baseCost × 1.40; // 40% profit margin
+finalPrice = filamentGrams × 4.5;
 
 totalPrice = finalPrice × quantity;
 ```
 
 **Example:**
-- Filament: 98.2g PLA
-- Print time: 3h 24m (3.4 hours)
-- Material cost: 98.2 × 1.2 = ₹117.84
-- Machine cost: 3.4 × 25 = ₹85
-- Electricity: 3.4 × 5 = ₹17
-- Base: 117.84 + 85 + 17 = ₹219.84
-- Final: 219.84 × 1.40 = **₹308** per unit
+- Filament: 98.2g
+- Print time: 3h 24m (not used in calculation)
+- Final: 98.2 × 4.5 = **₹442** per unit
 
 ### Resin (SLA Printing)
 

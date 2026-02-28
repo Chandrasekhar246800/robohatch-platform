@@ -13,7 +13,7 @@ const fsPromises = fs.promises;
  * Uses PrusaSlicer CLI to slice STL files and extract:
  * - Filament usage (grams)
  * - Print time (seconds)
- * - Accurate price calculation
+ * - Accurate price calculation using simplified formula: weight (grams) × ₹4.5
  * 
  * @security Prevents command injection via execFile with argument array
  * @security Validates file extensions and sanitizes paths
@@ -35,12 +35,13 @@ interface PricingConfig {
   profitMarginPercent: number;  // Percentage
 }
 
-// Default pricing configuration
+// Default pricing configuration (kept for interface compatibility)
+// Actual pricing now uses simplified formula: weight × ₹4.5
 const DEFAULT_PRICING: PricingConfig = {
-  materialCostPerGram: 1.2,      // ₹1.2 per gram
-  machineCostPerHour: 25,        // ₹25 per hour
-  electricityCostPerHour: 5,     // ₹5 per hour
-  profitMarginPercent: 40,       // 40% profit margin
+  materialCostPerGram: 4.5,      // ₹4.5 per gram (simplified pricing)
+  machineCostPerHour: 0,         // Not used in simplified formula
+  electricityCostPerHour: 0,     // Not used in simplified formula
+  profitMarginPercent: 0,        // Not used in simplified formula
 };
 
 export class STLAnalysisService {
@@ -228,28 +229,16 @@ export class STLAnalysisService {
   }
 
   /**
-   * Calculate final price based on material, machine, and electricity costs
+   * Calculate final price based on weight
+   * Simplified formula: weight (grams) × ₹4.5
    */
   private calculatePrice(
     filamentGrams: number,
     printTimeSeconds: number,
     customPricing?: Partial<PricingConfig>
   ): number {
-    const pricing = { ...DEFAULT_PRICING, ...customPricing };
-
-    const printTimeHours = printTimeSeconds / 3600;
-
-    // Calculate individual costs
-    const materialCost = filamentGrams * pricing.materialCostPerGram;
-    const machineCost = printTimeHours * pricing.machineCostPerHour;
-    const electricityCost = printTimeHours * pricing.electricityCostPerHour;
-
-    // Base cost
-    const baseCost = materialCost + machineCost + electricityCost;
-
-    // Add profit margin
-    const profitMultiplier = 1 + (pricing.profitMarginPercent / 100);
-    const finalPrice = baseCost * profitMultiplier;
+    // Simplified pricing formula: weight * 4.5
+    const finalPrice = filamentGrams * 4.5;
 
     // Round to nearest integer
     return Math.round(finalPrice);
