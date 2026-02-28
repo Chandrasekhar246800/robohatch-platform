@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Prisma migrate add missing columns",
+			"type": "shell",
+			"command": "npx prisma migrate dev --name add-missing-columns --schema=apps/api/prisma/schema.prisma",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
