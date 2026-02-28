@@ -100,6 +100,9 @@ export async function slice3DFile({
     });
     // Parse G-code output
     const gcode = fs.readFileSync(outputPath, 'utf8');
+    // Log first 30 header lines for debug
+    const gcodeHeaderLines = gcode.split('\n').slice(0, 30).join('\n');
+    logs += '\n--- GCODE HEADER START ---\n' + gcodeHeaderLines + '\n--- GCODE HEADER END ---\n';
     const filamentMatch = gcode.match(/; filament used \[g\] = ([\d.]+)/);
     const timeMatch = gcode.match(/; estimated printing time = ([^\n]+)/);
     let filament_grams = 0;
@@ -116,7 +119,17 @@ export async function slice3DFile({
     const hours = print_time_seconds / 3600;
     const machineCost = hours * MACHINE_COST_PER_HOUR;
     const electricityCost = hours * ELECTRICITY_COST_PER_HOUR;
-    let final_price = (materialCost + machineCost + electricityCost) * PROFIT_MARGIN * quantity;
+    // LOG all parsed and calculated values
+    logs += `\n[DEBUG] filament_grams: ${filament_grams}`;
+    logs += `\n[DEBUG] print_time_seconds: ${print_time_seconds}`;
+    logs += `\n[DEBUG] quantity: ${quantity}`;
+    logs += `\n[DEBUG] materialCost: ${materialCost}`;
+    logs += `\n[DEBUG] machineCost: ${machineCost}`;
+    logs += `\n[DEBUG] electricityCost: ${electricityCost}`;
+    let final_price = (materialCost + machineCost + electricityCost) * PROFIT_MARGIN;
+    logs += `\n[DEBUG] finalPrice (before quantity): ${final_price}`;
+    final_price = final_price * quantity;
+    logs += `\n[DEBUG] finalPrice (after quantity): ${final_price}`;
     // Cleanup
     fs.rmSync(tempDir, { recursive: true, force: true });
     activeJobs--;
