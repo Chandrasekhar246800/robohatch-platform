@@ -59,6 +59,7 @@ export default function Upload3DFilePage() {
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
   const [printTimeSeconds, setPrintTimeSeconds] = useState<number | null>(null);
   const [customDesignId, setCustomDesignId] = useState<string | null>(null);
+  const [productId, setProductId] = useState<string | null>(null); // Product ID for cart operations
   const [uploadComplete, setUploadComplete] = useState<boolean>(false);
   
   const [formData, setFormData] = useState({
@@ -210,6 +211,11 @@ export default function Upload3DFilePage() {
         // Store custom design ID for checkout
         if (result.customDesign?.id) {
           setCustomDesignId(result.customDesign.id);
+        }
+        
+        // Store product ID for cart operations
+        if (result.customDesign?.productId) {
+          setProductId(result.customDesign.productId);
         }
 
         setUploadComplete(true);
@@ -578,11 +584,14 @@ export default function Upload3DFilePage() {
                   <div className="space-y-3">
                     <Button
                       onClick={async () => {
-                        if (!backendPrice || !customDesignId) return;
+                        if (!backendPrice || !productId) {
+                          toast.error('Product not ready. Please try uploading again.');
+                          return;
+                        }
                         
                         // Convert custom design to Product format for cart
                         const customProduct: Product = {
-                          id: customDesignId,
+                          id: productId, // Use the created product ID
                           name: formData.name,
                           description: formData.description || 'Custom 3D Printed Design',
                           price: backendPrice,
@@ -627,6 +636,7 @@ export default function Upload3DFilePage() {
                         setFile(null);
                         setBackendPrice(null);
                         setCustomDesignId(null);
+                        setProductId(null);
                         setUploadProgress(0);
                         setFormData({
                           name: '',
