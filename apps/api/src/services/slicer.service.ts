@@ -1,7 +1,10 @@
-import { execFile } from 'child_process';
+import { execFile, exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export interface SlicerResult {
   accurate: boolean;
@@ -25,6 +28,21 @@ const ELECTRICITY_COST_PER_HOUR = 5;
 const PROFIT_MARGIN = 1.4;
 const MAX_CONCURRENT_JOBS = 2;
 let activeJobs = 0;
+
+// Check if xvfb-run is available (for headless OrcaSlicer)
+let hasXvfb: boolean | null = null;
+async function checkXvfb(): Promise<boolean> {
+  if (hasXvfb !== null) return hasXvfb;
+  try {
+    await execAsync('which xvfb-run');
+    hasXvfb = true;
+    console.log('✓ xvfb-run available for headless slicing');
+  } catch {
+    hasXvfb = false;
+    console.log('⚠ xvfb-run not available, using direct orcaslicer');
+  }
+  return hasXvfb;
+}
 
 function getProfile(printerType: string): string {
   switch (printerType) {
@@ -79,15 +97,39 @@ export async function slice3DFile({
   const outputPath = path.join(tempDir, 'output.gcode');
   let logs = '';
   try {
-    const profilePath = getProfile(printerType);
-    const args = [
-      '--load', profilePath,
-      '--export-gcode',
-      inputPath,
-      '--output', outputPath,
-    ];
+    // Check if we should use xvfb-run for headless execution
+    const useXvfb = await checkXvfb();
+    
+    // Build command and args
+    const slicerCmd = useXvfb ? 'xvfb-run' : 'orcaslicer';
+    const args: string[] = [];
+    
+    // If using xvfb-run, add xvfb args and orcaslicer command
+    if (useXvfb) {
+      args.push('-a', 'orcaslicer');
+    }
+    
+    // Add slicer arguments  
+    args.push('--export-gcode', inputPath, '--output', outputPath);
+    
+    try {
+      const profilePath = getProfile(printerType);
+      if (fs.existsSync(profilePath)) {
+        // Insert profile args before export-gcode
+        const exportIndex = args.indexOf('--export-gcode');
+        args.splice(exportIndex, 0, '--load', profilePath);
+        console.log(`Using profile: ${profilePath}`);
+      } else {
+        console.log(`Profile not found: ${profilePath}, using defaults`);
+      }
+    } catch (profileError) {
+      console.log('Profile loading skipped:', profileError);
+    }
+    
+    console.log(`Executing: ${slicerCmd} ${args.join(' ')}`);
+    
     const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-      execFile('orca-slicer', args, { timeout: 90000 }, (error, stdout, stderr) => {
+      execFile(slicerCmd, args, { timeout: 90000 }, (error, stdout, stderr) => {
         if (error) {
           reject({ error, stdout, stderr });
         } else {
@@ -143,6 +185,15 @@ export async function slice3DFile({
       final_price: 0,
     };
   } catch (err: any) {
+    // Log detailed error for debugging
+    console.error('=== SLICER ERROR ===');
+    console.error('Error message:', err.message);
+    console.error('Error details:', err);
+    console.error('Input path:', inputPath);
+    console.error('Material:', material);
+    console.error('Printer type:', printerType);
+    console.error('==================');
+    
     // Fallback estimation
     let fallbackPrice = 300 * quantity;
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -152,7 +203,7 @@ export async function slice3DFile({
       filament_grams: 0,
       print_time_seconds: 0,
       final_price: fallbackPrice,
-      error: err.message,
+      error: `Slicer failed: ${err.message}`,
       logs,
     };
   }

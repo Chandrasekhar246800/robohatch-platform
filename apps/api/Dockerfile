@@ -41,15 +41,20 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libfreetype6 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install OrcaSlicer CLI (headless)
-RUN wget -O /tmp/orcaslicer.deb https://github.com/SoftFever/OrcaSlicer/releases/download/v2.0.0/OrcaSlicer-2.0.0-linux.deb \
-    && dpkg -i /tmp/orcaslicer.deb || apt-get install -f -y \
-    && rm /tmp/orcaslicer.deb
+# Download and install OrcaSlicer (v2.1.1 known to work)
+RUN wget -O /tmp/orcaslicer.AppImage https://github.com/SoftFever/OrcaSlicer/releases/download/v2.1.1/OrcaSlicer_Linux_V2.1.1.AppImage \
+    && chmod +x /tmp/orcaslicer.AppImage \
+    && /tmp/orcaslicer.AppImage --appimage-extract \
+    && mv squashfs-root /opt/orcaslicer \
+    && ln -s /opt/orcaslicer/AppRun /usr/local/bin/orcaslicer \
+    && rm /tmp/orcaslicer.AppImage
 
 # Verify OrcaSlicer installation
-RUN orcaslicer --version || echo "WARNING: OrcaSlicer not found in PATH"
+RUN which orcaslicer || echo "WARNING: OrcaSlicer not found in PATH" \
+    && orcaslicer --version || echo "WARNING: OrcaSlicer --version failed"
 
 # Install dumb-init for proper signal handling
 RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
