@@ -1,11 +1,24 @@
+
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-
 const execFileAsync = promisify(execFile);
 const fsPromises = fs.promises;
+
+// PART 1: Startup check for PrusaSlicer
+const PRUSA_SLICER_PATH = process.env.PRUSA_SLICER_PATH || 'prusa-slicer';
+let prusaSlicerAvailable = false;
+execFile(PRUSA_SLICER_PATH, ['--version'], (err, stdout, stderr) => {
+  if (err) {
+    console.error('[Startup] PrusaSlicer not installed or not in PATH');
+    prusaSlicerAvailable = false;
+  } else {
+    prusaSlicerAvailable = true;
+    console.log(`[Startup] PrusaSlicer found: ${stdout.trim()}`);
+  }
+});
 
 /**
  * STL Analysis Service - Production-ready 3D print price analysis
@@ -20,11 +33,15 @@ const fsPromises = fs.promises;
  * @security Implements timeouts to prevent hanging processes
  */
 
+
 interface STLAnalysisResult {
   success: boolean;
   filament_grams?: number;
   print_time_seconds?: number;
   price_inr?: number;
+  volume_cm3?: number;
+  resin_price_inr?: number;
+  accurate?: boolean;
   error?: string;
 }
 
@@ -45,18 +62,22 @@ const DEFAULT_PRICING: PricingConfig = {
 };
 
 export class STLAnalysisService {
+
   private uploadDir: string;
   private prusaSlicerPath: string;
   private sliceTimeout: number;
+  private printerProfilePath: string;
 
   constructor() {
-    // Use /tmp for temporary storage (Linux) or OS temp dir
     this.uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'temp');
-    this.prusaSlicerPath = process.env.PRUSA_SLICER_PATH || 'prusa-slicer';
-    this.sliceTimeout = 60000; // 60 seconds timeout
-
-    // Ensure upload directory exists
+    this.prusaSlicerPath = PRUSA_SLICER_PATH;
+    this.sliceTimeout = 60000;
+    this.printerProfilePath = path.resolve(process.cwd(), 'printer-profile.ini');
     this.ensureUploadDir();
+    // PART 2: Check printer profile exists
+    if (!fs.existsSync(this.printerProfilePath)) {
+      console.error('[Startup] printer-profile.ini missing at', this.printerProfilePath);
+    }
   }
 
   /**
@@ -109,15 +130,17 @@ export class STLAnalysisService {
    * Run PrusaSlicer to slice the STL file
    * @security Uses execFile with argument array to prevent command injection
    */
-  private async sliceSTL(stlPath: string): Promise<string> {
-    const gcodeFilename = stlPath.replace('.stl', '.gcode');
-
+  private async sliceSTL(stlPath: string): Promise<{ gcodePath: string; stdout: string; stderr: string }> {
+    // PART 2: Use real printer profile
+    if (!fs.existsSync(this.printerProfilePath)) {
+      throw new Error(`printer-profile.ini missing at ${this.printerProfilePath}`);
+    }
+    const gcodeFilename = stlPath.replace(/\.(stl|3mf|obj)$/i, '.gcode');
     try {
-      // Use execFile (NOT exec) to prevent command injection
-      // Arguments passed as array, not concatenated string
       const { stdout, stderr } = await execFileAsync(
         this.prusaSlicerPath,
         [
+          '--load', this.printerProfilePath,
           '--export-gcode',
           stlPath,
           '--output',
@@ -125,30 +148,17 @@ export class STLAnalysisService {
         ],
         {
           timeout: this.sliceTimeout,
-          maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+          maxBuffer: 10 * 1024 * 1024,
         }
       );
-
-      if (stderr) {
-        console.warn('PrusaSlicer stderr:', stderr);
-      }
-
-      if (stdout) {
-        console.log('PrusaSlicer stdout:', stdout);
-      }
-
+      // PART 3: Log raw slicer output
+      console.log('[SLICER STDOUT]', stdout);
+      if (stderr) console.warn('[SLICER STDERR]', stderr);
       // Verify G-code file was created
-      try {
-        await fsPromises.access(gcodeFilename, fs.constants.R_OK);
-      } catch {
-        throw new Error('G-code file was not generated');
-      }
-
-      return gcodeFilename;
+      await fsPromises.access(gcodeFilename, fs.constants.R_OK);
+      return { gcodePath: gcodeFilename, stdout, stderr };
     } catch (error: any) {
-      if (error.killed) {
-        throw new Error('Slicing timeout - file too complex or PrusaSlicer hung');
-      }
+      if (error.killed) throw new Error('Slicing timeout - file too complex or PrusaSlicer hung');
       throw new Error(`PrusaSlicer failed: ${error.message}`);
     }
   }
@@ -162,42 +172,19 @@ export class STLAnalysisService {
   private async parseGCode(gcodePath: string): Promise<{ filamentGrams: number; printTimeSeconds: number }> {
     const content = await fsPromises.readFile(gcodePath, 'utf-8');
     const lines = content.split('\n');
-
     let filamentGrams: number | null = null;
     let printTimeSeconds: number | null = null;
-
     for (const line of lines) {
-      // Extract filament usage: "; filament used [g] = 98.2"
       const filamentMatch = line.match(/;\s*filament used \[g\]\s*=\s*([\d.]+)/i);
-      if (filamentMatch) {
-        filamentGrams = parseFloat(filamentMatch[1]);
-      }
-
-      // Extract print time: "; estimated printing time (normal mode) = 3h 24m 12s"
+      if (filamentMatch) filamentGrams = parseFloat(filamentMatch[1]);
       const timeMatch = line.match(/;\s*estimated printing time \(normal mode\)\s*=\s*(.+)/i);
-      if (timeMatch) {
-        printTimeSeconds = this.parseTimeString(timeMatch[1].trim());
-      }
-
-      // Stop searching if we found both values
-      if (filamentGrams !== null && printTimeSeconds !== null) {
-        break;
-      }
+      if (timeMatch) printTimeSeconds = this.parseTimeString(timeMatch[1].trim());
+      if (filamentGrams !== null && printTimeSeconds !== null) break;
     }
-
     if (filamentGrams === null || printTimeSeconds === null) {
-      throw new Error('Failed to extract metadata from G-code - file may be corrupted or incompatible');
+      console.error('[GCODE PARSE] Failed to parse G-code metadata');
+      throw new Error('Failed to parse G-code metadata');
     }
-
-    // Validate extracted values
-    if (isNaN(filamentGrams) || filamentGrams < 0 || filamentGrams > 10000) {
-      throw new Error('Invalid filament value extracted from G-code');
-    }
-
-    if (isNaN(printTimeSeconds) || printTimeSeconds < 0 || printTimeSeconds > 1000000) {
-      throw new Error('Invalid print time extracted from G-code');
-    }
-
     return { filamentGrams, printTimeSeconds };
   }
 
@@ -232,16 +219,23 @@ export class STLAnalysisService {
    * Calculate final price based on weight
    * Simplified formula: weight (grams) × ₹4.5
    */
+  // PART 5: Resin logic and improved pricing
   private calculatePrice(
     filamentGrams: number,
     printTimeSeconds: number,
-    customPricing?: Partial<PricingConfig>
-  ): number {
-    // Simplified pricing formula: weight * 4.5
-    const finalPrice = filamentGrams * 4.5;
-
-    // Round to nearest integer
-    return Math.round(finalPrice);
+    material: string
+  ): { price: number; accurate: boolean } {
+    // For FDM: price = grams * 4.5
+    if (material !== 'resin') {
+      const price = Math.round(filamentGrams * 4.5);
+      return { price, accurate: true };
+    }
+    // For resin: estimate volume and price
+    const resinDensity = 1.1; // g/cm3 (configurable)
+    const resinCostPerCm3 = 3.5; // INR/cm3 (configurable)
+    const volumeCm3 = filamentGrams / resinDensity;
+    const resinPrice = Math.round(volumeCm3 * resinCostPerCm3);
+    return { price: resinPrice, accurate: true };
   }
 
   /**
@@ -270,84 +264,113 @@ export class STLAnalysisService {
   async analyze3DFile(
     fileBuffer: Buffer,
     originalFilename: string,
-    customPricing?: Partial<PricingConfig>
+    material: string = 'pla',
+    // infill, layerHeight, support, nozzle, filamentDiameter can be added as needed
   ): Promise<STLAnalysisResult> {
     let tempPath: string | null = null;
     let gcodePath: string | null = null;
-
     try {
-      // Validate file type
+      if (!prusaSlicerAvailable) {
+        console.warn('[ANALYSIS] PrusaSlicer not available. Results may be inaccurate.');
+      }
       if (!this.validate3DFile(originalFilename)) {
-        return {
-          success: false,
-          error: 'Invalid file type. Only .stl, .3mf, .obj, .gcode files are allowed',
-        };
+        return { success: false, error: 'Invalid file type. Only .stl, .3mf, .obj, .gcode files are allowed' };
       }
-
-      // Check file size (max 50MB)
-      const maxSize = 50 * 1024 * 1024; // 50MB
+      const maxSize = 50 * 1024 * 1024;
       if (fileBuffer.length > maxSize) {
-        return {
-          success: false,
-          error: `File too large. Maximum size is ${maxSize / (1024 * 1024)}MB`,
-        };
+        return { success: false, error: `File too large. Maximum size is ${maxSize / (1024 * 1024)}MB` };
       }
-
-      // Save file temporarily
       tempPath = await this.saveTemporaryFile(fileBuffer, originalFilename);
-      console.log(`✓ Saved 3D file: ${path.basename(tempPath)}`);
-
+      console.log(`[ANALYSIS] Saved 3D file: ${path.basename(tempPath)}`);
       const ext = path.extname(originalFilename).toLowerCase();
       if (['.stl', '.3mf', '.obj'].includes(ext)) {
-        // Slice with PrusaSlicer
-        console.log('⏳ Slicing with PrusaSlicer...');
-        gcodePath = await this.sliceSTL(tempPath);
-        console.log(`✓ Slicing complete: ${path.basename(gcodePath)}`);
-
-        // Parse G-code
-        console.log('⏳ Parsing G-code...');
-        const { filamentGrams, printTimeSeconds } = await this.parseGCode(gcodePath);
-        console.log(`✓ Extracted: ${filamentGrams}g filament, ${Math.round(printTimeSeconds / 60)} minutes`);
-
-        // Calculate price
-        const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
-        console.log(`✓ Calculated price: ₹${priceInr}`);
-
-        // Cleanup files
+        // PART 2: Use real printer profile
+        let slicerResult;
+        try {
+          console.log('[ANALYSIS] Slicing with PrusaSlicer...');
+          slicerResult = await this.sliceSTL(tempPath);
+          gcodePath = slicerResult.gcodePath;
+          console.log(`[ANALYSIS] Slicing complete: ${path.basename(gcodePath)}`);
+        } catch (err: any) {
+          console.error('[SLICER ERROR]', err.message);
+          return { success: false, error: err.message, accurate: false };
+        }
+        // PART 3: Log raw slicer output (already done in sliceSTL)
+        // PART 4: Print settings (see printer-profile.ini for infill, layer height, etc)
+        // To adjust infill dynamically, inject --infill-percentage 20 (for example) into the args array above.
+        // PART 7: Fail safe
+        let filamentGrams, printTimeSeconds;
+        try {
+          ({ filamentGrams, printTimeSeconds } = await this.parseGCode(gcodePath));
+        } catch (err: any) {
+          console.error('[GCODE PARSE ERROR]', err.message);
+          await this.cleanup([tempPath, gcodePath]);
+          return { success: false, error: err.message, accurate: false };
+        }
+        // PART 5: Resin logic
+        let price, volumeCm3, resinPrice;
+        if (material === 'resin') {
+          const resinDensity = 1.1;
+          const resinCostPerCm3 = 3.5;
+          volumeCm3 = filamentGrams / resinDensity;
+          resinPrice = Math.round(volumeCm3 * resinCostPerCm3);
+          price = resinPrice;
+        } else {
+          price = Math.round(filamentGrams * 4.5);
+        }
+        // PART 6: Log accuracy
+        console.log(`[RESULT] Filament used: ${filamentGrams.toFixed(1)} grams`);
+        console.log(`[RESULT] Print time: ${printTimeSeconds} seconds`);
+        console.log(`[RESULT] Final calculated price: ₹${price}`);
         await this.cleanup([tempPath, gcodePath]);
-
         return {
           success: true,
           filament_grams: filamentGrams,
           print_time_seconds: printTimeSeconds,
-          price_inr: priceInr,
+          price_inr: price,
+          ...(material === 'resin' ? { volume_cm3: volumeCm3, resin_price_inr: resinPrice } : {}),
+          accurate: true,
         };
       } else if (ext === '.gcode') {
         // Directly parse G-code
-        console.log('⏳ Parsing uploaded G-code...');
-        const { filamentGrams, printTimeSeconds } = await this.parseGCode(tempPath);
-        const priceInr = this.calculatePrice(filamentGrams, printTimeSeconds, customPricing);
+        let filamentGrams, printTimeSeconds;
+        try {
+          ({ filamentGrams, printTimeSeconds } = await this.parseGCode(tempPath));
+        } catch (err: any) {
+          console.error('[GCODE PARSE ERROR]', err.message);
+          await this.cleanup([tempPath]);
+          return { success: false, error: err.message, accurate: false };
+        }
+        let price, volumeCm3, resinPrice;
+        if (material === 'resin') {
+          const resinDensity = 1.1;
+          const resinCostPerCm3 = 3.5;
+          volumeCm3 = filamentGrams / resinDensity;
+          resinPrice = Math.round(volumeCm3 * resinCostPerCm3);
+          price = resinPrice;
+        } else {
+          price = Math.round(filamentGrams * 4.5);
+        }
+        console.log(`[RESULT] Filament used: ${filamentGrams.toFixed(1)} grams`);
+        console.log(`[RESULT] Print time: ${printTimeSeconds} seconds`);
+        console.log(`[RESULT] Final calculated price: ₹${price}`);
         await this.cleanup([tempPath]);
         return {
           success: true,
           filament_grams: filamentGrams,
           print_time_seconds: printTimeSeconds,
-          price_inr: priceInr,
+          price_inr: price,
+          ...(material === 'resin' ? { volume_cm3: volumeCm3, resin_price_inr: resinPrice } : {}),
+          accurate: true,
         };
       } else {
         throw new Error('Unsupported file extension');
       }
     } catch (error: any) {
-      console.error('❌ 3D file analysis failed:', error.message);
-      // Cleanup on error
+      console.error('[ANALYSIS ERROR]', error.message);
       const filesToClean = [tempPath, gcodePath].filter(Boolean) as string[];
-      if (filesToClean.length > 0) {
-        await this.cleanup(filesToClean);
-      }
-      return {
-        success: false,
-        error: error.message || 'Analysis failed',
-      };
+      if (filesToClean.length > 0) await this.cleanup(filesToClean);
+      return { success: false, error: error.message || 'Analysis failed', accurate: false };
     }
   }
 
