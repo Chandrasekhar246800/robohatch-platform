@@ -1,13 +1,15 @@
 import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 export interface SlicerResult {
+  accurate: boolean;
   filament_grams: number;
   print_time_seconds: number;
-  price_inr: number;
-  success: boolean;
+  final_price: number;
   error?: string;
+  logs?: string;
 }
 
 const MATERIAL_COSTS: Record<string, number> = {
@@ -17,71 +19,126 @@ const MATERIAL_COSTS: Record<string, number> = {
   tpu: 2.5,
 };
 
-export class OrcaSlicerService {
-  static async analyze3DFileFromPath(
-    filePath: string,
-    options: { material: string; infill?: number; layerHeight?: number; quantity?: number }
-  ): Promise<SlicerResult> {
-    const { material, infill = 20, layerHeight = 0.2, quantity = 1 } = options;
-    const allowed = ['pla', 'abs', 'petg', 'tpu'];
-    if (!allowed.includes(material.toLowerCase())) {
-      return { success: false, error: 'Only PLA, ABS, PETG, TPU are supported', filament_grams: 0, print_time_seconds: 0, price_inr: 0 };
-    }
-    // Build OrcaSlicer CLI command
-    const outputPath = filePath + '.gcode';
+const MACHINE_COST_PER_HOUR = 25;
+const ELECTRICITY_COST_PER_HOUR = 5;
+const PROFIT_MARGIN = 1.4;
+const MAX_CONCURRENT_JOBS = 2;
+let activeJobs = 0;
+
+function getProfile(printerType: string): string {
+  switch (printerType) {
+    case 'p1s':
+      return path.resolve(__dirname, '../../config/p1s-profile.ini');
+    case 'a1':
+      return path.resolve(__dirname, '../../config/a1-profile.ini');
+    case 'a1mini':
+      return path.resolve(__dirname, '../../config/a1mini-profile.ini');
+    default:
+      throw new Error('Invalid printerType. Supported: p1s, a1, a1mini');
+  }
+  // This line is unreachable but required for TS return type
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  return '';
+}
+
+function parseTimeToSeconds(timeStr: string): number {
+  // Format: 1h 23m 45s or 23m 45s or 45s
+  let seconds = 0;
+  const h = /([0-9]+)h/.exec(timeStr);
+  const m = /([0-9]+)m/.exec(timeStr);
+  const s = /([0-9]+)s/.exec(timeStr);
+  if (h) seconds += parseInt(h[1]) * 3600;
+  if (m) seconds += parseInt(m[1]) * 60;
+  if (s) seconds += parseInt(s[1]);
+  return seconds;
+}
+
+export async function slice3DFile({
+  inputPath,
+  material,
+  quantity = 1,
+  printerType,
+}: {
+  inputPath: string;
+  material: string;
+  quantity?: number;
+  printerType: string;
+}): Promise<SlicerResult> {
+  if (activeJobs >= MAX_CONCURRENT_JOBS) {
+    return {
+      accurate: false,
+      filament_grams: 0,
+      print_time_seconds: 0,
+      final_price: 0,
+      error: 'Too many concurrent slicing jobs',
+    };
+  }
+  activeJobs++;
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'slicer-'));
+  const outputPath = path.join(tempDir, 'output.gcode');
+  let logs = '';
+  try {
+    const profilePath = getProfile(printerType);
     const args = [
-      '--slice',
-      filePath,
-      '--output',
-      outputPath,
-      '--filament-type',
-      material.toUpperCase(),
-      '--infill',
-      infill.toString(),
-      '--layer-height',
-      layerHeight.toString(),
-      '--no-gui',
+      '--load', profilePath,
+      '--export-gcode',
+      inputPath,
+      '--output', outputPath,
     ];
-    return new Promise((resolve) => {
-      execFile('orcaslicer', args, { timeout: 120000 }, (error, stdout, stderr) => {
+    const execResult = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+      execFile('orca-slicer', args, { timeout: 90000 }, (error, stdout, stderr) => {
+        logs += stderr;
         if (error) {
-          resolve({ success: false, error: error.message, filament_grams: 0, print_time_seconds: 0, price_inr: 0 });
-          return;
+          reject({ error, stdout, stderr });
+        } else {
+          resolve({ stdout, stderr });
         }
-        // Parse G-code for stats (weight, time)
-        fs.readFile(outputPath, 'utf8', (err, data) => {
-          if (err) {
-            resolve({ success: false, error: 'Failed to read G-code output', filament_grams: 0, print_time_seconds: 0, price_inr: 0 });
-            return;
-          }
-          // Example: Parse for filament used and print time
-          const filamentMatch = data.match(/; filament used = ([\d.]+) mm/);
-          const timeMatch = data.match(/; estimated printing time \(normal mode\) = ([\d:]+)/);
-          let filament_grams = 0;
-          let print_time_seconds = 0;
-          if (filamentMatch) {
-            // Convert mm to grams (assume 1.24g/m for PLA, adjust for others)
-            const mm = parseFloat(filamentMatch[1]);
-            const density = 1.24; // g/m
-            filament_grams = (mm / 1000) * density;
-          }
-          if (timeMatch) {
-            // Convert HH:MM:SS to seconds
-            const parts = timeMatch[1].split(':').map(Number);
-            if (parts.length === 3) {
-              print_time_seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-            } else if (parts.length === 2) {
-              print_time_seconds = parts[0] * 60 + parts[1];
-            }
-          }
-          // Calculate price
-          const materialCost = filament_grams * (MATERIAL_COSTS[material.toLowerCase()] || 1.2);
-          const machineCost = (print_time_seconds / 3600) * 30;
-          const electricityCost = (print_time_seconds / 3600) * 6;
-          let price_inr = (materialCost + machineCost + electricityCost) * 1.45 * quantity;
-          resolve({ success: true, filament_grams, print_time_seconds, price_inr });
-        });
       });
+    }).catch((e) => {
+      logs += e.stderr || '';
+      throw new Error(e.error ? e.error.message : 'Slicing failed');
     });
+    // Parse G-code output
+    const gcode = fs.readFileSync(outputPath, 'utf8');
+    const filamentMatch = gcode.match(/; filament used \[g\] = ([\d.]+)/);
+    const timeMatch = gcode.match(/; estimated printing time = ([^\n]+)/);
+    let filament_grams = 0;
+    let print_time_seconds = 0;
+    if (filamentMatch) {
+      filament_grams = parseFloat(filamentMatch[1]);
+    }
+    if (timeMatch) {
+      print_time_seconds = parseTimeToSeconds(timeMatch[1]);
+    }
+    // Pricing
+    const matKey = material.toLowerCase();
+    const materialCost = filament_grams * (MATERIAL_COSTS[matKey] || 1.2);
+    const hours = print_time_seconds / 3600;
+    const machineCost = hours * MACHINE_COST_PER_HOUR;
+    const electricityCost = hours * ELECTRICITY_COST_PER_HOUR;
+    let final_price = (materialCost + machineCost + electricityCost) * PROFIT_MARGIN * quantity;
+    // Cleanup
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    activeJobs--;
+    return {
+      accurate: true,
+      filament_grams,
+      print_time_seconds,
+      final_price: Math.round(final_price),
+      logs,
+    };
+  } catch (err: any) {
+    // Fallback estimation
+    let fallbackPrice = 300 * quantity;
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    activeJobs--;
+    return {
+      accurate: false,
+      filament_grams: 0,
+      print_time_seconds: 0,
+      final_price: fallbackPrice,
+      error: err.message,
+      logs,
+    };
   }
 }

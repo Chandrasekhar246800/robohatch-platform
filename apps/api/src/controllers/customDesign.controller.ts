@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
-import { OrcaSlicerService } from '../services/slicer.service';
+import { slice3DFile } from '../services/slicer.service';
 import { s3 } from '../config/s3';
 import path from 'path';
 import fs from 'fs';
@@ -214,19 +214,16 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
 
           // Step 3: Analyze with new 3D file analysis
           console.log('⏳ Analyzing with 3D file analysis...');
-          const analysis = await OrcaSlicerService.analyze3DFileFromPath(
-            tempFilePath,
-            {
-              material: materialLower,
-              infill: parseInt(infillPercentage) || 20,
-              layerHeight: parseFloat(layerHeight) || 0.2,
-              quantity: quantityInt,
-            }
-          );
+          const analysis = await slice3DFile({
+            inputPath: tempFilePath,
+            material: materialLower,
+            quantity: quantityInt,
+            printerType: req.body.printerType || 'p1s',
+          });
 
           // Step 4: Use accurate price if analysis succeeded
-          if (analysis.success && analysis.price_inr) {
-            estimatedPrice = Math.round(analysis.price_inr * quantityInt);
+          if (analysis.accurate && analysis.final_price) {
+            estimatedPrice = Math.round(analysis.final_price);
             pricingData = {
               accurate: true,
               filament_grams: analysis.filament_grams,
