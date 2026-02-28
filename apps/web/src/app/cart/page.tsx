@@ -121,9 +121,15 @@ export default function CartPage() {
                             {item.product.name}
                           </h3>
                         </Link>
-                        <p className="text-xs text-gray-500 mb-3">
-                          {item.product.category.name}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                          <span>{item.product.category.name}</span>
+                          {item.product.weight && (
+                            <>
+                              <span>•</span>
+                              <span>Weight: {item.product.weight}</span>
+                            </>
+                          )}
+                        </div>
 
                         {/* Price and Quantity */}
                         <div className="flex items-center gap-6 mb-4">

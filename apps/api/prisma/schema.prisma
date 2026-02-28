@@ -33,6 +33,9 @@ model Product {
   description   String            @db.Text
   price         Decimal
   stock         Int               @default(0) // ✅ NEW: Inventory management
+  material      String?           // Material specification (e.g., PLA, ABS, etc.)
+  dimensions    String?           // Product dimensions
+  weight        String?           // Product weight (e.g., "150g")
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
@@ -189,20 +192,22 @@ model Upload {
 }
 
 model CustomDesign {
-  id             String             @id @default(uuid())
-  userId         String
-  name           String
-  description    String?            @db.Text
-  material       String?
-  color          String?
-  size           String?
-  quantity       Int                @default(1)
-  fileUrl        String?
-  status         CustomDesignStatus @default(PENDING)
-  estimatedPrice Decimal?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  user           User               @relation(fields: [userId], references: [id])
+  id               String             @id @default(uuid())
+  userId           String
+  name             String
+  description      String?            @db.Text
+  material         String?
+  color            String?
+  size             String?
+  quantity         Int                @default(1)
+  fileUrl          String?
+  status           CustomDesignStatus @default(PENDING)
+  estimatedPrice   Decimal?
+  filamentGrams    Decimal?           // Weight in grams (from STL analysis)
+  printTimeSeconds Int?               // Print time in seconds (from STL analysis)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  user             User               @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "CustomDesign_userId_fkey")
 }

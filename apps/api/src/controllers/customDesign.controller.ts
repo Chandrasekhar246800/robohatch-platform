@@ -316,18 +316,24 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         fileUrl: file.location, // S3 URL from multer-s3
         status: CustomDesignStatus.PENDING,
         estimatedPrice,
+        // TODO: Uncomment after running WEIGHT_TRACKING_MIGRATION.sql
+        // filamentGrams: pricingData?.filament_grams || null,
+        // printTimeSeconds: pricingData?.print_time_seconds || null,
       },
     });
 
     // Create a Product for this custom design so it can be added to cart
-    // Store the customDesignId in the description for reference
+    // Store the customDesignId and weight info in the description for reference
+    const weightInfo = pricingData?.filament_grams ? ` | Weight: ${pricingData.filament_grams.toFixed(1)}g` : '';
     const product = await prisma.product.create({
       data: {
         name: `Custom 3D Print: ${name}`,
-        description: `[CUSTOM_DESIGN:${customDesign.id}] ${description || `Custom 3D printed design in ${material} (${color})`}`,
+        description: `[CUSTOM_DESIGN:${customDesign.id}] ${description || `Custom 3D printed design in ${material} (${color})`}${weightInfo}`,
         price: estimatedPrice,
         stock: quantityInt, // Each custom design is unique, stock = quantity ordered
         isActive: true,
+        // TODO: Uncomment after running WEIGHT_TRACKING_MIGRATION.sql
+        // weight: pricingData?.filament_grams ? `${pricingData.filament_grams.toFixed(1)}g` : null,
       },
     });
 

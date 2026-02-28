@@ -547,6 +547,27 @@ export default function Upload3DFilePage() {
                 
                 {backendPrice !== null ? (
                   <>
+                    {/* Weight and Print Time Info */}
+                    {pricingAccurate && filamentGrams && (
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs font-medium text-blue-900 mb-2">STL Analysis Results</p>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-700">Weight:</span>
+                            <span className="font-semibold text-gray-900">{filamentGrams.toFixed(1)}g</span>
+                          </div>
+                          {printTimeSeconds && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-700">Print Time:</span>
+                              <span className="font-semibold text-gray-900">
+                                {Math.floor(printTimeSeconds / 3600)}h {Math.floor((printTimeSeconds % 3600) / 60)}m
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="border-t border-b py-4 mb-6">
                       <div className="flex justify-between text-xl font-bold">
                         <span>Total:</span>
