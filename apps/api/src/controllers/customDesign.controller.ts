@@ -312,19 +312,6 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Create a Product for this custom design so it can be added to cart
-    // Store the customDesignId and weight info in the description for reference
-    const weightInfo = pricingData?.filament_grams ? ` | Weight: ${pricingData.filament_grams.toFixed(1)}g` : '';
-    const product = await prisma.product.create({
-      data: {
-        name: `Custom 3D Print: ${name}`,
-        description: `[CUSTOM_DESIGN:${customDesign.id}] ${description || `Custom 3D printed design in ${material} (${color})`}${weightInfo}`,
-        price: finalEstimatedPrice,
-        stock: quantityInt, // Each custom design is unique, stock = quantity ordered
-        isActive: true,
-        weight: pricingData?.filament_grams ? `${pricingData.filament_grams.toFixed(1)}g` : null,
-      },
-    });
 
     // Send email notification to admin (non-blocking)
     emailService.send3DDesignNotification({
@@ -349,7 +336,6 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       message: 'Custom design request submitted successfully',
       customDesign: {
         ...customDesign,
-        productId: product.id, // Include product ID for cart operations
       },
       pricing: pricingData,
     });

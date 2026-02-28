@@ -53,8 +53,9 @@ export default function Upload3DFilePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Backend pricing data
-  const [backendPrice, setBackendPrice] = useState<number | null>(null);
-  const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
+  // Remove pricing state for debug phase
+  // const [backendPrice, setBackendPrice] = useState<number | null>(null);
+  // const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
   const [printTimeSeconds, setPrintTimeSeconds] = useState<number | null>(null);
   const [customDesignId, setCustomDesignId] = useState<string | null>(null);
@@ -142,8 +143,7 @@ export default function Upload3DFilePage() {
   const removeFile = () => {
     setFile(null);
     setErrors({});
-    setBackendPrice(null);
-    setPricingAccurate(false);
+    // Pricing state removed
     setFilamentGrams(null);
     setPrintTimeSeconds(null);
     // Reset file input
@@ -195,35 +195,15 @@ export default function Upload3DFilePage() {
       setUploadProgress(100);
 
       if (result.success) {
-        // Store pricing data from backend
-        if (result.pricing) {
-          setBackendPrice(result.pricing.final_price);
-          setPricingAccurate(result.pricing.accurate);
-          if (result.pricing.filament_grams) {
-            setFilamentGrams(result.pricing.filament_grams);
-          }
-          if (result.pricing.print_time_seconds) {
-            setPrintTimeSeconds(result.pricing.print_time_seconds);
-          }
+        // Store only filament and time for debug phase
+        if (typeof result.filament_grams === 'number') {
+          setFilamentGrams(result.filament_grams);
         }
-
-        // Store custom design ID for checkout
-        if (result.customDesign?.id) {
-          setCustomDesignId(result.customDesign.id);
+        if (typeof result.print_time_seconds === 'number') {
+          setPrintTimeSeconds(result.print_time_seconds);
         }
-        
-        // Store product ID for cart operations
-        if (result.customDesign?.productId) {
-          setProductId(result.customDesign.productId);
-        }
-
         setUploadComplete(true);
-        
-        const successMsg = result.pricing?.accurate
-          ? `Analysis complete! Price: ₹${result.pricing.final_price}`
-          : 'Upload successful! Estimated price calculated.';
-        
-        toast.success(successMsg, {
+        toast.success('Analysis complete! Filament and time parsed.', {
           id: uploadToast,
           duration: 5000,
         });
@@ -333,38 +313,27 @@ export default function Upload3DFilePage() {
                       </button>
                     </div>
 
-                    {/* Backend Pricing Display */}
-                    {backendPrice !== null && (
-                      <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
+                    {/* Backend Filament/Time Display Only */}
+                    {uploadComplete && (
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle className="text-green-600" size={20} />
-                          <p className="font-medium text-green-900">
-                            {pricingAccurate ? 'Accurate Pricing Applied' : 'Estimate Provided'}
+                          <CheckCircle className="text-blue-600" size={20} />
+                          <p className="font-medium text-blue-900">
+                            STL Analysis Results
                           </p>
                         </div>
-                        {pricingAccurate && filamentGrams && printTimeSeconds && (
-                          <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <p className="text-gray-600">Filament</p>
-                              <p className="font-medium text-lg">{filamentGrams.toFixed(1)}g</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">Print Time</p>
-                              <p className="font-medium text-lg">
-                                {Math.floor(printTimeSeconds / 3600)}h {Math.floor((printTimeSeconds % 3600) / 60)}m
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">Total Price</p>
-                              <p className="font-medium text-lg text-green-700">₹{backendPrice}</p>
-                            </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-600">Weight</p>
+                            <p className="font-medium text-lg">{filamentGrams !== null ? filamentGrams.toFixed(1) : '--'}g</p>
                           </div>
-                        )}
-                        {!pricingAccurate && (
-                          <p className="text-sm text-gray-600 mt-2">
-                            Estimated price: ₹{backendPrice}
-                          </p>
-                        )}
+                          <div>
+                            <p className="text-gray-600">Print Time</p>
+                            <p className="font-medium text-lg">
+                              {printTimeSeconds !== null ? (printTimeSeconds / 3600).toFixed(2) : '--'} hours
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -542,53 +511,25 @@ export default function Upload3DFilePage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Price Summary</h2>
-                
-                {backendPrice !== null ? (
-                  <>
-                    {/* Weight and Print Time Info */}
-                    {pricingAccurate && filamentGrams && (
-                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-xs font-medium text-blue-900 mb-2">STL Analysis Results</p>
-                        <div className="space-y-1.5 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-700">Weight:</span>
-                            <span className="font-semibold text-gray-900">{filamentGrams.toFixed(1)}g</span>
-                          </div>
-                          {printTimeSeconds && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-700">Print Time:</span>
-                              <span className="font-semibold text-gray-900">
-                                {Math.floor(printTimeSeconds / 3600)}h {Math.floor((printTimeSeconds % 3600) / 60)}m
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                <h2 className="text-xl font-semibold mb-4">STL Analysis</h2>
+                {uploadComplete ? (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs font-medium text-blue-900 mb-2">STL Analysis Results</p>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Weight:</span>
+                        <span className="font-semibold text-gray-900">{filamentGrams !== null ? filamentGrams.toFixed(1) : '--'}g</span>
                       </div>
-                    )}
-                    
-                    <div className="border-t border-b py-4 mb-6">
-                      <div className="flex justify-between text-xl font-bold">
-                        <span>Total:</span>
-                        <span className="text-primary">₹{backendPrice}</span>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Print Time:</span>
+                        <span className="font-semibold text-gray-900">{printTimeSeconds !== null ? (printTimeSeconds / 3600).toFixed(2) : '--'} hours</span>
                       </div>
-                      {pricingAccurate ? (
-                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                          <CheckCircle className="inline" size={12} /> 
-                          Accurate pricing from STL analysis
-                        </p>
-                      ) : (
-                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                          <Info className="inline" size={12} /> 
-                          Estimated price (final quote after review)
-                        </p>
-                      )}
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <div className="py-8 text-center text-gray-500">
                     <Info size={32} className="mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">Upload and submit to get pricing</p>
+                    <p className="text-sm">Upload and submit to get analysis</p>
                   </div>
                 )}
 
@@ -603,61 +544,14 @@ export default function Upload3DFilePage() {
                 ) : (
                   <div className="space-y-3">
                     <Button
-                      onClick={async () => {
-                        if (!backendPrice || !productId) {
-                          toast.error('Product not ready. Please try uploading again.');
-                          return;
-                        }
-                        
-                        // Convert custom design to Product format for cart
-                        const customProduct: Product = {
-                          id: productId, // Use the created product ID
-                          name: formData.name,
-                          description: formData.description || 'Custom 3D Printed Design',
-                          price: backendPrice,
-                          stock: 999,
-                          images: ['/placeholder-3d.png'],
-                          category: { 
-                            id: 'custom', 
-                            name: 'Custom 3D Prints', 
-                            slug: 'custom-3d-prints', 
-                            description: null, 
-                            image: null, 
-                            isActive: true, 
-                            createdAt: new Date(), 
-                            updatedAt: new Date() 
-                          },
-                          rating: 5,
-                          reviews: 0,
-                          inStock: true,
-                          featured: false,
-                          customizable: true,
-                          material: formData.material,
-                          tags: ['custom-design', '3d-print'],
-                          isActive: true,
-                          createdAt: new Date(),
-                        };
-                        
-                        try {
-                          await addItem(customProduct, formData.quantity, isAuthenticated);
-                          toast.success('Added to cart! Proceed to checkout.');
-                          router.push('/cart');
-                        } catch (error) {
-                          toast.error('Failed to add to cart');
-                        }
-                      }}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      Add to Cart →
-                    </Button>
-                    <Button
                       onClick={() => {
                         setUploadComplete(false);
                         setFile(null);
-                        setBackendPrice(null);
                         setCustomDesignId(null);
                         setProductId(null);
                         setUploadProgress(0);
+                        setFilamentGrams(null);
+                        setPrintTimeSeconds(null);
                         setFormData({
                           name: '',
                           description: '',

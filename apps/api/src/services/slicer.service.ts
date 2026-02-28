@@ -10,6 +10,7 @@ export interface SlicerResult {
   final_price: number;
   error?: string;
   logs?: string;
+  debug?: boolean;
 }
 
 const MATERIAL_COSTS: Record<string, number> = {
@@ -85,9 +86,8 @@ export async function slice3DFile({
       inputPath,
       '--output', outputPath,
     ];
-    const execResult = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+    const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
       execFile('orca-slicer', args, { timeout: 90000 }, (error, stdout, stderr) => {
-        logs += stderr;
         if (error) {
           reject({ error, stdout, stderr });
         } else {
@@ -95,50 +95,52 @@ export async function slice3DFile({
         }
       });
     }).catch((e) => {
-      logs += e.stderr || '';
       throw new Error(e.error ? e.error.message : 'Slicing failed');
     });
-    // Parse G-code output
+    // STEP 1: Log raw slicer output
+    console.log("=== RAW SLICER STDOUT ===");
+    console.log(stdout);
+    console.log("=== RAW SLICER STDERR ===");
+    console.log(stderr);
+
+    // STEP 2: Parse filament weight (both formats)
     const gcode = fs.readFileSync(outputPath, 'utf8');
-    // Log first 30 header lines for debug
-    const gcodeHeaderLines = gcode.split('\n').slice(0, 30).join('\n');
-    logs += '\n--- GCODE HEADER START ---\n' + gcodeHeaderLines + '\n--- GCODE HEADER END ---\n';
-    const filamentMatch = gcode.match(/; filament used \[g\] = ([\d.]+)/);
-    const timeMatch = gcode.match(/; estimated printing time = ([^\n]+)/);
-    let filament_grams = 0;
-    let print_time_seconds = 0;
-    if (filamentMatch) {
-      filament_grams = parseFloat(filamentMatch[1]);
+    let filament_grams: number | null = null;
+    let match1 = gcode.match(/; filament used \[g\] = ([\d.]+)/);
+    let match2 = gcode.match(/; total filament used = [\d.]+mm \(([\d.]+)g\)/);
+    if (match1) {
+      filament_grams = parseFloat(match1[1]);
+      console.log("Parsed filament grams (format 1):", filament_grams);
+    } else if (match2) {
+      filament_grams = parseFloat(match2[1]);
+      console.log("Parsed filament grams (format 2):", filament_grams);
+    } else {
+      console.log("Filament weight not found in G-code");
+      filament_grams = 0;
     }
-    if (timeMatch) {
-      print_time_seconds = parseTimeToSeconds(timeMatch[1]);
+
+    // STEP 3: Parse print time (both formats)
+    let print_time_seconds: number | null = null;
+    let timeMatch1 = gcode.match(/; estimated printing time = ([^\n]+)/);
+    let timeMatch2 = gcode.match(/; estimated printing time \(normal mode\) = ([^\n]+)/);
+    let timeStr = timeMatch1 ? timeMatch1[1] : (timeMatch2 ? timeMatch2[1] : null);
+    if (timeStr) {
+      print_time_seconds = parseTimeToSeconds(timeStr);
+      console.log("Parsed print time seconds:", print_time_seconds);
+    } else {
+      console.log("Print time not found in G-code");
+      print_time_seconds = 0;
     }
-    // Pricing
-    const matKey = material.toLowerCase();
-    const materialCost = filament_grams * (MATERIAL_COSTS[matKey] || 1.2);
-    const hours = print_time_seconds / 3600;
-    const machineCost = hours * MACHINE_COST_PER_HOUR;
-    const electricityCost = hours * ELECTRICITY_COST_PER_HOUR;
-    // LOG all parsed and calculated values
-    logs += `\n[DEBUG] filament_grams: ${filament_grams}`;
-    logs += `\n[DEBUG] print_time_seconds: ${print_time_seconds}`;
-    logs += `\n[DEBUG] quantity: ${quantity}`;
-    logs += `\n[DEBUG] materialCost: ${materialCost}`;
-    logs += `\n[DEBUG] machineCost: ${machineCost}`;
-    logs += `\n[DEBUG] electricityCost: ${electricityCost}`;
-    let final_price = (materialCost + machineCost + electricityCost) * PROFIT_MARGIN;
-    logs += `\n[DEBUG] finalPrice (before quantity): ${final_price}`;
-    final_price = final_price * quantity;
-    logs += `\n[DEBUG] finalPrice (after quantity): ${final_price}`;
-    // Cleanup
+
+    // STEP 4: Return only weight and time
     fs.rmSync(tempDir, { recursive: true, force: true });
     activeJobs--;
     return {
       accurate: true,
-      filament_grams,
-      print_time_seconds,
-      final_price: Math.round(final_price),
-      logs,
+      debug: true,
+      filament_grams: filament_grams || 0,
+      print_time_seconds: print_time_seconds || 0,
+      final_price: 0,
     };
   } catch (err: any) {
     // Fallback estimation

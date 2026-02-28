@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,13 +15,13 @@ model User {
   role          Role           @default(USER)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  addresses     Address[]
   cart          Cart?
   customDesigns CustomDesign[]
   orders        Order[]
   payments      Payment[]
   uploads       Upload[]
   wishlist      Wishlist?
-  addresses     Address[]
 }
 
 model Product {
@@ -32,20 +29,20 @@ model Product {
   name          String
   description   String            @db.Text
   price         Decimal
-  stock         Int               @default(0) // ✅ NEW: Inventory management
-  material      String?           // Material specification (e.g., PLA, ABS, etc.)
-  dimensions    String?           // Product dimensions
-  weight        String?           // Product weight (e.g., "150g")
+  stock         Int               @default(0)
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+  dimensions    String?
+  material      String?
+  weight        String?
   cartItems     CartItem[]
   orderItems    OrderItem[]
   categories    ProductCategory[]
   images        ProductImage[]
   wishlistItems WishlistItem[]
 
-  @@index([stock]) // Index for stock queries
+  @@index([stock])
 }
 
 model ProductImage {
@@ -89,15 +86,15 @@ model Order {
   status          OrderStatus      @default(PENDING)
   total           Decimal
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt // ✅ NEW: Track order updates
+  updatedAt       DateTime         @updatedAt
   user            User             @relation(fields: [userId], references: [id])
   items           OrderItem[]
   payment         Payment?
-  shippingAddress ShippingAddress? // ✅ NEW: Shipping address relation
+  shippingAddress ShippingAddress?
 
   @@index([userId], map: "Order_userId_fkey")
-  @@index([status]) // ✅ NEW: Index for status queries
-  @@index([createdAt]) // ✅ NEW: Index for date queries
+  @@index([status])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -113,7 +110,6 @@ model OrderItem {
   @@index([productId], map: "OrderItem_productId_fkey")
 }
 
-// ✅ NEW MODEL: Shipping Address Storage
 model ShippingAddress {
   id           String   @id @default(uuid())
   orderId      String   @unique
@@ -130,10 +126,9 @@ model ShippingAddress {
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
-  @@index([postalCode]) // For regional queries
+  @@index([postalCode])
 }
 
-// ✅ NEW MODEL: User Saved Addresses
 model Address {
   id           String   @id @default(uuid())
   userId       String
@@ -167,8 +162,8 @@ model Payment {
   gatewayOrderId   String?       @unique
   gatewayPaymentId String?       @unique
   signature        String?       @db.Text
-  refundId         String?       @unique // ✅ NEW: For refund tracking
-  refundedAt       DateTime? // ✅ NEW: Refund timestamp
+  refundId         String?       @unique
+  refundedAt       DateTime?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -203,10 +198,10 @@ model CustomDesign {
   fileUrl          String?
   status           CustomDesignStatus @default(PENDING)
   estimatedPrice   Decimal?
-  filamentGrams    Decimal?           // Weight in grams (from STL analysis)
-  printTimeSeconds Int?               // Print time in seconds (from STL analysis)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  filamentGrams    Decimal?
+  printTimeSeconds Int?
   user             User               @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "CustomDesign_userId_fkey")
@@ -247,6 +242,7 @@ model ContactSubmission {
   @@index([createdAt])
   @@index([email])
 }
+
 model Wishlist {
   id        String         @id @default(uuid())
   userId    String         @unique
@@ -261,28 +257,26 @@ model WishlistItem {
   wishlistId String
   productId  String
   createdAt  DateTime @default(now())
-  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
   @@unique([wishlistId, productId])
   @@index([wishlistId])
   @@index([productId])
 }
 
-// ✅ NEW MODEL: Password Reset Token for Forgot Password
 model PasswordResetToken {
   id        String   @id @default(uuid())
   email     String
-  token     String   @unique // Hashed token
+  token     String   @unique
   expiresAt DateTime
-  used      Boolean  @default(false) // Prevent reuse
+  used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([email])
   @@index([token])
   @@index([expiresAt])
 }
-
 
 enum Role {
   USER
@@ -291,21 +285,21 @@ enum Role {
 
 enum OrderStatus {
   PENDING
-  CREATED // ✅ NEW: Order created but not paid
+  CREATED
   PAID
-  PROCESSING // ✅ NEW: Payment captured, processing order
+  PROCESSING
   SHIPPED
-  OUT_FOR_DELIVERY // ✅ NEW: En route to customer
+  OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
-  REFUNDED // ✅ NEW: Payment refunded
+  REFUNDED
 }
 
 enum PaymentMethod {
   UPI
-  CARD // ✅ NEW: For card payments
-  NET_BANKING // ✅ NEW: For net banking
-  WALLET // ✅ NEW: For wallet payments
+  CARD
+  NET_BANKING
+  WALLET
 }
 
 enum UploadStatus {
@@ -335,5 +329,5 @@ enum PaymentStatus {
   CAPTURED
   FAILED
   REFUNDED
-  PARTIALLY_REFUNDED // ✅ NEW: For partial refunds
+  PARTIALLY_REFUNDED
 }
