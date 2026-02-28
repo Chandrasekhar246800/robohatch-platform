@@ -27,10 +27,9 @@ RUN npm run build
 FROM node:20 AS production
 
 
-# Install OrcaSlicer CLI and dependencies for STL/3MF analysis
+# Install system dependencies for OrcaSlicer
 RUN apt-get update && apt-get install -y \
     wget \
-    curl \
     ca-certificates \
     libglu1-mesa \
     libxrender1 \
@@ -41,22 +40,39 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libfreetype6 \
+    libfontconfig1 \
+    libxfixes3 \
+    libxcomposite1 \
+    libxdamage1 \
+    libwayland-client0 \
     xvfb \
-    libfuse2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and extract OrcaSlicer (v2.1.1)
-RUN wget -O /tmp/orcaslicer.AppImage https://github.com/SoftFever/OrcaSlicer/releases/download/v2.1.1/OrcaSlicer_Linux_V2.1.1.AppImage \
-    && chmod +x /tmp/orcaslicer.AppImage \
-    && cd /tmp \
-    && ./orcaslicer.AppImage --appimage-extract \
-    && mv squashfs-root /opt/orcaslicer \
-    && ln -s /opt/orcaslicer/usr/bin/orca-slicer /usr/local/bin/orcaslicer \
-    && rm /tmp/orcaslicer.AppImage \
-    && chmod +x /usr/local/bin/orcaslicer
+# Download and extract OrcaSlicer without AppImage (direct binary extraction)
+RUN cd /tmp \
+    && wget -O orcaslicer.AppImage https://github.com/SoftFever/OrcaSlicer/releases/download/v2.1.1/OrcaSlicer_Linux_V2.1.1.AppImage \
+    && chmod +x orcaslicer.AppImage \
+    && ./orcaslicer.AppImage --appimage-extract 2>/dev/null || true \
+    && if [ -d squashfs-root ]; then \
+        mv squashfs-root /opt/orcaslicer && \
+        ln -s /opt/orcaslicer/usr/bin/orca-slicer /usr/local/bin/orcaslicer && \
+        chmod +x /usr/local/bin/orcaslicer; \
+    else \
+        echo "AppImage extraction failed, trying alternative..." && \
+        wget -O orcaslicer.tar.gz https://github.com/SoftFever/OrcaSlicer/releases/download/v2.1.1/OrcaSlicer_Linux_V2.1.1.tar.gz 2>/dev/null && \
+        tar xzf orcaslicer.tar.gz && \
+        mv OrcaSlicer /opt/orcaslicer && \
+        ln -s /opt/orcaslicer/bin/orca-slicer /usr/local/bin/orcaslicer && \
+        chmod +x /usr/local/bin/orcaslicer; \
+    fi \
+    && rm -rf /tmp/orcaslicer* /tmp/squashfs-root
 
-# Verify OrcaSlicer installation
-RUN which orcaslicer && ls -la /usr/local/bin/orcaslicer || echo "WARNING: OrcaSlicer not found"
+# Verify installation and show what we have
+RUN echo "=== OrcaSlicer Installation Check ===" \
+    && ls -la /opt/ || true \
+    && ls -la /opt/orcaslicer/ || true \
+    && which orcaslicer || echo "WARNING: orcaslicer not in PATH" \
+    && file /usr/local/bin/orcaslicer || echo "Symlink check failed"
 
 # Install dumb-init for proper signal handling
 RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
