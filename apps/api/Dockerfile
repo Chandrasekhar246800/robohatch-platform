@@ -42,19 +42,21 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libfreetype6 \
     xvfb \
+    libfuse2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install OrcaSlicer (v2.1.1 known to work)
+# Download and extract OrcaSlicer (v2.1.1)
 RUN wget -O /tmp/orcaslicer.AppImage https://github.com/SoftFever/OrcaSlicer/releases/download/v2.1.1/OrcaSlicer_Linux_V2.1.1.AppImage \
     && chmod +x /tmp/orcaslicer.AppImage \
-    && /tmp/orcaslicer.AppImage --appimage-extract \
+    && cd /tmp \
+    && ./orcaslicer.AppImage --appimage-extract \
     && mv squashfs-root /opt/orcaslicer \
-    && ln -s /opt/orcaslicer/AppRun /usr/local/bin/orcaslicer \
-    && rm /tmp/orcaslicer.AppImage
+    && ln -s /opt/orcaslicer/usr/bin/orca-slicer /usr/local/bin/orcaslicer \
+    && rm /tmp/orcaslicer.AppImage \
+    && chmod +x /usr/local/bin/orcaslicer
 
 # Verify OrcaSlicer installation
-RUN which orcaslicer || echo "WARNING: OrcaSlicer not found in PATH" \
-    && orcaslicer --version || echo "WARNING: OrcaSlicer --version failed"
+RUN which orcaslicer && ls -la /usr/local/bin/orcaslicer || echo "WARNING: OrcaSlicer not found"
 
 # Install dumb-init for proper signal handling
 RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
