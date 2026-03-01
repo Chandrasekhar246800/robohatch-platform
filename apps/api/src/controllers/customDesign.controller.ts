@@ -195,8 +195,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     let tempFilePath: string | null = null;
 
     try {
-      if (is3DFile) {
-        console.log(`🔬 3D file detected (${fileExtension}) - attempting accurate analysis...`);
+      if (is3DFile && fileExtension === '.stl') {
+        console.log(`🔬 STL file detected - attempting accurate analysis...`);
         try {
           // Step 1: Download file from S3 to temp location
           const s3Key = getS3KeyFromUrl(file.key || file.location);
@@ -212,8 +212,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             profitMarginPercent: 0,
           };
 
-          // Step 3: Analyze with new 3D file analysis
-          console.log('⏳ Analyzing with 3D file analysis...');
+          // Step 3: Analyze STL with JavaScript parser
+          console.log('⏳ Analyzing STL with JavaScript parser...');
           const analysis = await slice3DFile({
             inputPath: tempFilePath,
             material: materialLower,
@@ -236,7 +236,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             throw new Error(analysis.error || 'Analysis failed');
           }
         } catch (analysisError: any) {
-          console.error('⚠️  3D file analysis failed:', analysisError.message);
+          console.error('⚠️  STL analysis failed:', analysisError.message);
           console.log('Falling back to file-size estimation...');
           // Fallback to simple calculation
           estimatedPrice = calculateEstimatedPrice({
@@ -251,6 +251,20 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             final_price: estimatedPrice,
           };
         }
+      } else if (is3DFile) {
+        // Non-STL 3D files (.3mf, .obj, .gcode): use file-size estimation
+        console.log(`📄 3D file (${fileExtension}) - JavaScript parser only supports .stl, using estimation`);
+        estimatedPrice = calculateEstimatedPrice({
+          fileSize: file.size,
+          material: materialLower,
+          quantity: quantityInt,
+          infillPercentage: parseInt(infillPercentage) || 20,
+          layerHeight: parseFloat(layerHeight) || 0.2,
+        });
+        pricingData = {
+          accurate: false,
+          final_price: estimatedPrice,
+        };
       } else {
         // Non-3D files: use file-size estimation
         console.log(`📄 Non-3D file (${fileExtension}) - using estimation`);
