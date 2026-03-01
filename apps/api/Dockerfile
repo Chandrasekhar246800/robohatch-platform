@@ -27,39 +27,7 @@ RUN npm run build
 FROM node:20 AS production
 
 
-# Install system dependencies and PrusaSlicer
-RUN apt-get update && apt-get install -y \
-    wget \
-    ca-certificates \
-    libglu1-mesa \
-    libgtk-3-0 \
-    libxrender1 \
-    libxi6 \
-    libxrandr2 \
-    libxcursor1 \
-    libxinerama1 \
-    libdbus-1-3 \
-    libsm6 \
-    libxext6 \
-    libfreetype6 \
-    libfontconfig1 \
-    xvfb \
-    && rm -rf /var/lib/apt/lists/*
-
-# Download and install PrusaSlicer (more stable than OrcaSlicer on headless servers)
-RUN cd /tmp \
-    && wget -O prusa.AppImage https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404141201.AppImage \
-    && chmod +x prusa.AppImage \
-    && ./prusa.AppImage --appimage-extract \
-    && mv squashfs-root /opt/prusaslicer \
-    && echo '#!/bin/bash\nexec xvfb-run -a /opt/prusaslicer/usr/bin/prusa-slicer "$@"' > /usr/local/bin/orcaslicer \
-    && chmod +x /usr/local/bin/orcaslicer \
-    && rm prusa.AppImage
-
-# Verify installation
-RUN echo "=== Slicer Installation Check ===" \
-    && ls -la /opt/prusaslicer/usr/bin/ || echo "PrusaSlicer not found" \
-    && which orcaslicer && cat /usr/local/bin/orcaslicer || echo "Wrapper not found"
+# Install minimal system dependencies (no GUI tools needed)
 
 # Install dumb-init for proper signal handling
 RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*

@@ -219,6 +219,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
             material: materialLower,
             quantity: quantityInt,
             printerType: req.body.printerType || 'p1s',
+            infillPercentage: parseInt(infillPercentage) || 20,
           });
 
           // Step 4: Use accurate price if analysis succeeded
