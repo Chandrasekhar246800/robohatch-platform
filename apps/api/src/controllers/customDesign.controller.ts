@@ -223,17 +223,17 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           });
 
           // Step 4: Use accurate price if analysis succeeded
-          if (analysis.accurate && analysis.final_price) {
-            estimatedPrice = Math.round(analysis.final_price);
+          if (analysis.accurate) {
+            estimatedPrice = Math.round(analysis.final_price) || 0;
             pricingData = {
               accurate: true,
               filament_grams: analysis.filament_grams,
               print_time_seconds: analysis.print_time_seconds,
               final_price: estimatedPrice,
             };
-            console.log(`✅ Accurate analysis complete: ₹${estimatedPrice}`);
+            console.log(`✅ Accurate analysis complete: ${analysis.filament_grams}g, ${(analysis.print_time_seconds / 3600).toFixed(2)}h`);
           } else {
-            throw new Error(analysis.error || 'Analysis returned no price');
+            throw new Error(analysis.error || 'Analysis failed');
           }
         } catch (analysisError: any) {
           console.error('⚠️  3D file analysis failed:', analysisError.message);
@@ -339,6 +339,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         ...customDesign,
       },
       pricing: pricingData,
+      // Expose fields at top level for frontend convenience
+      filament_grams: pricingData?.filament_grams || null,
+      print_time_seconds: pricingData?.print_time_seconds || null,
     });
   } catch (error: any) {
     console.error('Create custom design error:', error);
