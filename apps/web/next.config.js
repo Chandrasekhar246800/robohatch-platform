@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@robohatch/ui'],
-  // Enable standalone output for Docker
-  output: 'standalone',
+  // Note: 'output: standalone' removed - conflicts with Vercel deployment
+  // Re-enable for Docker deployments only
   images: {
     remotePatterns: [
       {
