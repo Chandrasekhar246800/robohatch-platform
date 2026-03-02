@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
-import { slice3DFile } from '../services/slicer.service';
+import { sliceModel } from '../services/bambuSlicer.service';
 import { s3 } from '../config/s3';
 import path from 'path';
 import fs from 'fs';
@@ -196,7 +196,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
 
     try {
       if (is3DFile && fileExtension === '.stl') {
-        console.log(`🔬 STL file detected - attempting accurate analysis...`);
+        console.log(`🔬 STL file detected - using Bambu slicer for accurate analysis...`);
         try {
           // Step 1: Download file from S3 to temp location
           const s3Key = getS3KeyFromUrl(file.key || file.location);
@@ -204,39 +204,32 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           tempFilePath = await downloadFromS3(s3Key);
           console.log(`✓ Downloaded to: ${tempFilePath}`);
 
-          // Step 2: Build custom pricing (FDM only)
-          const customPricing = {
-            materialCostPerGram: 4.5,
-            machineCostPerHour: 0,
-            electricityCostPerHour: 0,
-            profitMarginPercent: 0,
-          };
-
-          // Step 3: Analyze STL with JavaScript parser
-          console.log('⏳ Analyzing STL with JavaScript parser...');
-          const analysis = await slice3DFile({
-            inputPath: tempFilePath,
+          // Step 2: Slice with OrcaSlicer using real Bambu profiles
+          const printerType = req.body.printerType || 'p1s';
+          console.log(`⏳ Slicing with OrcaSlicer (${printerType} profile)...`);
+          
+          const analysis = await sliceModel({
+            stlPath: tempFilePath,
+            printerType,
             material: materialLower,
             quantity: quantityInt,
-            printerType: req.body.printerType || 'p1s',
-            infillPercentage: parseInt(infillPercentage) || 20,
           });
 
-          // Step 4: Use accurate price if analysis succeeded
+          // Step 3: Use accurate results from slicer
           if (analysis.accurate) {
-            estimatedPrice = Math.round(analysis.final_price) || 0;
+            estimatedPrice = analysis.final_price;
             pricingData = {
               accurate: true,
               filament_grams: analysis.filament_grams,
               print_time_seconds: analysis.print_time_seconds,
               final_price: estimatedPrice,
             };
-            console.log(`✅ Accurate analysis complete: ${analysis.filament_grams}g, ${(analysis.print_time_seconds / 3600).toFixed(2)}h`);
+            console.log(`✅ Bambu slicer complete: ${analysis.filament_grams}g, ${(analysis.print_time_seconds / 3600).toFixed(2)}h, ₹${estimatedPrice}`);
           } else {
-            throw new Error(analysis.error || 'Analysis failed');
+            throw new Error(analysis.error || 'Slicing failed');
           }
         } catch (analysisError: any) {
-          console.error('⚠️  STL analysis failed:', analysisError.message);
+          console.error('⚠️  Bambu slicer failed:', analysisError.message);
           console.log('Falling back to file-size estimation...');
           // Fallback to simple calculation
           estimatedPrice = calculateEstimatedPrice({

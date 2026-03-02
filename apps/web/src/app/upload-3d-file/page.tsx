@@ -12,7 +12,8 @@ import {
   Info,
   Package,
   Palette,
-  Ruler
+  Ruler,
+  Settings
 } from 'lucide-react';
 import { Button, Input, Card, CardContent } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
@@ -29,6 +30,12 @@ const materials = [
   { id: 'abs', name: 'ABS', description: 'Durable, heat-resistant' },
   { id: 'petg', name: 'PETG', description: 'Strong, flexible' },
   { id: 'tpu', name: 'TPU', description: 'Flexible, rubber-like' },
+];
+
+const printers = [
+  { id: 'p1s', name: 'Bambu P1S', description: 'High speed, enclosed' },
+  { id: 'a1', name: 'Bambu A1', description: 'Standard build volume' },
+  { id: 'a1mini', name: 'Bambu A1 Mini', description: 'Compact size' },
 ];
 
 const colors = [
@@ -53,11 +60,10 @@ export default function Upload3DFilePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Backend pricing data
-  // Remove pricing state for debug phase
-  // const [backendPrice, setBackendPrice] = useState<number | null>(null);
-  // const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
   const [printTimeSeconds, setPrintTimeSeconds] = useState<number | null>(null);
+  const [finalPrice, setFinalPrice] = useState<number | null>(null);
+  const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
   const [customDesignId, setCustomDesignId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null); // Product ID for cart operations
   const [uploadComplete, setUploadComplete] = useState<boolean>(false);
@@ -68,6 +74,7 @@ export default function Upload3DFilePage() {
     material: 'pla',
     color: 'white',
     quantity: 1,
+    printerType: 'p1s',
     infillPercentage: 20,
     layerHeight: 0.2,
   });
@@ -187,6 +194,7 @@ export default function Upload3DFilePage() {
         material: formData.material,
         color: formData.color,
         quantity: formData.quantity,
+        printerType: formData.printerType,
         infillPercentage: formData.infillPercentage,
         layerHeight: formData.layerHeight,
       });
@@ -195,15 +203,21 @@ export default function Upload3DFilePage() {
       setUploadProgress(100);
 
       if (result.success) {
-        // Store only filament and time for debug phase
+        // Store pricing data from Bambu slicer
         if (typeof result.filament_grams === 'number') {
           setFilamentGrams(result.filament_grams);
         }
         if (typeof result.print_time_seconds === 'number') {
           setPrintTimeSeconds(result.print_time_seconds);
         }
+        if (typeof result.final_price === 'number') {
+          setFinalPrice(result.final_price);
+        }
+        if (result.pricing?.accurate) {
+          setPricingAccurate(true);
+        }
         setUploadComplete(true);
-        toast.success('Analysis complete! Filament and time parsed.', {
+        toast.success('Slicing complete! Accurate pricing from Bambu profile.', {
           id: uploadToast,
           duration: 5000,
         });
@@ -313,24 +327,37 @@ export default function Upload3DFilePage() {
                       </button>
                     </div>
 
-                    {/* Backend Filament/Time Display Only */}
+                    {/* Bambu Slicer Results */}
                     {uploadComplete && (
-                      <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle className="text-blue-600" size={20} />
-                          <p className="font-medium text-blue-900">
-                            STL Analysis Results
-                          </p>
+                      <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="text-green-600" size={20} />
+                            <p className="font-medium text-green-900">
+                              Bambu Slicer Analysis
+                            </p>
+                          </div>
+                          {pricingAccurate && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
+                              Accurate via Bambu Profile
+                            </span>
+                          )}
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
-                            <p className="text-gray-600">Weight</p>
+                            <p className="text-gray-600">Filament Weight</p>
                             <p className="font-medium text-lg">{filamentGrams !== null ? filamentGrams.toFixed(1) : '--'}g</p>
                           </div>
                           <div>
                             <p className="text-gray-600">Print Time</p>
                             <p className="font-medium text-lg">
-                              {printTimeSeconds !== null ? (printTimeSeconds / 3600).toFixed(2) : '--'} hours
+                              {printTimeSeconds !== null ? (printTimeSeconds / 3600).toFixed(2) : '--'}h
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600">Total Price</p>
+                            <p className="font-medium text-lg text-green-700">
+                              {finalPrice !== null ? `₹${finalPrice}` : '--'}
                             </p>
                           </div>
                         </div>
@@ -427,6 +454,30 @@ export default function Upload3DFilePage() {
                         >
                           <p className="font-medium">{material.name}</p>
                           <p className="text-xs text-gray-600">{material.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Printer Type */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Settings size={18} className="text-primary" />
+                      <label className="text-sm font-medium">Bambu Printer</label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {printers.map((printer) => (
+                        <div
+                          key={printer.id}
+                          className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            formData.printerType === printer.id
+                              ? 'border-primary bg-primary/5'
+                              : 'border-gray-300 hover:border-primary'
+                          }`}
+                          onClick={() => setFormData({ ...formData, printerType: printer.id })}
+                        >
+                          <p className="font-medium">{printer.name}</p>
+                          <p className="text-xs text-gray-600">{printer.description}</p>
                         </div>
                       ))}
                     </div>
@@ -558,6 +609,7 @@ export default function Upload3DFilePage() {
                           material: 'pla',
                           color: 'white',
                           quantity: 1,
+                          printerType: 'p1s',
                           infillPercentage: 20,
                           layerHeight: 0.2,
                         });

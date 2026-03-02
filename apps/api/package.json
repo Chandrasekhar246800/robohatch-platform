@@ -37,7 +37,6 @@
     "multer": "^2.0.2",
     "multer-s3": "^3.0.1",
     "mysql2": "^3.16.2",
-    "node-stl": "^0.1.0",
     "prisma": "^5.22.0",
     "razorpay": "^2.9.6",
     "react-hot-toast": "^2.6.0",

@@ -1131,6 +1131,7 @@ class ApiClient {
     material: string;
     color: string;
     quantity: number;
+    printerType: string;
     infillPercentage: number;
     layerHeight: number;
   }) {
@@ -1144,6 +1145,7 @@ class ApiClient {
       formData.append('material', data.material);
       formData.append('color', data.color);
       formData.append('quantity', data.quantity.toString());
+      formData.append('printerType', data.printerType);
       formData.append('infillPercentage', data.infillPercentage.toString());
       formData.append('layerHeight', data.layerHeight.toString());
 

@@ -26,11 +26,33 @@ RUN npm run build
 # Stage 2: Production
 FROM node:20 AS production
 
+# Install system dependencies for OrcaSlicer
+RUN apt-get update && apt-get install -y \
+    dumb-init \
+    wget \
+    unzip \
+    libgtk-3-0 \
+    libgl1 \
+    libglu1-mesa \
+    libfuse2 \
+    ca-certificates \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install minimal system dependencies (no GUI tools needed)
+# Download and install OrcaSlicer AppImage
+RUN wget -q https://github.com/SoftFever/OrcaSlicer/releases/download/v2.1.1/OrcaSlicer_Linux_V2.1.1.AppImage -O /tmp/orcaslicer.AppImage && \
+    chmod +x /tmp/orcaslicer.AppImage && \
+    cd /tmp && \
+    ./orcaslicer.AppImage --appimage-extract && \
+    mv squashfs-root /opt/orcaslicer && \
+    ln -s /opt/orcaslicer/AppRun /usr/local/bin/orca-slicer && \
+    rm /tmp/orcaslicer.AppImage
 
-# Install dumb-init for proper signal handling
-RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
+# Verify OrcaSlicer installation
+RUN xvfb-run -a orca-slicer --version || echo "OrcaSlicer installed (version check may fail in headless)
+
+# Create slicing temp directory
+RUN mkdir -p /tmp/slicer && chmod 777 /tmp/slicer
 
 # Create app user
 RUN groupadd -g 1001 nodejs && \
@@ -51,6 +73,9 @@ RUN npm install --production --workspace=@robohatch/api
 COPY --chown=nodejs:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=nodejs:nodejs --from=builder /app/apps/api/node_modules/.prisma ./apps/api/node_modules/.prisma
 COPY --chown=nodejs:nodejs --from=builder /app/apps/api/prisma ./apps/api/prisma
+
+# Copy Bambu printer profiles
+COPY --chown=nodejs:nodejs apps/api/config ./apps/api/config
 
 # Create temp directory for STL analysis
 RUN mkdir -p /tmp/stl-uploads && \
