@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
-import { sliceModel } from '../services/bambuSlicer.service';
+import { calculateWeight } from '../services/meshWeight.service';
 import { s3 } from '../config/s3';
 import path from 'path';
 import fs from 'fs';
@@ -195,8 +195,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     let tempFilePath: string | null = null;
 
     try {
-      if (is3DFile && fileExtension === '.stl') {
-        console.log(`🔬 STL file detected - using Bambu slicer for accurate analysis...`);
+      if (is3DFile && (fileExtension === '.stl' || fileExtension === '.3mf')) {
+        console.log(`🔬 3D file detected (${fileExtension}) - calculating mesh weight...`);
         try {
           // Step 1: Download file from S3 to temp location
           const s3Key = getS3KeyFromUrl(file.key || file.location);
@@ -204,32 +204,44 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           tempFilePath = await downloadFromS3(s3Key);
           console.log(`✓ Downloaded to: ${tempFilePath}`);
 
-          // Step 2: Slice with OrcaSlicer using real Bambu profiles
-          const printerType = req.body.printerType || 'p1s';
-          console.log(`⏳ Slicing with OrcaSlicer (${printerType} profile)...`);
+          // Step 2: Calculate weight using mesh volume analysis
+          const scalePercent = parseInt(req.body.scalePercent) || 100;
+          const infillPercent = parseInt(infillPercentage) || 20;
+          const pricePerGram = 4; // Raw material price per gram
           
-          const analysis = await sliceModel({
-            stlPath: tempFilePath,
-            printerType,
+          console.log(`⏳ Calculating mesh weight...`);
+          console.log(`   Scale: ${scalePercent}%`);
+          console.log(`   Infill: ${infillPercent}%`);
+          console.log(`   Material: ${materialLower}`);
+          
+          const result = await calculateWeight({
+            filePath: tempFilePath,
             material: materialLower,
-            quantity: quantityInt,
+            scalePercent,
+            infillPercent,
+            pricePerGram,
           });
 
-          // Step 3: Use accurate results from slicer
-          if (analysis.accurate) {
-            estimatedPrice = analysis.final_price;
-            pricingData = {
-              accurate: true,
-              filament_grams: analysis.filament_grams,
-              print_time_seconds: analysis.print_time_seconds,
-              final_price: estimatedPrice,
-            };
-            console.log(`✅ Bambu slicer complete: ${analysis.filament_grams}g, ${(analysis.print_time_seconds / 3600).toFixed(2)}h, ₹${estimatedPrice}`);
-          } else {
-            throw new Error(analysis.error || 'Slicing failed');
-          }
+          // Step 3: Use calculated weight and raw cost
+          const weightGrams = result.weight_grams;
+          const rawCost = result.raw_material_cost;
+          
+          // Multiply by quantity for final price
+          estimatedPrice = rawCost * quantityInt;
+          
+          pricingData = {
+            accurate: true,
+            filament_grams: weightGrams,
+            final_price: estimatedPrice,
+          };
+          
+          console.log(`✅ Mesh weight calculation complete:`);
+          console.log(`   Weight: ${weightGrams}g`);
+          console.log(`   Raw cost: ₹${rawCost} (single unit)`);
+          console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
+          
         } catch (analysisError: any) {
-          console.error('⚠️  Bambu slicer failed:', analysisError.message);
+          console.error('⚠️  Mesh weight calculation failed:', analysisError.message);
           console.log('Falling back to file-size estimation...');
           // Fallback to simple calculation
           estimatedPrice = calculateEstimatedPrice({
@@ -245,8 +257,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           };
         }
       } else if (is3DFile) {
-        // Non-STL 3D files (.3mf, .obj, .gcode): use file-size estimation
-        console.log(`📄 3D file (${fileExtension}) - JavaScript parser only supports .stl, using estimation`);
+        // Non-STL/3MF 3D files (.obj, .gcode): use file-size estimation
+        console.log(`📄 3D file (${fileExtension}) - mesh parser only supports .stl/.3mf, using estimation`);
         estimatedPrice = calculateEstimatedPrice({
           fileSize: file.size,
           material: materialLower,
@@ -346,7 +358,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         ...customDesign,
       },
       pricing: pricingData,
-      // Expose fields at top level for frontend convenience
+      // Raw material calculation results (top-level for convenience)
+      weight_grams: pricingData?.filament_grams || null,
+      raw_material_cost: pricingData?.final_price ? Math.round(pricingData.final_price / quantityInt) : null,
       filament_grams: pricingData?.filament_grams || null,
       print_time_seconds: pricingData?.print_time_seconds || null,
     });
