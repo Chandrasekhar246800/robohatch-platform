@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && turbo run build --filter=@robohatch/web",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install --prefix=../..",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "apps/web/**": {
+      "maxDuration": 60
+    }
+  }
+}
