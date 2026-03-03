@@ -361,8 +361,12 @@ function estimatePurgeWaste(fileExt: string, filePath: string): number {
 /**
  * Compute mesh volume using signed tetrahedron formula
  * Volume = (1/6) * |p1 · (p2 × p3)|
+ * Returns volume in mm³ and bounding box dimensions
  */
-function computeVolume(positions: number[]): number {
+function computeVolume(positions: number[]): { 
+  volume: number; 
+  boundingBox: { sizeX: number; sizeY: number; sizeZ: number; maxDimension: number }
+} {
   console.log(`   🔢 Computing volume from ${positions.length} position values...`);
   
   if (positions.length === 0) {
@@ -425,11 +429,13 @@ function computeVolume(positions: number[]): number {
   const sizeX = maxX - minX;
   const sizeY = maxY - minY;
   const sizeZ = maxZ - minZ;
+  const maxDimension = Math.max(sizeX, sizeY, sizeZ);
   
   console.log(`   📊 Bounding box:`);
   console.log(`      X: ${minX.toFixed(2)} to ${maxX.toFixed(2)} = ${sizeX.toFixed(2)} mm`);
   console.log(`      Y: ${minY.toFixed(2)} to ${maxY.toFixed(2)} = ${sizeY.toFixed(2)} mm`);
   console.log(`      Z: ${minZ.toFixed(2)} to ${maxZ.toFixed(2)} = ${sizeZ.toFixed(2)} mm`);
+  console.log(`      Max dimension: ${maxDimension.toFixed(2)} mm`);
   console.log(`   📊 Raw signed volume: ${volume.toFixed(2)} mm³`);
   console.log(`   📊 Absolute volume: ${absVolume.toFixed(2)} mm³`);
   
@@ -444,7 +450,10 @@ function computeVolume(positions: number[]): number {
     console.log(`   ⚠️ This might indicate unit conversion issue or mesh errors`);
   }
   
-  return absVolume;
+  return {
+    volume: absVolume,
+    boundingBox: { sizeX, sizeY, sizeZ, maxDimension }
+  };
 }
 
 /**
@@ -508,6 +517,44 @@ function estimateSupportPercentage(positions: number[]): number {
 }
 
 /**
+ * Calculate dynamic shell factor based on part size
+ * Small parts have higher surface-area-to-volume ratio, so shells are a larger percentage
+ * Large parts have lower surface-area-to-volume ratio, so shells are a smaller percentage
+ */
+function calculateDynamicShellFactor(maxDimension: number): number {
+  // Shell factor based on maximum bounding box dimension (in mm)
+  // Small parts (< 50mm): 0.65-0.75 shell factor (high surface area ratio)
+  // Medium parts (50-150mm): 0.45-0.65 shell factor  
+  // Large parts (> 150mm): 0.35-0.45 shell factor (low surface area ratio)
+  
+  let shellFactor: number;
+  
+  if (maxDimension < 30) {
+    // Very small parts (< 30mm): 75% shell
+    shellFactor = 0.75;
+  } else if (maxDimension < 50) {
+    // Small parts (30-50mm): 70% shell, linear interpolation
+    shellFactor = 0.75 - ((maxDimension - 30) / 20) * 0.10; // 0.75 → 0.65
+  } else if (maxDimension < 100) {
+    // Medium-small parts (50-100mm): 65% → 55% shell
+    shellFactor = 0.65 - ((maxDimension - 50) / 50) * 0.10; // 0.65 → 0.55
+  } else if (maxDimension < 150) {
+    // Medium parts (100-150mm): 55% → 45% shell
+    shellFactor = 0.55 - ((maxDimension - 100) / 50) * 0.10; // 0.55 → 0.45
+  } else if (maxDimension < 200) {
+    // Medium-large parts (150-200mm): 45% → 40% shell
+    shellFactor = 0.45 - ((maxDimension - 150) / 50) * 0.05; // 0.45 → 0.40
+  } else {
+    // Large parts (> 200mm): 35-40% shell
+    shellFactor = Math.max(0.35, 0.40 - (maxDimension - 200) / 1000);
+  }
+  
+  console.log(`   📏 Part size: ${maxDimension.toFixed(1)}mm → Dynamic shell factor: ${shellFactor.toFixed(3)}`);
+  
+  return shellFactor;
+}
+
+/**
  * Calculate weight and raw material cost for uploaded 3D file
  */
 export async function calculateWeight({
@@ -568,8 +615,10 @@ export async function calculateWeight({
       throw new Error(`Insufficient geometry data: only ${geometryData.positions.length} values (need at least 9 for one triangle)`);
     }
     
-    // Calculate volume in mm³
-    const volumeMm3 = computeVolume(geometryData.positions);
+    // Calculate volume in mm³ and get bounding box
+    const volumeResult = computeVolume(geometryData.positions);
+    const volumeMm3 = volumeResult.volume;
+    const boundingBox = volumeResult.boundingBox;
     console.log(`📐 Mesh volume: ${volumeMm3.toFixed(2)} mm³`);
     
     // Convert to cm³ (1 cm³ = 1000 mm³)
@@ -581,19 +630,14 @@ export async function calculateWeight({
     const scaledVolumeCm3 = volumeCm3 * Math.pow(scaleFactor, 3);
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
+    // Calculate dynamic shell factor based on part size
+    const shellFactor = calculateDynamicShellFactor(boundingBox.maxDimension);
+    
     // Apply infill + shell factor
-    // Calibrated formula based on real-world printing and Bambu Studio weight matching:
-    // - Walls/perimeters: 2-3 perimeters @ 0.4mm
-    // - Top/bottom: 4-5 solid layers
-    // - Infill: variable percentage
-    // CALIBRATION: Tested with user's file - 146g Bambu target
-    // 75g → 146g requires 1.95x increase, but 0.66 was too high (170g)
-    // Adjusted to 0.50 for better balance: 75g × (0.70/0.44) = 119g base, closer to target
-    const shellFactor = 0.50; // Calibrated to match Bambu Studio Model+Support weight
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
-    console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
-    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor} shell + ${infillPercent}% infill)`);
+    console.log(`   Shell factor: ${shellFactor.toFixed(3)} (walls + top/bottom, size-adjusted)`);
+    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor.toFixed(3)} shell + ${infillPercent}% infill)`);
     console.log(`   Effective volume: ${effectiveVolumeCm3.toFixed(2)} cm³`);
     
     // Estimate support material needs
