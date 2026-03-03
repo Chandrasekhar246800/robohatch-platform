@@ -102,20 +102,29 @@ function load3MF(filePath: string): { positions: number[] } {
   console.log(`   📦 ZIP contains ${zipEntries.length} files`);
   console.log(`   📦 Available entries: ${zipEntries.map((e: any) => e.entryName).join(', ')}`);
   
-  // Find 3D model file (usually in 3D/3dmodel.model)
-  let modelEntry = zipEntries.find((entry: any) => 
-    entry.entryName.endsWith('.model') || entry.entryName.includes('3dmodel')
-  );
+  // Find ALL .model files (main model + object files)
+  const modelFiles = zipEntries.filter((entry: any) => entry.entryName.endsWith('.model'));
+  console.log(`   📦 Found ${modelFiles.length} model files: ${modelFiles.map((e: any) => e.entryName).join(', ')}`);
   
-  if (!modelEntry) {
-    throw new Error('No 3D model found in 3MF file');
+  let allPositions: number[] = [];
+  let totalTriangles = 0;
+  
+  // Parse each model file and combine geometries
+  for (const modelEntry of modelFiles) {
+    console.log(`   📄 Parsing ${modelEntry.entryName}...`);
+    const modelXML = modelEntry.getData().toString('utf8');
+    const result = parse3MFModel(modelXML);
+    
+    if (result.positions.length > 0) {
+      allPositions = allPositions.concat(result.positions);
+      totalTriangles += result.positions.length / 9;
+      console.log(`   ✅ Added ${result.positions.length / 9} triangles from ${modelEntry.entryName}`);
+    }
   }
   
-  console.log(`   ✅ Found model: ${modelEntry.entryName}`);
-  const modelXML = modelEntry.getData().toString('utf8');
-  console.log(`   📄 Model XML size: ${modelXML.length} bytes`);
+  console.log(`   ✅ Total combined: ${totalTriangles} triangles, ${allPositions.length} positions`);
   
-  return parse3MFModel(modelXML);
+  return { positions: allPositions };
 }
 
 /**
@@ -262,11 +271,20 @@ function computeVolume(positions: number[]): number {
   const triangleCount = Math.floor(positions.length / 9);
   console.log(`   📐 Processing ${triangleCount} triangles...`);
   
-  let volume = 0;
-  let minCoord = Infinity;
-  let maxCoord = -Infinity;
+  // Sample first few coordinates for debugging
+  if (positions.length >= 9) {
+    console.log(`   🔍 First triangle vertices:`);
+    console.log(`      v1: (${positions[0].toFixed(2)}, ${positions[1].toFixed(2)}, ${positions[2].toFixed(2)})`);
+    console.log(`      v2: (${positions[3].toFixed(2)}, ${positions[4].toFixed(2)}, ${positions[5].toFixed(2)})`);
+    console.log(`      v3: (${positions[6].toFixed(2)}, ${positions[7].toFixed(2)}, ${positions[8].toFixed(2)})`);
+  }
   
-  // Process triangles in groups of 9 values (3 vertices × 3 coordinates)
+  let volume = 0;
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+  
+  // Process triangles and compute signed volume
   for (let i = 0; i < positions.length; i += 9) {
     const p1x = positions[i];
     const p1y = positions[i + 1];
@@ -281,29 +299,47 @@ function computeVolume(positions: number[]): number {
     const p3z = positions[i + 8];
     
     // Track bounding box
-    [p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z].forEach(coord => {
-      minCoord = Math.min(minCoord, coord);
-      maxCoord = Math.max(maxCoord, coord);
-    });
+    minX = Math.min(minX, p1x, p2x, p3x);
+    maxX = Math.max(maxX, p1x, p2x, p3x);
+    minY = Math.min(minY, p1y, p2y, p3y);
+    maxY = Math.max(maxY, p1y, p2y, p3y);
+    minZ = Math.min(minZ, p1z, p2z, p3z);
+    maxZ = Math.max(maxZ, p1z, p2z, p3z);
     
-    // Calculate cross product: p2 × p3
+    // Signed volume of tetrahedron formed by origin and triangle
+    // V = (1/6) * p1 · (p2 × p3)
     const crossX = p2y * p3z - p2z * p3y;
     const crossY = p2z * p3x - p2x * p3z;
     const crossZ = p2x * p3y - p2y * p3x;
     
-    // Calculate dot product: p1 · (p2 × p3)
     const dot = p1x * crossX + p1y * crossY + p1z * crossZ;
-    
-    // Signed volume of tetrahedron
     volume += dot / 6.0;
   }
   
   const absVolume = Math.abs(volume);
-  console.log(`   📊 Bounding box: ${minCoord.toFixed(2)} to ${maxCoord.toFixed(2)} mm`);
-  console.log(`   📊 Raw volume: ${volume.toFixed(2)} mm³ (signed)`);
+  const sizeX = maxX - minX;
+  const sizeY = maxY - minY;
+  const sizeZ = maxZ - minZ;
+  
+  console.log(`   📊 Bounding box:`);
+  console.log(`      X: ${minX.toFixed(2)} to ${maxX.toFixed(2)} = ${sizeX.toFixed(2)} mm`);
+  console.log(`      Y: ${minY.toFixed(2)} to ${maxY.toFixed(2)} = ${sizeY.toFixed(2)} mm`);
+  console.log(`      Z: ${minZ.toFixed(2)} to ${maxZ.toFixed(2)} = ${sizeZ.toFixed(2)} mm`);
+  console.log(`   📊 Raw signed volume: ${volume.toFixed(2)} mm³`);
   console.log(`   📊 Absolute volume: ${absVolume.toFixed(2)} mm³`);
   
-  return absVolume; // Return absolute volume in mm³
+  // Sanity check: if volume is suspiciously small compared to bounding box
+  const boundingBoxVolume = sizeX * sizeY * sizeZ;
+  const volumeRatio = absVolume / boundingBoxVolume;
+  console.log(`   📊 Bounding box volume: ${boundingBoxVolume.toFixed(2)} mm³`);
+  console.log(`   📊 Mesh fill ratio: ${(volumeRatio * 100).toFixed(1)}%`);
+  
+  if (absVolume < 1 && triangleCount > 100) {
+    console.log(`   ⚠️ WARNING: Volume suspiciously small (${absVolume.toFixed(4)} mm³) for ${triangleCount} triangles`);
+    console.log(`   ⚠️ This might indicate unit conversion issue or mesh errors`);
+  }
+  
+  return absVolume;
 }
 
 /**
