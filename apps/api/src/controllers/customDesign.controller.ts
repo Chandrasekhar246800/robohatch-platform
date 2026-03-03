@@ -80,12 +80,12 @@ const getS3KeyFromUrl = (s3Url: string): string => {
  */
 const getMaterialCostPerGram = (material: string): number => {
   const costs: Record<string, number> = {
-    pla: 1.2,
-    abs: 1.5,
-    petg: 1.8,
-    tpu: 2.5,
+    pla: 3.5,     // PLA - cheapest, most common
+    abs: 4.0,     // ABS - standard
+    petg: 4.5,    // PETG - more expensive, stronger
+    tpu: 5.5,     // TPU - most expensive, flexible
   };
-  return costs[material] || 1.2; // Default to PLA cost
+  return costs[material] || 3.5; // Default to PLA cost
 };
 
 /**
@@ -207,12 +207,13 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           // Step 2: Calculate weight using mesh volume analysis
           const scalePercent = parseInt(req.body.scalePercent) || 100;
           const infillPercent = parseInt(infillPercentage) || 20;
-          const pricePerGram = 4; // Raw material price per gram
+          const pricePerGram = getMaterialCostPerGram(materialLower); // Material-specific pricing
           
           console.log(`⏳ Calculating mesh weight...`);
           console.log(`   Scale: ${scalePercent}%`);
           console.log(`   Infill: ${infillPercent}%`);
           console.log(`   Material: ${materialLower}`);
+          console.log(`   Price per gram: ₹${pricePerGram}/g`);
           
           const result = await calculateWeight({
             filePath: tempFilePath,
