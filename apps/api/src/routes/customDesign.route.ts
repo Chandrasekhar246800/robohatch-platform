@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware';
-import { upload3d } from '../middlewares/upload3d.middleware';
+import { upload3d, handleUploadError } from '../middlewares/upload3d.middleware';
 import {
   createCustomDesign,
   getUserCustomDesigns,
@@ -12,7 +12,7 @@ import {
 const router = Router();
 
 // User routes - with 3D file upload
-router.post('/', authMiddleware, upload3d.single('file'), createCustomDesign);
+router.post('/', authMiddleware, upload3d.single('file'), handleUploadError, createCustomDesign);
 router.get('/my-designs', authMiddleware, getUserCustomDesigns);
 router.get('/:id', authMiddleware, getCustomDesignById);
 
