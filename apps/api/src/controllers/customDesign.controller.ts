@@ -80,12 +80,12 @@ const getS3KeyFromUrl = (s3Url: string): string => {
  */
 const getMaterialCostPerGram = (material: string): number => {
   const costs: Record<string, number> = {
-    pla: 3.5,     // PLA - cheapest, most common
-    abs: 4.0,     // ABS - standard
-    petg: 4.5,    // PETG - more expensive, stronger
-    tpu: 5.5,     // TPU - most expensive, flexible
+    pla: 4,     // PLA - ₹4 per gram
+    abs: 7,     // ABS - ₹7 per gram
+    petg: 6,    // PETG - ₹6 per gram
+    tpu: 8,     // TPU - ₹8 per gram (most expensive, flexible)
   };
-  return costs[material] || 3.5; // Default to PLA cost
+  return costs[material] || 4; // Default to PLA cost
 };
 
 /**
