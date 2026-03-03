@@ -518,40 +518,36 @@ function estimateSupportPercentage(positions: number[]): number {
 
 /**
  * Calculate dynamic shell factor based on part size
- * Small parts have higher surface-area-to-volume ratio, so shells are a larger percentage
- * Large parts have lower surface-area-to-volume ratio, so shells are a smaller percentage
+ * Gentle adjustment curve centered around 0.22
  * 
  * CALIBRATED based on user testing:
- * - 100mm parts: Bambu 112g/86g vs Website 183g/176g (was too high with 0.55 factor)
- * - Reduced all factors by ~60% to match real Bambu calculations
+ * - Fixed 0.22: Some models 20-40g too high, others 10-20g too low
+ * - Need gentle dynamic adjustment based on part size
+ * - Small parts (high SA/V): Slightly higher factor (more solid walls)
+ * - Large parts (low SA/V): Slightly lower factor (more hollow inside)
  */
 function calculateDynamicShellFactor(maxDimension: number): number {
-  // Shell factor based on maximum bounding box dimension (in mm)
-  // Calibrated to match Bambu Studio weights across different part sizes
-  
+  // Very gentle curve centered at 0.22, ranging only from 0.18 to 0.26
   let shellFactor: number;
   
-  if (maxDimension < 30) {
-    // Very small parts (< 30mm): 40% shell (high surface area ratio)
-    shellFactor = 0.40;
-  } else if (maxDimension < 50) {
-    // Small parts (30-50mm): 40% → 35% shell, linear interpolation
-    shellFactor = 0.40 - ((maxDimension - 30) / 20) * 0.05; // 0.40 → 0.35
-  } else if (maxDimension < 100) {
-    // Medium-small parts (50-100mm): 35% → 28% shell
-    shellFactor = 0.35 - ((maxDimension - 50) / 50) * 0.07; // 0.35 → 0.28
-  } else if (maxDimension < 150) {
-    // Medium parts (100-150mm): 28% → 24% shell
-    shellFactor = 0.28 - ((maxDimension - 100) / 50) * 0.04; // 0.28 → 0.24
-  } else if (maxDimension < 200) {
-    // Medium-large parts (150-200mm): 24% → 22% shell
-    shellFactor = 0.24 - ((maxDimension - 150) / 50) * 0.02; // 0.24 → 0.22
+  if (maxDimension < 40) {
+    // Very small parts (< 40mm): 0.26 shell (high surface area ratio)
+    shellFactor = 0.26;
+  } else if (maxDimension < 80) {
+    // Small-medium parts (40-80mm): 0.26 → 0.23 shell
+    shellFactor = 0.26 - ((maxDimension - 40) / 40) * 0.03; // 0.26 → 0.23
+  } else if (maxDimension < 120) {
+    // Medium parts (80-120mm): 0.23 → 0.21 shell
+    shellFactor = 0.23 - ((maxDimension - 80) / 40) * 0.02; // 0.23 → 0.21
+  } else if (maxDimension < 180) {
+    // Medium-large parts (120-180mm): 0.21 → 0.19 shell
+    shellFactor = 0.21 - ((maxDimension - 120) / 60) * 0.02; // 0.21 → 0.19
   } else {
-    // Large parts (> 200mm): 20-22% shell
-    shellFactor = Math.max(0.20, 0.22 - (maxDimension - 200) / 2000);
+    // Large parts (> 180mm): 0.18-0.19 shell
+    shellFactor = Math.max(0.18, 0.19 - (maxDimension - 180) / 1000);
   }
   
-  console.log(`   📏 Part size: ${maxDimension.toFixed(1)}mm → Dynamic shell factor: ${shellFactor.toFixed(3)}`);
+  console.log(`   📏 Part size: ${maxDimension.toFixed(1)}mm → Shell factor: ${shellFactor.toFixed(3)}`);
   
   return shellFactor;
 }
@@ -632,17 +628,13 @@ export async function calculateWeight({
     const scaledVolumeCm3 = volumeCm3 * Math.pow(scaleFactor, 3);
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
+    // Calculate dynamic shell factor based on part size (gentle adjustment)
+    const shellFactor = calculateDynamicShellFactor(boundingBox.maxDimension);
+    
     // Apply infill + shell factor
-    // Using original working formula from before AWS issues
-    // Calibrated based on user testing: 
-    // - 0.24 produced 86g (perfect match)
-    // - 0.30 produced 20-30g too high
-    // - 0.22 should be optimal balance
-    const shellFactor = 0.22; // Fine-tuned to match Bambu Studio weights
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
-    console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
-    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor} shell + ${infillPercent}% infill)`);
+    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor.toFixed(3)} shell + ${infillPercent}% infill)`);
     console.log(`   Effective volume: ${effectiveVolumeCm3.toFixed(2)} cm³`);
     
     // Estimate support material needs
