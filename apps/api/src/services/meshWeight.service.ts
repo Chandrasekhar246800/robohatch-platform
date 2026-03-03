@@ -108,7 +108,7 @@ async function loadSTL(filePath: string): Promise<{ positions: number[] }> {
   // Extract vertex positions from facets
   for (const facet of result.facets) {
     // Each facet has 3 vertices with x, y, z coordinates
-    for (const vertex of facet.vertices) {
+    for (const vertex of facet.verts) {
       positions.push(vertex[0], vertex[1], vertex[2]);
     }
   }
