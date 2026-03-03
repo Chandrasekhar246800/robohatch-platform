@@ -417,10 +417,16 @@ export async function calculateWeight({
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
     // Apply infill + shell factor
-    // Formula: 0.15 (shell/walls) + (infill/100)
-    const infillFactor = 0.15 + (infillPercent / 100);
+    // Adjusted formula based on real-world printing:
+    // - Walls/perimeters: 2-3 perimeters (~0.23 of volume for typical models)
+    // - Top/bottom: 4-6 solid layers (included in shell factor)
+    // - Infill: variable percentage
+    const shellFactor = 0.23; // Realistic shell/walls factor (was 0.15)
+    const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
-    console.log(`   Effective volume (${infillPercent}% infill): ${effectiveVolumeCm3.toFixed(2)} cm³`);
+    console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
+    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor} shell + ${infillPercent}% infill)`);
+    console.log(`   Effective volume: ${effectiveVolumeCm3.toFixed(2)} cm³`);
     
     // Get material density
     const density = MATERIAL_DENSITIES[material.toLowerCase()] || MATERIAL_DENSITIES.pla;
