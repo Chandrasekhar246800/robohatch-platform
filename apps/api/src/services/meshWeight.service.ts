@@ -417,11 +417,11 @@ export async function calculateWeight({
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
     // Apply infill + shell factor
-    // Adjusted formula based on real-world printing:
-    // - Walls/perimeters: 2-3 perimeters (~0.23 of volume for typical models)
-    // - Top/bottom: 4-6 solid layers (included in shell factor)
+    // Calibrated formula based on real-world printing:
+    // - Walls/perimeters: 2-3 perimeters
+    // - Top/bottom: 4-5 solid layers
     // - Infill: variable percentage
-    const shellFactor = 0.23; // Realistic shell/walls factor (was 0.15)
+    const shellFactor = 0.18; // Calibrated shell/walls factor
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
     console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
