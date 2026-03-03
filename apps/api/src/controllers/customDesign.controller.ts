@@ -359,7 +359,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       console.error('Failed to send 3D design notification email:', error);
     });
 
-    res.status(201).json({
+    console.log('📝 Preparing response payload...');
+    const responsePayload = {
       success: true,
       message: 'Custom design request submitted successfully',
       customDesign: {
@@ -371,7 +372,12 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       raw_material_cost: pricingData?.final_price ? Math.round(pricingData.final_price / quantityInt) : null,
       filament_grams: pricingData?.filament_grams || null,
       print_time_seconds: pricingData?.print_time_seconds || null,
-    });
+    };
+
+    console.log('✅ Sending success response...');
+    res.status(201).json(responsePayload);
+    console.log('✅ Response sent successfully');
+    
   } catch (error: any) {
     console.error('Create custom design error:', error);
     console.error('Error details:', {
