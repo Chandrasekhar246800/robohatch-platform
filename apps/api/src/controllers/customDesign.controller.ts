@@ -242,6 +242,13 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           
         } catch (analysisError: any) {
           console.error('⚠️  Mesh weight calculation failed:', analysisError.message);
+          console.error('Error stack:', analysisError.stack);
+          console.error('File details:', {
+            filename: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            extension: fileExtension
+          });
           console.log('Falling back to file-size estimation...');
           // Fallback to simple calculation
           estimatedPrice = calculateEstimatedPrice({
