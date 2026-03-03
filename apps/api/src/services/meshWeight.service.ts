@@ -343,6 +343,66 @@ function computeVolume(positions: number[]): number {
 }
 
 /**
+ * Estimate support material percentage based on overhangs
+ * Analyzes triangle normals to detect overhanging geometry
+ */
+function estimateSupportPercentage(positions: number[]): number {
+  let overhangCount = 0;
+  let totalTriangles = 0;
+  
+  // Process triangles
+  for (let i = 0; i < positions.length; i += 9) {
+    const p1x = positions[i], p1y = positions[i + 1], p1z = positions[i + 2];
+    const p2x = positions[i + 3], p2y = positions[i + 4], p2z = positions[i + 5];
+    const p3x = positions[i + 6], p3y = positions[i + 7], p3z = positions[i + 8];
+    
+    // Calculate triangle normal (cross product)
+    const edge1x = p2x - p1x, edge1y = p2y - p1y, edge1z = p2z - p1z;
+    const edge2x = p3x - p1x, edge2y = p3y - p1y, edge2z = p3z - p1z;
+    
+    const normalX = edge1y * edge2z - edge1z * edge2y;
+    const normalY = edge1z * edge2x - edge1x * edge2z;
+    const normalZ = edge1x * edge2y - edge1y * edge2x;
+    
+    // Normalize
+    const length = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+    if (length > 0) {
+      const nz = normalZ / length;
+      
+      // Check if triangle is overhanging (normal pointing downward)
+      // Threshold: -45 degrees (nz < -0.707) needs support
+      if (nz < -0.5) {
+        overhangCount++;
+      }
+    }
+    
+    totalTriangles++;
+  }
+  
+  if (totalTriangles === 0) return 0;
+  
+  const overhangRatio = overhangCount / totalTriangles;
+  
+  // Support estimation:
+  // - 0-10% overhangs: 5% support
+  // - 10-30% overhangs: 10-15% support  
+  // - 30%+ overhangs: 15-20% support
+  let supportPercent = 0;
+  if (overhangRatio < 0.1) {
+    supportPercent = overhangRatio * 50; // 0-5%
+  } else if (overhangRatio < 0.3) {
+    supportPercent = 5 + (overhangRatio - 0.1) * 50; // 5-15%
+  } else {
+    supportPercent = 15 + (overhangRatio - 0.3) * 25; // 15-20%
+  }
+  
+  console.log(`   🏗️  Overhang analysis: ${(overhangRatio * 100).toFixed(1)}% of triangles need support`);
+  console.log(`   🏗️  Estimated support material: ${supportPercent.toFixed(1)}%`);
+  
+  return Math.min(supportPercent / 100, 0.25); // Cap at 25% support
+}
+
+/**
  * Calculate weight and raw material cost for uploaded 3D file
  */
 export async function calculateWeight({
@@ -421,20 +481,29 @@ export async function calculateWeight({
     // - Walls/perimeters: 2-3 perimeters
     // - Top/bottom: 4-5 solid layers
     // - Infill: variable percentage
-    const shellFactor = 0.18; // Calibrated shell/walls factor
+    const shellFactor = 0.20; // Calibrated shell/walls factor (increased for better accuracy)
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
     console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
     console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor} shell + ${infillPercent}% infill)`);
     console.log(`   Effective volume: ${effectiveVolumeCm3.toFixed(2)} cm³`);
     
+    // Estimate support material needs
+    const supportFactor = estimateSupportPercentage(geometryData.positions);
+    const supportVolumeCm3 = scaledVolumeCm3 * supportFactor;
+    console.log(`   Support volume: ${supportVolumeCm3.toFixed(2)} cm³ (${(supportFactor * 100).toFixed(1)}%)`);
+    
+    // Total volume including supports
+    const totalVolumeCm3 = effectiveVolumeCm3 + supportVolumeCm3;
+    console.log(`   📦 Total material volume: ${totalVolumeCm3.toFixed(2)} cm³ (model + supports)`);
+    
     // Get material density
     const density = MATERIAL_DENSITIES[material.toLowerCase()] || MATERIAL_DENSITIES.pla;
     console.log(`   Material density: ${density} g/cm³`);
     
-    // Calculate weight in grams
-    const weightGrams = Math.round(effectiveVolumeCm3 * density);
-    console.log(`⚖️  Weight: ${weightGrams}g`);
+    // Calculate weight in grams (including supports)
+    const weightGrams = Math.round(totalVolumeCm3 * density);
+    console.log(`⚖️  Total weight: ${weightGrams}g (including supports)`);
     
     // Calculate raw material cost
     const rawCost = Math.round(weightGrams * pricePerGram);
@@ -447,7 +516,7 @@ export async function calculateWeight({
       debug: {
         volume_mm3: volumeMm3,
         scaled_volume_cm3: scaledVolumeCm3,
-        effective_volume_cm3: effectiveVolumeCm3,
+        effective_volume_cm3: totalVolumeCm3,
         material_density: density,
         infill_factor: infillFactor,
       },
