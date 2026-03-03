@@ -520,33 +520,35 @@ function estimateSupportPercentage(positions: number[]): number {
  * Calculate dynamic shell factor based on part size
  * Small parts have higher surface-area-to-volume ratio, so shells are a larger percentage
  * Large parts have lower surface-area-to-volume ratio, so shells are a smaller percentage
+ * 
+ * CALIBRATED based on user testing:
+ * - 100mm parts: Bambu 112g/86g vs Website 183g/176g (was too high with 0.55 factor)
+ * - Reduced all factors by ~60% to match real Bambu calculations
  */
 function calculateDynamicShellFactor(maxDimension: number): number {
   // Shell factor based on maximum bounding box dimension (in mm)
-  // Small parts (< 50mm): 0.65-0.75 shell factor (high surface area ratio)
-  // Medium parts (50-150mm): 0.45-0.65 shell factor  
-  // Large parts (> 150mm): 0.35-0.45 shell factor (low surface area ratio)
+  // Calibrated to match Bambu Studio weights across different part sizes
   
   let shellFactor: number;
   
   if (maxDimension < 30) {
-    // Very small parts (< 30mm): 75% shell
-    shellFactor = 0.75;
+    // Very small parts (< 30mm): 40% shell (high surface area ratio)
+    shellFactor = 0.40;
   } else if (maxDimension < 50) {
-    // Small parts (30-50mm): 70% shell, linear interpolation
-    shellFactor = 0.75 - ((maxDimension - 30) / 20) * 0.10; // 0.75 → 0.65
+    // Small parts (30-50mm): 40% → 35% shell, linear interpolation
+    shellFactor = 0.40 - ((maxDimension - 30) / 20) * 0.05; // 0.40 → 0.35
   } else if (maxDimension < 100) {
-    // Medium-small parts (50-100mm): 65% → 55% shell
-    shellFactor = 0.65 - ((maxDimension - 50) / 50) * 0.10; // 0.65 → 0.55
+    // Medium-small parts (50-100mm): 35% → 28% shell
+    shellFactor = 0.35 - ((maxDimension - 50) / 50) * 0.07; // 0.35 → 0.28
   } else if (maxDimension < 150) {
-    // Medium parts (100-150mm): 55% → 45% shell
-    shellFactor = 0.55 - ((maxDimension - 100) / 50) * 0.10; // 0.55 → 0.45
+    // Medium parts (100-150mm): 28% → 24% shell
+    shellFactor = 0.28 - ((maxDimension - 100) / 50) * 0.04; // 0.28 → 0.24
   } else if (maxDimension < 200) {
-    // Medium-large parts (150-200mm): 45% → 40% shell
-    shellFactor = 0.45 - ((maxDimension - 150) / 50) * 0.05; // 0.45 → 0.40
+    // Medium-large parts (150-200mm): 24% → 22% shell
+    shellFactor = 0.24 - ((maxDimension - 150) / 50) * 0.02; // 0.24 → 0.22
   } else {
-    // Large parts (> 200mm): 35-40% shell
-    shellFactor = Math.max(0.35, 0.40 - (maxDimension - 200) / 1000);
+    // Large parts (> 200mm): 20-22% shell
+    shellFactor = Math.max(0.20, 0.22 - (maxDimension - 200) / 2000);
   }
   
   console.log(`   📏 Part size: ${maxDimension.toFixed(1)}mm → Dynamic shell factor: ${shellFactor.toFixed(3)}`);
