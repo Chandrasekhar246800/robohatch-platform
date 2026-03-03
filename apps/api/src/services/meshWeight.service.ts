@@ -254,6 +254,111 @@ function loadSTL(filePath: string): { positions: number[] } {
 }
 
 /**
+ * Detect number of materials/colors from 3MF file for purge waste estimation
+ */
+function detectMaterialCount(filePath: string): number {
+  try {
+    const zip = new AdmZip(filePath);
+    const zipEntries = zip.getEntries();
+    
+    // Find the main model file
+    const modelEntry = zipEntries.find((entry: any) => 
+      entry.entryName === '3D/3dmodel.model' || 
+      entry.entryName.endsWith('.model')
+    );
+    
+    if (!modelEntry) {
+      console.log('   ⚠️ No model file found in 3MF, assuming single material');
+      return 1;
+    }
+    
+    const modelXML = modelEntry.getData().toString('utf8');
+    
+    // Method 1: Check <basematerials> section
+    const baseMaterialsMatch = modelXML.match(/<basematerials[^>]*>([\s\S]*?)<\/basematerials>/i);
+    if (baseMaterialsMatch) {
+      const materialMatches = baseMaterialsMatch[1].match(/<base[^>]*name=/gi);
+      if (materialMatches && materialMatches.length > 1) {
+        console.log(`   🎨 Found ${materialMatches.length} materials in <basematerials>`);
+        return materialMatches.length;
+      }
+    }
+    
+    // Method 2: Check for unique pid (material ID) attributes in objects
+    const pidMatches = modelXML.match(/\bpid="([^"]+)"/gi);
+    if (pidMatches) {
+      const uniquePids = new Set(pidMatches.map((match: string) => {
+        const pidValue = match.match(/pid="([^"]+)"/);
+        return pidValue ? pidValue[1] : '';
+      }));
+      if (uniquePids.size > 1) {
+        console.log(`   🎨 Found ${uniquePids.size} unique material PIDs`);
+        return uniquePids.size;
+      }
+    }
+    
+    // Method 3: Check for multiple color attributes
+    const colorMatches = modelXML.match(/<color[^>]*>/gi);
+    if (colorMatches && colorMatches.length > 1) {
+      console.log(`   🎨 Found ${colorMatches.length} color definitions`);
+      return Math.min(colorMatches.length, 8); // Cap at 8 colors
+    }
+    
+    // Default: single material
+    console.log('   🎨 No multi-material indicators found, assuming single color');
+    return 1;
+  } catch (error: any) {
+    console.log(`   ⚠️ Could not detect materials: ${error.message}`);
+    return 1; // Default to single material
+  }
+}
+
+/**
+ * Estimate purge and tower waste based on material count
+ * Returns waste multiplier (e.g., 1.15 = +15% waste)
+ */
+function estimatePurgeWaste(fileExt: string, filePath: string): number {
+  console.log(`   🗑️  Estimating purge/tower waste...`);
+  
+  // STL files: Single material assumed, minimal priming waste
+  if (fileExt === '.stl') {
+    console.log(`   🗑️  STL file: single material, adding 15% priming waste`);
+    return 1.15;
+  }
+  
+  // 3MF files: Detect material count
+  if (fileExt === '.3mf') {
+    const materialCount = detectMaterialCount(filePath);
+    
+    let wasteMultiplier = 1.0;
+    
+    if (materialCount === 1) {
+      // Single material: minimal priming waste (15%)
+      wasteMultiplier = 1.15;
+      console.log(`   🗑️  Single material: +15% priming waste`);
+    } else if (materialCount === 2) {
+      // 2 materials: moderate purging (60% total waste)
+      wasteMultiplier = 1.60;
+      console.log(`   🗑️  2 materials: +60% purge/tower waste`);
+    } else if (materialCount === 3) {
+      // 3 materials: heavy purging (200% waste)
+      wasteMultiplier = 3.0;
+      console.log(`   🗑️  3 materials: +200% purge/tower waste`);
+    } else if (materialCount >= 4) {
+      // 4+ materials: very heavy purging (600% waste, like your example)
+      wasteMultiplier = 7.0;
+      console.log(`   🗑️  ${materialCount}+ materials: +600% purge/tower waste`);
+    }
+    
+    return wasteMultiplier;
+  }
+  
+  // Default: 15% priming waste
+  console.log(`   🗑️  Unknown format, adding 15% waste`);
+  return 1.15;
+}
+
+/**
  * Compute mesh volume using signed tetrahedron formula
  * Volume = (1/6) * |p1 · (p2 × p3)|
  */
@@ -481,7 +586,7 @@ export async function calculateWeight({
     // - Walls/perimeters: 2-3 perimeters
     // - Top/bottom: 4-5 solid layers
     // - Infill: variable percentage
-    const shellFactor = 0.20; // Calibrated shell/walls factor (increased for better accuracy)
+    const shellFactor = 0.24; // Calibrated to match Bambu Studio Model+Support weight
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
     console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
@@ -501,16 +606,24 @@ export async function calculateWeight({
     const density = MATERIAL_DENSITIES[material.toLowerCase()] || MATERIAL_DENSITIES.pla;
     console.log(`   Material density: ${density} g/cm³`);
     
-    // Calculate weight in grams (including supports)
-    const weightGrams = Math.round(totalVolumeCm3 * density);
-    console.log(`⚖️  Total weight: ${weightGrams}g (including supports)`);
+    // Calculate base weight (model + supports only)
+    const baseWeightGrams = totalVolumeCm3 * density;
+    console.log(`⚖️  Base weight: ${baseWeightGrams.toFixed(1)}g (model + supports)`);
+    
+    // Estimate purge/tower waste based on file type and materials
+    const wasteMultiplier = estimatePurgeWaste(ext, filePath);
+    
+    // Calculate final weight including all waste
+    const finalWeightGrams = Math.round(baseWeightGrams * wasteMultiplier);
+    console.log(`⚖️  Final weight: ${finalWeightGrams}g (including purge/tower waste)`);
+    console.log(`   📊 Breakdown: ${baseWeightGrams.toFixed(1)}g × ${wasteMultiplier.toFixed(2)} = ${finalWeightGrams}g`);
     
     // Calculate raw material cost
-    const rawCost = Math.round(weightGrams * pricePerGram);
+    const rawCost = Math.round(finalWeightGrams * pricePerGram);
     console.log(`💰 Raw material cost: ₹${rawCost} (${pricePerGram}₹/g)`);
     
     return {
-      weight_grams: weightGrams,
+      weight_grams: finalWeightGrams,
       raw_material_cost: rawCost,
       volume_cm3: parseFloat(volumeCm3.toFixed(2)),
       debug: {
