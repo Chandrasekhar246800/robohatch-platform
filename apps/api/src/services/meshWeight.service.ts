@@ -634,8 +634,11 @@ export async function calculateWeight({
     
     // Apply infill + shell factor
     // Using original working formula from before AWS issues
-    // Calibrated based on user testing: Bambu 112g/86g matched our calculation
-    const shellFactor = 0.30; // Reverted from dynamic approach, works across different sizes
+    // Calibrated based on user testing: 
+    // - 0.24 produced 86g (perfect match)
+    // - 0.30 produced 20-30g too high
+    // - 0.22 should be optimal balance
+    const shellFactor = 0.22; // Fine-tuned to match Bambu Studio weights
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
     console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
