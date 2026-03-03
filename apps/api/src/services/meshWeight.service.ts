@@ -632,14 +632,14 @@ export async function calculateWeight({
     const scaledVolumeCm3 = volumeCm3 * Math.pow(scaleFactor, 3);
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
-    // Calculate dynamic shell factor based on part size
-    const shellFactor = calculateDynamicShellFactor(boundingBox.maxDimension);
-    
     // Apply infill + shell factor
+    // Using original working formula from before AWS issues
+    // Calibrated based on user testing: Bambu 112g/86g matched our calculation
+    const shellFactor = 0.30; // Reverted from dynamic approach, works across different sizes
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
-    console.log(`   Shell factor: ${shellFactor.toFixed(3)} (walls + top/bottom, size-adjusted)`);
-    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor.toFixed(3)} shell + ${infillPercent}% infill)`);
+    console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
+    console.log(`   Infill factor: ${infillFactor.toFixed(2)} (${shellFactor} shell + ${infillPercent}% infill)`);
     console.log(`   Effective volume: ${effectiveVolumeCm3.toFixed(2)} cm³`);
     
     // Estimate support material needs
