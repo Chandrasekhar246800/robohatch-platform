@@ -31,8 +31,11 @@ export interface MeshWeightResult {
 function parse3MFModel(xml: string): { positions: number[] } {
   const positions: number[] = [];
   
-  // Extract vertices
-  const vertexRegex = /<vertex\s+x="([^"]+)"\s+y="([^"]+)"\s+z="([^"]+)"/g;
+  console.log(`   📝 XML length: ${xml.length} characters`);
+  console.log(`   📝 XML preview: ${xml.substring(0, 500)}...`);
+  
+  // Extract vertices - flexible regex for any attribute order
+  const vertexRegex = /<vertex[^>]*\bx="([^"]+)"[^>]*\by="([^"]+)"[^>]*\bz="([^"]+)"[^>]*\/?>/gi;
   const vertices: { x: number; y: number; z: number }[] = [];
   let match;
   
@@ -44,26 +47,46 @@ function parse3MFModel(xml: string): { positions: number[] } {
     });
   }
   
-  console.log(`   Found ${vertices.length} vertices`);
+  console.log(`   ✅ Found ${vertices.length} vertices`);
   
-  // Extract triangles
-  const triangleRegex = /<triangle\s+v1="(\d+)"\s+v2="(\d+)"\s+v3="(\d+)"/g;
+  if (vertices.length > 0) {
+    console.log(`   📊 First vertex: x=${vertices[0].x}, y=${vertices[0].y}, z=${vertices[0].z}`);
+  }
+  
+  // Extract triangles - flexible regex for any attribute order
+  const triangleRegex = /<triangle[^>]*\bv1="(\d+)"[^>]*\bv2="(\d+)"[^>]*\bv3="(\d+)"[^>]*\/?>/gi;
   let triangleCount = 0;
   
   while ((match = triangleRegex.exec(xml)) !== null) {
-    const v1 = vertices[parseInt(match[1])];
-    const v2 = vertices[parseInt(match[2])];
-    const v3 = vertices[parseInt(match[3])];
+    const idx1 = parseInt(match[1]);
+    const idx2 = parseInt(match[2]);
+    const idx3 = parseInt(match[3]);
+    
+    const v1 = vertices[idx1];
+    const v2 = vertices[idx2];
+    const v3 = vertices[idx3];
     
     if (v1 && v2 && v3) {
       positions.push(v1.x, v1.y, v1.z);
       positions.push(v2.x, v2.y, v2.z);
       positions.push(v3.x, v3.y, v3.z);
       triangleCount++;
+    } else {
+      console.log(`   ⚠️ Invalid vertex indices: v1=${idx1}, v2=${idx2}, v3=${idx3}`);
     }
   }
   
-  console.log(`   Found ${triangleCount} triangles`);
+  console.log(`   ✅ Found ${triangleCount} triangles`);
+  
+  if (triangleCount === 0 && vertices.length > 0) {
+    console.log(`   ⚠️ Warning: Found vertices but no triangles!`);
+    console.log(`   📝 Searching for triangle patterns in XML...`);
+    // Log sample of XML around <mesh> tags
+    const meshMatch = xml.match(/<mesh[\s\S]{0,1000}/i);
+    if (meshMatch) {
+      console.log(`   📝 Mesh section: ${meshMatch[0].substring(0, 500)}...`);
+    }
+  }
   
   return { positions };
 }
@@ -72,8 +95,12 @@ function parse3MFModel(xml: string): { positions: number[] } {
  * Load and parse 3MF file (ZIP archive with XML)
  */
 function load3MF(filePath: string): { positions: number[] } {
+  console.log('   📦 Opening 3MF ZIP archive...');
   const zip = new AdmZip(filePath);
   const zipEntries = zip.getEntries();
+  
+  console.log(`   📦 ZIP contains ${zipEntries.length} files`);
+  console.log(`   📦 Available entries: ${zipEntries.map((e: any) => e.entryName).join(', ')}`);
   
   // Find 3D model file (usually in 3D/3dmodel.model)
   let modelEntry = zipEntries.find((entry: any) => 
@@ -81,12 +108,13 @@ function load3MF(filePath: string): { positions: number[] } {
   );
   
   if (!modelEntry) {
-    console.log('   Available entries:', zipEntries.map((e: any) => e.entryName).join(', '));
     throw new Error('No 3D model found in 3MF file');
   }
   
-  console.log(`   Found model: ${modelEntry.entryName}`);
+  console.log(`   ✅ Found model: ${modelEntry.entryName}`);
   const modelXML = modelEntry.getData().toString('utf8');
+  console.log(`   📄 Model XML size: ${modelXML.length} bytes`);
+  
   return parse3MFModel(modelXML);
 }
 
