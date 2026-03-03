@@ -582,11 +582,13 @@ export async function calculateWeight({
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
     // Apply infill + shell factor
-    // Calibrated formula based on real-world printing:
-    // - Walls/perimeters: 2-3 perimeters
+    // Calibrated formula based on real-world printing and Bambu Studio weight matching:
+    // - Walls/perimeters: 2-3 perimeters @ 0.4mm = significant volume for small parts
     // - Top/bottom: 4-5 solid layers
     // - Infill: variable percentage
-    const shellFactor = 0.24; // Calibrated to match Bambu Studio Model+Support weight
+    // CALIBRATION: Tested with user's file - 146g Bambu vs 75g before adjustment
+    // Adjustment factor: 1.95x → shell factor increased from 0.24 to 0.66
+    const shellFactor = 0.66; // Calibrated to match Bambu Studio Model+Support weight
     const infillFactor = shellFactor + (infillPercent / 100);
     const effectiveVolumeCm3 = scaledVolumeCm3 * infillFactor;
     console.log(`   Shell factor: ${shellFactor} (walls + top/bottom)`);
