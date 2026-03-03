@@ -59,11 +59,9 @@ export default function Upload3DFilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Backend pricing data
+  // Backend pricing data from mesh weight calculation
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
-  const [printTimeSeconds, setPrintTimeSeconds] = useState<number | null>(null);
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
-  const [pricingAccurate, setPricingAccurate] = useState<boolean>(false);
   const [customDesignId, setCustomDesignId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null); // Product ID for cart operations
   const [uploadComplete, setUploadComplete] = useState<boolean>(false);
@@ -150,9 +148,10 @@ export default function Upload3DFilePage() {
   const removeFile = () => {
     setFile(null);
     setErrors({});
-    // Pricing state removed
+    // Reset pricing state
     setFilamentGrams(null);
-    setPrintTimeSeconds(null);
+    setFinalPrice(null);
+    setUploadComplete(false);
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -203,21 +202,15 @@ export default function Upload3DFilePage() {
       setUploadProgress(100);
 
       if (result.success) {
-        // Store pricing data from Bambu slicer
-        if (typeof result.filament_grams === 'number') {
-          setFilamentGrams(result.filament_grams);
+        // Store pricing data from mesh weight calculation
+        if (typeof result.weight_grams === 'number') {
+          setFilamentGrams(result.weight_grams);
         }
-        if (typeof result.print_time_seconds === 'number') {
-          setPrintTimeSeconds(result.print_time_seconds);
-        }
-        if (typeof result.final_price === 'number') {
-          setFinalPrice(result.final_price);
-        }
-        if (result.pricing?.accurate) {
-          setPricingAccurate(true);
+        if (typeof result.raw_material_cost === 'number') {
+          setFinalPrice(result.raw_material_cost);
         }
         setUploadComplete(true);
-        toast.success('Slicing complete! Accurate pricing from Bambu profile.', {
+        toast.success('Mesh analysis complete! Weight calculated from volume.', {
           id: uploadToast,
           duration: 5000,
         });
@@ -327,37 +320,29 @@ export default function Upload3DFilePage() {
                       </button>
                     </div>
 
-                    {/* Bambu Slicer Results */}
+                    {/* Mesh Weight Analysis */}
                     {uploadComplete && (
                       <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <CheckCircle className="text-green-600" size={20} />
                             <p className="font-medium text-green-900">
-                              Bambu Slicer Analysis
+                              Mesh Weight Analysis
                             </p>
                           </div>
-                          {pricingAccurate && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                              Accurate via Bambu Profile
-                            </span>
-                          )}
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                            Calculated from mesh volume
+                          </span>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <p className="text-gray-600">Filament Weight</p>
+                            <p className="text-gray-600">Material Weight</p>
                             <p className="font-medium text-lg">{filamentGrams !== null ? filamentGrams.toFixed(1) : '--'}g</p>
                           </div>
                           <div>
-                            <p className="text-gray-600">Print Time</p>
-                            <p className="font-medium text-lg">
-                              {printTimeSeconds !== null ? (printTimeSeconds / 3600).toFixed(2) : '--'}h
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Total Price</p>
+                            <p className="text-gray-600">Raw Material Cost</p>
                             <p className="font-medium text-lg text-green-700">
-                              {finalPrice !== null ? `₹${finalPrice}` : '--'}
+                              {finalPrice !== null ? `₹${finalPrice.toFixed(2)}` : '--'}
                             </p>
                           </div>
                         </div>
@@ -571,10 +556,6 @@ export default function Upload3DFilePage() {
                         <span className="text-gray-700">Weight:</span>
                         <span className="font-semibold text-gray-900">{filamentGrams !== null ? filamentGrams.toFixed(1) : '--'}g</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-700">Print Time:</span>
-                        <span className="font-semibold text-gray-900">{printTimeSeconds !== null ? (printTimeSeconds / 3600).toFixed(2) : '--'} hours</span>
-                      </div>
                     </div>
                   </div>
                 ) : (
@@ -602,7 +583,7 @@ export default function Upload3DFilePage() {
                         setProductId(null);
                         setUploadProgress(0);
                         setFilamentGrams(null);
-                        setPrintTimeSeconds(null);
+                        setFinalPrice(null);
                         setFormData({
                           name: '',
                           description: '',
