@@ -91,41 +91,129 @@ function load3MF(filePath: string): { positions: number[] } {
 }
 
 /**
- * Load and parse STL file using stl-parser
+ * Manual binary STL parser (fallback strategy)
+ */
+function parseBinarySTL(buffer: Buffer): { positions: number[] } {
+  console.log('   📝 Trying binary STL parser...');
+  
+  // Binary STL: 80 byte header + 4 byte triangle count + triangle data
+  if (buffer.length < 84) {
+    throw new Error('File too small to be binary STL');
+  }
+  
+  // Read triangle count (uint32 at byte 80)
+  const triangleCount = buffer.readUInt32LE(80);
+  console.log(`   Triangle count from header: ${triangleCount}`);
+  
+  // Each triangle: 50 bytes (12 normal + 36 vertices + 2 attribute)
+  const expectedSize = 84 + (triangleCount * 50);
+  if (buffer.length < expectedSize) {
+    throw new Error(`File size mismatch: expected ${expectedSize}, got ${buffer.length}`);
+  }
+  
+  const positions: number[] = [];
+  let offset = 84; // Skip header + count
+  
+  for (let i = 0; i < triangleCount; i++) {
+    // Skip normal vector (12 bytes)
+    offset += 12;
+    
+    // Read 3 vertices (each 12 bytes = 3 floats)
+    for (let v = 0; v < 3; v++) {
+      const x = buffer.readFloatLE(offset);
+      const y = buffer.readFloatLE(offset + 4);
+      const z = buffer.readFloatLE(offset + 8);
+      positions.push(x, y, z);
+      offset += 12;
+    }
+    
+    // Skip attribute bytes (2 bytes)
+    offset += 2;
+  }
+  
+  console.log(`   ✅ Binary parser found ${triangleCount} triangles`);
+  return { positions };
+}
+
+/**
+ * Manual ASCII STL parser (fallback strategy)
+ */
+function parseAsciiSTL(buffer: Buffer): { positions: number[] } {
+  console.log('   📝 Trying ASCII STL parser...');
+  
+  const content = buffer.toString('utf8');
+  const positions: number[] = [];
+  
+  // Match vertex lines: "vertex x y z"
+  const vertexRegex = /vertex\s+([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s+([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s+([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/g;
+  let match;
+  let vertexCount = 0;
+  
+  while ((match = vertexRegex.exec(content)) !== null) {
+    positions.push(
+      parseFloat(match[1]),
+      parseFloat(match[2]),
+      parseFloat(match[3])
+    );
+    vertexCount++;
+  }
+  
+  if (vertexCount === 0) {
+    throw new Error('No vertices found in ASCII STL');
+  }
+  
+  console.log(`   ✅ ASCII parser found ${vertexCount} vertices (${vertexCount / 3} triangles)`);
+  return { positions };
+}
+
+/**
+ * Load and parse STL file with multiple fallback strategies
  */
 function loadSTL(filePath: string): { positions: number[] } {
   const fileBuffer = fs.readFileSync(filePath);
   
   console.log(`   File size: ${fileBuffer.length} bytes`);
   
-  // Parse STL using stl-parser library (synchronous function)
-  const result = stlParser.toObject(fileBuffer);
-  
-  console.log(`   Parser result:`, {
-    hasFacets: !!result?.facets,
-    facetCount: result?.facets?.length || 0,
-    hasPositions: !!result?.positions,
-    positionCount: result?.positions?.length || 0,
-  });
-  
-  if (!result || !result.facets || result.facets.length === 0) {
-    throw new Error('No facets found in STL file');
-  }
-  
-  const positions: number[] = [];
-  
-  // Extract vertex positions from facets
-  for (const facet of result.facets) {
-    // Each facet has 3 vertices with x, y, z coordinates
-    for (const vertex of facet.verts) {
-      positions.push(vertex[0], vertex[1], vertex[2]);
+  // Strategy 1: Try stl-parser library first
+  try {
+    console.log('   📦 Strategy 1: Using stl-parser library...');
+    const result = stlParser.toObject(fileBuffer);
+    
+    if (result && result.facets && result.facets.length > 0) {
+      const positions: number[] = [];
+      
+      // Extract vertex positions from facets
+      for (const facet of result.facets) {
+        for (const vertex of facet.verts) {
+          positions.push(vertex[0], vertex[1], vertex[2]);
+        }
+      }
+      
+      console.log(`   ✅ stl-parser found ${result.facets.length} triangles`);
+      return { positions };
     }
+    
+    console.log('   ⚠️ stl-parser returned empty data, trying fallback...');
+  } catch (error: any) {
+    console.log(`   ⚠️ stl-parser failed: ${error.message}`);
   }
   
-  console.log(`   Found ${result.facets.length} triangles`);
-  console.log(`   Total positions: ${positions.length}`);
+  // Strategy 2: Try binary STL parser
+  try {
+    return parseBinarySTL(fileBuffer);
+  } catch (error: any) {
+    console.log(`   ⚠️ Binary parser failed: ${error.message}`);
+  }
   
-  return { positions };
+  // Strategy 3: Try ASCII STL parser
+  try {
+    return parseAsciiSTL(fileBuffer);
+  } catch (error: any) {
+    console.log(`   ⚠️ ASCII parser failed: ${error.message}`);
+  }
+  
+  // All strategies failed
+  throw new Error('Could not parse STL file with any available method');
 }
 
 /**
@@ -133,7 +221,22 @@ function loadSTL(filePath: string): { positions: number[] } {
  * Volume = (1/6) * |p1 · (p2 × p3)|
  */
 function computeVolume(positions: number[]): number {
+  console.log(`   🔢 Computing volume from ${positions.length} position values...`);
+  
+  if (positions.length === 0) {
+    throw new Error('No positions data for volume calculation');
+  }
+  
+  if (positions.length % 9 !== 0) {
+    console.log(`   ⚠️ Warning: positions.length (${positions.length}) is not divisible by 9`);
+  }
+  
+  const triangleCount = Math.floor(positions.length / 9);
+  console.log(`   📐 Processing ${triangleCount} triangles...`);
+  
   let volume = 0;
+  let minCoord = Infinity;
+  let maxCoord = -Infinity;
   
   // Process triangles in groups of 9 values (3 vertices × 3 coordinates)
   for (let i = 0; i < positions.length; i += 9) {
@@ -149,6 +252,12 @@ function computeVolume(positions: number[]): number {
     const p3y = positions[i + 7];
     const p3z = positions[i + 8];
     
+    // Track bounding box
+    [p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z].forEach(coord => {
+      minCoord = Math.min(minCoord, coord);
+      maxCoord = Math.max(maxCoord, coord);
+    });
+    
     // Calculate cross product: p2 × p3
     const crossX = p2y * p3z - p2z * p3y;
     const crossY = p2z * p3x - p2x * p3z;
@@ -161,7 +270,12 @@ function computeVolume(positions: number[]): number {
     volume += dot / 6.0;
   }
   
-  return Math.abs(volume); // Return absolute volume in mm³
+  const absVolume = Math.abs(volume);
+  console.log(`   📊 Bounding box: ${minCoord.toFixed(2)} to ${maxCoord.toFixed(2)} mm`);
+  console.log(`   📊 Raw volume: ${volume.toFixed(2)} mm³ (signed)`);
+  console.log(`   📊 Absolute volume: ${absVolume.toFixed(2)} mm³`);
+  
+  return absVolume; // Return absolute volume in mm³
 }
 
 /**
@@ -213,8 +327,16 @@ export async function calculateWeight({
       throw new Error(`Unsupported file type: ${ext}. Only .stl and .3mf are supported.`);
     }
     
+    console.log(`   ✅ Geometry loaded successfully`);
+    console.log(`   📊 Positions array length: ${geometryData.positions.length}`);
+    console.log(`   📊 Triangle count: ${geometryData.positions.length / 9}`);
+    
     if (!geometryData.positions || geometryData.positions.length === 0) {
       throw new Error('No geometry data found in file');
+    }
+    
+    if (geometryData.positions.length < 9) {
+      throw new Error(`Insufficient geometry data: only ${geometryData.positions.length} values (need at least 9 for one triangle)`);
     }
     
     // Calculate volume in mm³
