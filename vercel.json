@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx turbo build --filter=web",
+  "buildCommand": "npx turbo build --filter=@robohatch/web",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install",
   "framework": null
