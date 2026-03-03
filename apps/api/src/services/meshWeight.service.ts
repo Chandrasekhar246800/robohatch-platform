@@ -93,11 +93,20 @@ function load3MF(filePath: string): { positions: number[] } {
 /**
  * Load and parse STL file using stl-parser
  */
-async function loadSTL(filePath: string): Promise<{ positions: number[] }> {
+function loadSTL(filePath: string): { positions: number[] } {
   const fileBuffer = fs.readFileSync(filePath);
   
-  // Parse STL using stl-parser library
-  const result = await stlParser.toObject(fileBuffer);
+  console.log(`   File size: ${fileBuffer.length} bytes`);
+  
+  // Parse STL using stl-parser library (synchronous function)
+  const result = stlParser.toObject(fileBuffer);
+  
+  console.log(`   Parser result:`, {
+    hasFacets: !!result?.facets,
+    facetCount: result?.facets?.length || 0,
+    hasPositions: !!result?.positions,
+    positionCount: result?.positions?.length || 0,
+  });
   
   if (!result || !result.facets || result.facets.length === 0) {
     throw new Error('No facets found in STL file');
@@ -114,6 +123,7 @@ async function loadSTL(filePath: string): Promise<{ positions: number[] }> {
   }
   
   console.log(`   Found ${result.facets.length} triangles`);
+  console.log(`   Total positions: ${positions.length}`);
   
   return { positions };
 }
@@ -195,7 +205,7 @@ export async function calculateWeight({
     
     if (ext === '.stl') {
       console.log('📦 Loading STL file...');
-      geometryData = await loadSTL(filePath);
+      geometryData = loadSTL(filePath);
     } else if (ext === '.3mf') {
       console.log('📦 Loading 3MF file...');
       geometryData = load3MF(filePath);
