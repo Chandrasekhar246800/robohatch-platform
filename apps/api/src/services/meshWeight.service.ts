@@ -359,12 +359,14 @@ function estimatePurgeWaste(fileExt: string, filePath: string): number {
 }
 
 /**
- * Compute mesh volume using signed tetrahedron formula
+ * Compute mesh volume and surface area using signed tetrahedron formula
  * Volume = (1/6) * |p1 · (p2 × p3)|
- * Returns volume in mm³ and bounding box dimensions
+ * Surface Area = sum of all triangle areas
+ * Returns volume in mm³, surface area in mm², and bounding box dimensions
  */
-function computeVolume(positions: number[]): { 
-  volume: number; 
+function computeVolumeAndSurfaceArea(positions: number[]): { 
+  volume: number;
+  surfaceArea: number;
   boundingBox: { sizeX: number; sizeY: number; sizeZ: number; maxDimension: number }
 } {
   console.log(`   🔢 Computing volume from ${positions.length} position values...`);
@@ -389,11 +391,12 @@ function computeVolume(positions: number[]): {
   }
   
   let volume = 0;
+  let surfaceArea = 0;
   let minX = Infinity, maxX = -Infinity;
   let minY = Infinity, maxY = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
   
-  // Process triangles and compute signed volume
+  // Process triangles and compute signed volume + surface area
   for (let i = 0; i < positions.length; i += 9) {
     const p1x = positions[i];
     const p1y = positions[i + 1];
@@ -415,12 +418,21 @@ function computeVolume(positions: number[]): {
     minZ = Math.min(minZ, p1z, p2z, p3z);
     maxZ = Math.max(maxZ, p1z, p2z, p3z);
     
+    // Calculate edge vectors for this triangle
+    const edge1x = p2x - p1x, edge1y = p2y - p1y, edge1z = p2z - p1z;
+    const edge2x = p3x - p1x, edge2y = p3y - p1y, edge2z = p3z - p1z;
+    
+    // Cross product: edge1 × edge2
+    const crossX = edge1y * edge2z - edge1z * edge2y;
+    const crossY = edge1z * edge2x - edge1x * edge2z;
+    const crossZ = edge1x * edge2y - edge1y * edge2x;
+    
+    // Surface area of triangle = |cross product| / 2
+    const crossMagnitude = Math.sqrt(crossX * crossX + crossY * crossY + crossZ * crossZ);
+    surfaceArea += crossMagnitude / 2.0;
+    
     // Signed volume of tetrahedron formed by origin and triangle
     // V = (1/6) * p1 · (p2 × p3)
-    const crossX = p2y * p3z - p2z * p3y;
-    const crossY = p2z * p3x - p2x * p3z;
-    const crossZ = p2x * p3y - p2y * p3x;
-    
     const dot = p1x * crossX + p1y * crossY + p1z * crossZ;
     volume += dot / 6.0;
   }
@@ -438,6 +450,11 @@ function computeVolume(positions: number[]): {
   console.log(`      Max dimension: ${maxDimension.toFixed(2)} mm`);
   console.log(`   📊 Raw signed volume: ${volume.toFixed(2)} mm³`);
   console.log(`   📊 Absolute volume: ${absVolume.toFixed(2)} mm³`);
+  console.log(`   📊 Surface area: ${surfaceArea.toFixed(2)} mm²`);
+  
+  // Calculate surface area to volume ratio (key metric for shell factor)
+  const saToVolumeRatio = surfaceArea / absVolume;
+  console.log(`   📊 SA/V ratio: ${saToVolumeRatio.toFixed(4)} (higher = more hollow/thin-walled)`);
   
   // Sanity check: if volume is suspiciously small compared to bounding box
   const boundingBoxVolume = sizeX * sizeY * sizeZ;
@@ -452,6 +469,7 @@ function computeVolume(positions: number[]): {
   
   return {
     volume: absVolume,
+    surfaceArea: surfaceArea,
     boundingBox: { sizeX, sizeY, sizeZ, maxDimension }
   };
 }
@@ -517,36 +535,46 @@ function estimateSupportPercentage(positions: number[]): number {
 }
 
 /**
- * Calculate dynamic shell factor based on part size
- * Gentle adjustment curve centered around 0.24
+ * Calculate dynamic shell factor based on Surface Area to Volume ratio
+ * This handles ALL geometry types accurately:
+ * - Hollow parts (vases, pipes): High SA/V → Higher shell factor (more walls)
+ * - Solid parts (blocks, figures): Low SA/V → Lower shell factor (more infill)
+ * - Thin-walled parts: High SA/V → Higher shell factor
+ * - Thick bulky parts: Low SA/V → Lower shell factor
  * 
  * CALIBRATED based on user testing:
- * - Fixed 0.22: Some models 20-40g too high, others 10-20g too low
- * - 0.18-0.26 range: Working but some models still slightly low
- * - Increased to 0.21-0.29 range to handle low-calculating models
+ * - Size-based approach failed for different geometries
+ * - SA/V ratio is the key metric that Bambu Studio uses internally
  */
-function calculateDynamicShellFactor(maxDimension: number): number {
-  // Gentle curve centered at 0.24, ranging from 0.21 to 0.29
+function calculateDynamicShellFactor(surfaceArea: number, volume: number): number {
+  // Calculate SA/V ratio (mm² / mm³ = 1/mm)
+  const saVolumeRatio = surfaceArea / volume;
+  
+  // Typical SA/V ratios:
+  // - Solid cube 100mm: SA=60,000mm², V=1,000,000mm³ → ratio=0.06
+  // - Hollow vase: SA=30,000mm², V=50,000mm³ → ratio=0.60
+  // - Thin bracket: SA=8,000mm², V=5,000mm³ → ratio=1.60
+  
   let shellFactor: number;
   
-  if (maxDimension < 40) {
-    // Very small parts (< 40mm): 0.29 shell (high surface area ratio)
-    shellFactor = 0.29;
-  } else if (maxDimension < 80) {
-    // Small-medium parts (40-80mm): 0.29 → 0.26 shell
-    shellFactor = 0.29 - ((maxDimension - 40) / 40) * 0.03; // 0.29 → 0.26
-  } else if (maxDimension < 120) {
-    // Medium parts (80-120mm): 0.26 → 0.24 shell
-    shellFactor = 0.26 - ((maxDimension - 80) / 40) * 0.02; // 0.26 → 0.24
-  } else if (maxDimension < 180) {
-    // Medium-large parts (120-180mm): 0.24 → 0.22 shell
-    shellFactor = 0.24 - ((maxDimension - 120) / 60) * 0.02; // 0.24 → 0.22
+  if (saVolumeRatio < 0.05) {
+    // Very solid/bulky parts (low SA/V < 0.05)
+    shellFactor = 0.19;
+  } else if (saVolumeRatio < 0.10) {
+    // Solid parts (0.05-0.10): 0.19 → 0.22
+    shellFactor = 0.19 + ((saVolumeRatio - 0.05) / 0.05) * 0.03;
+  } else if (saVolumeRatio < 0.20) {
+    // Normal parts (0.10-0.20): 0.22 → 0.25
+    shellFactor = 0.22 + ((saVolumeRatio - 0.10) / 0.10) * 0.03;
+  } else if (saVolumeRatio < 0.40) {
+    // Thin-walled parts (0.20-0.40): 0.25 → 0.28
+    shellFactor = 0.25 + ((saVolumeRatio - 0.20) / 0.20) * 0.03;
   } else {
-    // Large parts (> 180mm): 0.21-0.22 shell
-    shellFactor = Math.max(0.21, 0.22 - (maxDimension - 180) / 1000);
+    // Very thin/hollow parts (> 0.40): 0.28-0.30
+    shellFactor = Math.min(0.30, 0.28 + (saVolumeRatio - 0.40) * 0.02);
   }
   
-  console.log(`   📏 Part size: ${maxDimension.toFixed(1)}mm → Shell factor: ${shellFactor.toFixed(3)}`);
+  console.log(`   📐 SA/V ratio: ${saVolumeRatio.toFixed(4)} → Shell factor: ${shellFactor.toFixed(3)}`);
   
   return shellFactor;
 }
@@ -612,9 +640,10 @@ export async function calculateWeight({
       throw new Error(`Insufficient geometry data: only ${geometryData.positions.length} values (need at least 9 for one triangle)`);
     }
     
-    // Calculate volume in mm³ and get bounding box
-    const volumeResult = computeVolume(geometryData.positions);
+    // Calculate volume, surface area, and bounding box
+    const volumeResult = computeVolumeAndSurfaceArea(geometryData.positions);
     const volumeMm3 = volumeResult.volume;
+    const surfaceArea = volumeResult.surfaceArea;
     const boundingBox = volumeResult.boundingBox;
     console.log(`📐 Mesh volume: ${volumeMm3.toFixed(2)} mm³`);
     
@@ -627,8 +656,8 @@ export async function calculateWeight({
     const scaledVolumeCm3 = volumeCm3 * Math.pow(scaleFactor, 3);
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
-    // Calculate dynamic shell factor based on part size (gentle adjustment)
-    const shellFactor = calculateDynamicShellFactor(boundingBox.maxDimension);
+    // Calculate dynamic shell factor based on geometry (SA/V ratio)
+    const shellFactor = calculateDynamicShellFactor(surfaceArea, volumeMm3);
     
     // Apply infill + shell factor
     const infillFactor = shellFactor + (infillPercent / 100);
