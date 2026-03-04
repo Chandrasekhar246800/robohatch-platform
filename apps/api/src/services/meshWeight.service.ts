@@ -367,6 +367,7 @@ function estimatePurgeWaste(fileExt: string, filePath: string): number {
 function computeVolumeAndSurfaceArea(positions: number[]): { 
   volume: number;
   surfaceArea: number;
+  meshFillRatio: number;
   boundingBox: { sizeX: number; sizeY: number; sizeZ: number; maxDimension: number }
 } {
   console.log(`   🔢 Computing volume from ${positions.length} position values...`);
@@ -470,6 +471,7 @@ function computeVolumeAndSurfaceArea(positions: number[]): {
   return {
     volume: absVolume,
     surfaceArea: surfaceArea,
+    meshFillRatio: volumeRatio,
     boundingBox: { sizeX, sizeY, sizeZ, maxDimension }
   };
 }
@@ -537,50 +539,75 @@ function estimateSupportPercentage(positions: number[]): number {
 /**
  * Calculate dynamic shell factor based on Surface Area to Volume ratio
  * 
- * FINAL CALIBRATION - Market Ready:
- * Current results vs Bambu targets:
- * - SA/V 0.1921: Shell 0.169 → 156.8g, NEED 140g (17g high) → reduce to 0.150
- * - SA/V 0.3215: Shell 0.414 → 99.8g, NEED 135g (35g low) → increase to 0.560
+ * DUAL-FACTOR SYSTEM for Maximum Accuracy:
+ * Factor 1: SA/V ratio (surface complexity)
+ * Factor 2: Mesh fill ratio (hollowness/density)
  * 
  * Target accuracy: ±5-10g (±3-7%)
  */
-function calculateDynamicShellFactor(surfaceArea: number, volume: number): number {
+function calculateDynamicShellFactor(surfaceArea: number, volume: number, meshFillRatio: number): number {
   const saVolumeRatio = surfaceArea / volume;
   
-  let shellFactor: number;
+  let baseShellFactor: number;
   
   // Fine-tuned exponential curve - CORRECTED based on real test results
   // Model A: SA/V 0.1921 → shell 0.080 → 127g base (Bambu: 129g) ✓ PERFECT!
   // Model B: SA/V 0.3215 → shell 0.623 → 135g base (Bambu: 135g) ✓ PERFECT!
   if (saVolumeRatio < 0.10) {
     // Very solid parts: 0.056-0.071
-    shellFactor = 0.056 + (saVolumeRatio / 0.10) * 0.015;
+    baseShellFactor = 0.056 + (saVolumeRatio / 0.10) * 0.015;
   } else if (saVolumeRatio < 0.20) {
     // Normal to dense parts (0.10-0.20): 0.071 → 0.081
     // SA/V 0.1921 → 0.080 shell factor → 129g target
-    shellFactor = 0.071 + ((saVolumeRatio - 0.10) / 0.10) * 0.01;
+    baseShellFactor = 0.071 + ((saVolumeRatio - 0.10) / 0.10) * 0.01;
   } else if (saVolumeRatio < 0.25) {
     // Transitional (0.20-0.25): 0.081 → 0.155
-    shellFactor = 0.081 + ((saVolumeRatio - 0.20) / 0.05) * 0.074;
+    baseShellFactor = 0.081 + ((saVolumeRatio - 0.20) / 0.05) * 0.074;
   } else if (saVolumeRatio < 0.30) {
     // Thin-walled rising (0.25-0.30): 0.155 → 0.35
-    shellFactor = 0.155 + ((saVolumeRatio - 0.25) / 0.05) * 0.195;
+    baseShellFactor = 0.155 + ((saVolumeRatio - 0.25) / 0.05) * 0.195;
   } else if (saVolumeRatio < 0.35) {
     // Very thin STEEPEST climb (0.30-0.35): 0.38 → 0.66
     // SA/V 0.3215 → 0.623 shell factor → 135g target
-    shellFactor = 0.38 + ((saVolumeRatio - 0.30) / 0.05) * 0.56;
+    baseShellFactor = 0.38 + ((saVolumeRatio - 0.30) / 0.05) * 0.56;
   } else if (saVolumeRatio < 0.40) {
     // Ultra-thin (0.35-0.40): 0.66 → 0.73
-    shellFactor = 0.66 + ((saVolumeRatio - 0.35) / 0.05) * 0.07;
+    baseShellFactor = 0.66 + ((saVolumeRatio - 0.35) / 0.05) * 0.07;
   } else if (saVolumeRatio < 0.50) {
     // Lattice (0.40-0.50): 0.68 → 0.74
-    shellFactor = 0.68 + ((saVolumeRatio - 0.40) / 0.10) * 0.06;
+    baseShellFactor = 0.68 + ((saVolumeRatio - 0.40) / 0.10) * 0.06;
   } else {
     // Extreme lattice/hollow (> 0.50): cap at 0.80
-    shellFactor = Math.min(0.80, 0.74 + (saVolumeRatio - 0.50) * 0.06);
+    baseShellFactor = Math.min(0.80, 0.74 + (saVolumeRatio - 0.50) * 0.06);
   }
   
-  console.log(`   📐 SA/V ratio: ${saVolumeRatio.toFixed(4)} → Shell factor: ${shellFactor.toFixed(3)}`);
+  // Apply mesh fill ratio multiplier
+  // Hollow models (low fill ratio) need much higher shell factors
+  let fillMultiplier: number;
+  const fillPercent = meshFillRatio * 100;
+  
+  if (fillPercent < 15) {
+    // Very hollow (< 15%): 4-5× multiplier
+    fillMultiplier = 4.0 + (15 - fillPercent) / 15 * 1.0;
+  } else if (fillPercent < 30) {
+    // Hollow (15-30%): 2.5-4× multiplier
+    fillMultiplier = 2.5 + (30 - fillPercent) / 15 * 1.5;
+  } else if (fillPercent < 50) {
+    // Moderate hollow (30-50%): 1.5-2.5× multiplier
+    fillMultiplier = 1.5 + (50 - fillPercent) / 20 * 1.0;
+  } else if (fillPercent < 70) {
+    // Normal (50-70%): 1.0-1.5× multiplier
+    fillMultiplier = 1.0 + (70 - fillPercent) / 20 * 0.5;
+  } else {
+    // Dense/solid (> 70%): 1× (no multiplier)
+    fillMultiplier = 1.0;
+  }
+  
+  const shellFactor = Math.min(0.95, baseShellFactor * fillMultiplier);
+  
+  console.log(`   📐 SA/V ratio: ${saVolumeRatio.toFixed(4)} → Base shell: ${baseShellFactor.toFixed(3)}`);
+  console.log(`   📦 Mesh fill: ${fillPercent.toFixed(1)}% → Multiplier: ${fillMultiplier.toFixed(2)}×`);
+  console.log(`   ⚙️ Final shell factor: ${shellFactor.toFixed(3)}`);
   
   return shellFactor;
 }
@@ -650,6 +677,7 @@ export async function calculateWeight({
     const volumeResult = computeVolumeAndSurfaceArea(geometryData.positions);
     const volumeMm3 = volumeResult.volume;
     const surfaceArea = volumeResult.surfaceArea;
+    const meshFillRatio = volumeResult.meshFillRatio;
     const boundingBox = volumeResult.boundingBox;
     console.log(`📐 Mesh volume: ${volumeMm3.toFixed(2)} mm³`);
     
@@ -662,8 +690,8 @@ export async function calculateWeight({
     const scaledVolumeCm3 = volumeCm3 * Math.pow(scaleFactor, 3);
     console.log(`   Scaled volume (${scalePercent}%): ${scaledVolumeCm3.toFixed(2)} cm³`);
     
-    // Calculate dynamic shell factor based on geometry (SA/V ratio)
-    const shellFactor = calculateDynamicShellFactor(surfaceArea, volumeMm3);
+    // Calculate dynamic shell factor based on geometry (SA/V ratio + mesh fill ratio)
+    const shellFactor = calculateDynamicShellFactor(surfaceArea, volumeMm3, meshFillRatio);
     
     // Apply infill + shell factor
     const infillFactor = shellFactor + (infillPercent / 100);
