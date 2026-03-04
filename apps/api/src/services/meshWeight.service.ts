@@ -518,33 +518,32 @@ function estimateSupportPercentage(positions: number[]): number {
 
 /**
  * Calculate dynamic shell factor based on part size
- * Gentle adjustment curve centered around 0.22
+ * Gentle adjustment curve centered around 0.24
  * 
  * CALIBRATED based on user testing:
  * - Fixed 0.22: Some models 20-40g too high, others 10-20g too low
- * - Need gentle dynamic adjustment based on part size
- * - Small parts (high SA/V): Slightly higher factor (more solid walls)
- * - Large parts (low SA/V): Slightly lower factor (more hollow inside)
+ * - 0.18-0.26 range: Working but some models still slightly low
+ * - Increased to 0.21-0.29 range to handle low-calculating models
  */
 function calculateDynamicShellFactor(maxDimension: number): number {
-  // Very gentle curve centered at 0.22, ranging only from 0.18 to 0.26
+  // Gentle curve centered at 0.24, ranging from 0.21 to 0.29
   let shellFactor: number;
   
   if (maxDimension < 40) {
-    // Very small parts (< 40mm): 0.26 shell (high surface area ratio)
-    shellFactor = 0.26;
+    // Very small parts (< 40mm): 0.29 shell (high surface area ratio)
+    shellFactor = 0.29;
   } else if (maxDimension < 80) {
-    // Small-medium parts (40-80mm): 0.26 → 0.23 shell
-    shellFactor = 0.26 - ((maxDimension - 40) / 40) * 0.03; // 0.26 → 0.23
+    // Small-medium parts (40-80mm): 0.29 → 0.26 shell
+    shellFactor = 0.29 - ((maxDimension - 40) / 40) * 0.03; // 0.29 → 0.26
   } else if (maxDimension < 120) {
-    // Medium parts (80-120mm): 0.23 → 0.21 shell
-    shellFactor = 0.23 - ((maxDimension - 80) / 40) * 0.02; // 0.23 → 0.21
+    // Medium parts (80-120mm): 0.26 → 0.24 shell
+    shellFactor = 0.26 - ((maxDimension - 80) / 40) * 0.02; // 0.26 → 0.24
   } else if (maxDimension < 180) {
-    // Medium-large parts (120-180mm): 0.21 → 0.19 shell
-    shellFactor = 0.21 - ((maxDimension - 120) / 60) * 0.02; // 0.21 → 0.19
+    // Medium-large parts (120-180mm): 0.24 → 0.22 shell
+    shellFactor = 0.24 - ((maxDimension - 120) / 60) * 0.02; // 0.24 → 0.22
   } else {
-    // Large parts (> 180mm): 0.18-0.19 shell
-    shellFactor = Math.max(0.18, 0.19 - (maxDimension - 180) / 1000);
+    // Large parts (> 180mm): 0.21-0.22 shell
+    shellFactor = Math.max(0.21, 0.22 - (maxDimension - 180) / 1000);
   }
   
   console.log(`   📏 Part size: ${maxDimension.toFixed(1)}mm → Shell factor: ${shellFactor.toFixed(3)}`);
