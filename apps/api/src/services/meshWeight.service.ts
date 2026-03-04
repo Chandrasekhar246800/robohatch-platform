@@ -543,35 +543,34 @@ function estimateSupportPercentage(positions: number[]): number {
  * - Thick bulky parts: Low SA/V → Lower shell factor
  * 
  * CALIBRATED based on user testing:
- * - Size-based approach failed for different geometries
- * - SA/V ratio is the key metric that Bambu Studio uses internally
+ * - Previous 0.19-0.30 range: 211g vs 141g (50% high), 97g vs 114g (15% low)
+ * - Reduced by 30% to 0.13-0.21 range for better accuracy
  */
 function calculateDynamicShellFactor(surfaceArea: number, volume: number): number {
   // Calculate SA/V ratio (mm² / mm³ = 1/mm)
   const saVolumeRatio = surfaceArea / volume;
   
-  // Typical SA/V ratios:
-  // - Solid cube 100mm: SA=60,000mm², V=1,000,000mm³ → ratio=0.06
-  // - Hollow vase: SA=30,000mm², V=50,000mm³ → ratio=0.60
-  // - Thin bracket: SA=8,000mm², V=5,000mm³ → ratio=1.60
-  
+  // Recalibrated shell factors (reduced by ~30% from previous values)
   let shellFactor: number;
   
   if (saVolumeRatio < 0.05) {
     // Very solid/bulky parts (low SA/V < 0.05)
-    shellFactor = 0.19;
+    shellFactor = 0.13;
   } else if (saVolumeRatio < 0.10) {
-    // Solid parts (0.05-0.10): 0.19 → 0.22
-    shellFactor = 0.19 + ((saVolumeRatio - 0.05) / 0.05) * 0.03;
+    // Solid parts (0.05-0.10): 0.13 → 0.15
+    shellFactor = 0.13 + ((saVolumeRatio - 0.05) / 0.05) * 0.02;
   } else if (saVolumeRatio < 0.20) {
-    // Normal parts (0.10-0.20): 0.22 → 0.25
-    shellFactor = 0.22 + ((saVolumeRatio - 0.10) / 0.10) * 0.03;
+    // Normal parts (0.10-0.20): 0.15 → 0.17
+    shellFactor = 0.15 + ((saVolumeRatio - 0.10) / 0.10) * 0.02;
   } else if (saVolumeRatio < 0.40) {
-    // Thin-walled parts (0.20-0.40): 0.25 → 0.28
-    shellFactor = 0.25 + ((saVolumeRatio - 0.20) / 0.20) * 0.03;
+    // Thin-walled parts (0.20-0.40): 0.17 → 0.19
+    shellFactor = 0.17 + ((saVolumeRatio - 0.20) / 0.20) * 0.02;
+  } else if (saVolumeRatio < 0.60) {
+    // Very thin/hollow parts (0.40-0.60): 0.19 → 0.21
+    shellFactor = 0.19 + ((saVolumeRatio - 0.40) / 0.20) * 0.02;
   } else {
-    // Very thin/hollow parts (> 0.40): 0.28-0.30
-    shellFactor = Math.min(0.30, 0.28 + (saVolumeRatio - 0.40) * 0.02);
+    // Extremely thin/lattice structures (> 0.60): cap at 0.21
+    shellFactor = 0.21;
   }
   
   console.log(`   📐 SA/V ratio: ${saVolumeRatio.toFixed(4)} → Shell factor: ${shellFactor.toFixed(3)}`);
