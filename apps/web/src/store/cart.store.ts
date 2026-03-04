@@ -7,6 +7,8 @@ export interface CartItem {
   product: Product;
   quantity: number;
   id?: string; // Backend cart item ID
+  customText?: string;
+  customImageUrl?: string;
 }
 
 interface CartStore {

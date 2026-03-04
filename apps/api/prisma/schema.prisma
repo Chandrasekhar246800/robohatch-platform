@@ -98,13 +98,15 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Decimal
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id             String  @id @default(uuid())
+  orderId        String
+  productId      String
+  quantity       Int
+  price          Decimal
+  customText     String? @db.Text
+  customImageUrl String? @db.Text
+  order          Order   @relation(fields: [orderId], references: [id])
+  product        Product @relation(fields: [productId], references: [id])
 
   @@index([orderId], map: "OrderItem_orderId_fkey")
   @@index([productId], map: "OrderItem_productId_fkey")
@@ -217,14 +219,16 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
+  id             String   @id @default(uuid())
+  cartId         String
+  productId      String
+  quantity       Int      @default(1)
+  customText     String?  @db.Text
+  customImageUrl String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id])
 
   @@unique([cartId, productId])
   @@index([productId], map: "CartItem_productId_fkey")

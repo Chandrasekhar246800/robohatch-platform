@@ -393,13 +393,13 @@ class ApiClient {
     }
   }
 
-  async addToCart(productId: string, quantity: number = 1) {
+  async addToCart(productId: string, quantity: number = 1, customText?: string, customImageUrl?: string) {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart/items`, {
         method: 'POST',
         headers: this.getHeaders(),
         credentials: 'include', // Send cookies for authentication
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, customText, customImageUrl }),
       });
 
       if (!response.ok) {
@@ -471,6 +471,34 @@ class ApiClient {
       return await response.json();
     } catch (error) {
       console.error('Clear cart error:', error);
+      throw error;
+    }
+  }
+
+  // Custom photo upload for personalized products
+  async uploadCustomPhoto(file: File) {
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      const response = await fetch(`${this.baseUrl}/api/custom-photos/upload`, {
+        method: 'POST',
+        headers: {
+          // Don't set Content-Type header - browser will set it with boundary
+          'Authorization': this.getAuthHeader(),
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Upload custom photo error:', error);
       throw error;
     }
   }

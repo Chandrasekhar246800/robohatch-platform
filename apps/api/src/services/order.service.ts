@@ -48,6 +48,8 @@ class OrderService {
             productId: item.productId,
             quantity: item.quantity,
             price: item.product.price,
+            customText: item.customText || undefined,
+            customImageUrl: item.customImageUrl || undefined,
           })),
         },
       },

@@ -116,7 +116,7 @@ export class CartService {
   }
 
   // Add item to cart or update quantity if exists (optimized)
-  async addToCart(userId: string, productId: string, quantity: number = 1) {
+  async addToCart(userId: string, productId: string, quantity: number = 1, customText?: string, customImageUrl?: string) {
     // Verify product exists - only check necessary fields
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -161,15 +161,21 @@ export class CartService {
 
     let cartItem;
     if (existingItem) {
-      // Update quantity - return minimal data for performance
+      // Update quantity and custom fields - return minimal data for performance
       cartItem = await prisma.cartItem.update({
         where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + quantity },
+        data: { 
+          quantity: existingItem.quantity + quantity,
+          customText: customText || undefined,
+          customImageUrl: customImageUrl || undefined,
+        },
         select: {
           id: true,
           quantity: true,
           productId: true,
           cartId: true,
+          customText: true,
+          customImageUrl: true,
         },
       });
     } else {
@@ -179,12 +185,16 @@ export class CartService {
           cartId: cart.id,
           productId,
           quantity,
+          customText: customText || undefined,
+          customImageUrl: customImageUrl || undefined,
         },
         select: {
           id: true,
           quantity: true,
           productId: true,
           cartId: true,
+          customText: true,
+          customImageUrl: true,
         },
       });
     }

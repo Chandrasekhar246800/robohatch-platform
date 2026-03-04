@@ -170,6 +170,31 @@ function OrderDetailContent() {
                   <p className="font-medium">{item.product?.name || 'Product'}</p>
                   <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                   <p className="text-sm text-gray-600">Price: ₹{Number(item.price).toFixed(2)}</p>
+                  {(item.customText || item.customImageUrl) && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-xs font-semibold text-blue-900 mb-1">
+                        ✨ Personalized Product
+                      </p>
+                      {item.customText && (
+                        <p className="text-xs text-blue-700">
+                          <span className="font-medium">Custom Text:</span> {item.customText}
+                        </p>
+                      )}
+                      {item.customImageUrl && (
+                        <p className="text-xs text-blue-700 mt-1">
+                          <span className="font-medium">Custom Photo:</span>{' '}
+                          <a 
+                            href={item.customImageUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline hover:text-blue-900"
+                          >
+                            View Image
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <p className="font-semibold text-lg">₹{(Number(item.price) * item.quantity).toFixed(2)}</p>
               </div>

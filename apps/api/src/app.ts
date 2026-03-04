@@ -24,6 +24,7 @@ import webhookRoutes from "./routes/webhook.route";
 import productRoutes from "./routes/product.route";
 import categoryRoutes from "./routes/category.route";
 import customDesignRoutes from "./routes/customDesign.route";
+import customPhotoRoutes from "./routes/customPhoto.route";
 import seedRoutes from "./routes/seed.route";
 import adminRoutes from "./routes/admin.route";
 import contactRoutes from "./routes/contact.route";
@@ -190,6 +191,7 @@ app.use("/api/addresses", addressRoutes);
 app.use("/api/orders", sensitiveOperationLimiter, orderRoutes);
 app.use("/api/payment", sensitiveOperationLimiter, paymentRoutes);
 app.use("/api/custom-designs", customDesignRoutes);
+app.use("/api/custom-photos", customPhotoRoutes);
 
 // 🔒 WEBHOOK ROUTES: No auth required, signature verification in controller
 // IMPORTANT: These must NOT have authMiddleware or rate limiting

@@ -299,48 +299,78 @@ export default function ProductDetailPage() {
     ? calculateDiscount(product.originalPrice, product.price)
     : 0;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     // Validate custom fields for specific categories
     const categorySlug = product.category.slug || product.category.name.toLowerCase().replace(/\s+/g, '-');
     
     // Check if custom text is required
     if ((categorySlug === 'keychains-custom' || categorySlug === 'logo-keychains') && !customText.trim()) {
-      alert('Please enter custom text for your keychain');
+      toast.error('Please enter custom text for your keychain');
       return;
     }
     
     // Check if file upload is required
     if ((categorySlug === 'moon-lamps' || categorySlug === 'photo-frames' || categorySlug === 'self-miniatures') && !customFile) {
-      alert('Please upload a photo for your custom product');
+      toast.error('Please upload a photo for your custom product');
       return;
     }
     
     setIsAdding(true);
-    // Transform product data for cart (expects images as string array)
-    const cartProduct = {
-      ...product,
-      images: product.images.map(img => img.url),
-      category: {
-        ...product.category,
-        slug: categorySlug,
-        image: '',
-        description: '',
-      },
-      featured: false,
-      customizable: false,
-      tags: [],
-      // Add custom data
-      customization: {
-        text: customText || undefined,
-        fileName: customFile?.name || undefined,
-        filePreview: customFilePreview || undefined,
+    
+    try {
+      let uploadedImageUrl: string | undefined;
+      
+      // Upload photo if present
+      if (customFile) {
+        toast.loading('Uploading your photo...');
+        const uploadResponse = await apiClient.uploadCustomPhoto(customFile);
+        if (uploadResponse.success && uploadResponse.data) {
+          uploadedImageUrl = uploadResponse.data.url;
+          toast.dismiss();
+          toast.success('Photo uploaded successfully');
+        } else {
+          toast.dismiss();
+          toast.error('Failed to upload photo');
+          setIsAdding(false);
+          return;
+        }
       }
-    };
-    addItem(cartProduct as any, quantity, isAuthenticated);
-    setTimeout(() => {
+      
+      // Add to cart with custom data
+      await apiClient.addToCart(
+        product.id, 
+        quantity, 
+        customText || undefined, 
+        uploadedImageUrl
+      );
+      
+      // Transform product data for local cart store
+      const cartProduct = {
+        ...product,
+        images: product.images.map(img => img.url),
+        category: {
+          ...product.category,
+          slug: categorySlug,
+          image: '',
+          description: '',
+        },
+        featured: false,
+        customizable: true,
+        tags: [],
+      };
+      
+      addItem(cartProduct as any, quantity, isAuthenticated);
+      toast.success('Added to cart!');
+      
+      setTimeout(() => {
+        setIsAdding(false);
+        router.push('/cart');
+      }, 800);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
       setIsAdding(false);
-      router.push('/cart');
-    }, 800);
+    }
   };
 
   const incrementQuantity = () => {

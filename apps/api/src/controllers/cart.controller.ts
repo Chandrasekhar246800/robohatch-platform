@@ -26,7 +26,7 @@ export class CartController {
   async addToCart(req: Request, res: Response) {
     try {
       const userId = (req as AuthRequest).user?.userId;
-      const { productId, quantity } = req.body;
+      const { productId, quantity, customText, customImageUrl } = req.body;
 
       if (!userId) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -43,7 +43,9 @@ export class CartController {
       const cartItem = await cartService.addToCart(
         userId,
         productId,
-        quantity || 1
+        quantity || 1,
+        customText,
+        customImageUrl
       );
 
       res.status(201).json({

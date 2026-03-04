@@ -22,6 +22,8 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
+  customText?: string;
+  customImageUrl?: string;
   product: {
     id: string;
     name: string;
@@ -295,6 +297,31 @@ export default function OrderDetailsPage() {
                           </p>
                         )}
                         <p className="text-sm text-gray-600 mt-1">Qty: {item.quantity}</p>
+                        {((item as any).customText || (item as any).customImageUrl) && (
+                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                            <p className="text-xs font-semibold text-blue-900 mb-1">
+                              ✨ Personalized Product
+                            </p>
+                            {(item as any).customText && (
+                              <p className="text-xs text-blue-700">
+                                <span className="font-medium">Custom Text:</span> {(item as any).customText}
+                              </p>
+                            )}
+                            {(item as any).customImageUrl && (
+                              <p className="text-xs text-blue-700 mt-1">
+                                <span className="font-medium">Custom Photo:</span>{' '}
+                                <a 
+                                  href={(item as any).customImageUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="underline hover:text-blue-900"
+                                >
+                                  View Image
+                                </a>
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-gray-900">

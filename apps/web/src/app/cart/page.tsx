@@ -131,6 +131,25 @@ export default function CartPage() {
                           )}
                         </div>
 
+                        {/* Custom Personalization Details */}
+                        {(item.customText || item.customImageUrl) && (
+                          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                            <p className="text-xs font-semibold text-blue-900 mb-1">
+                              ✨ Personalized Product
+                            </p>
+                            {item.customText && (
+                              <p className="text-xs text-blue-700">
+                                <span className="font-medium">Custom Text:</span> {item.customText}
+                              </p>
+                            )}
+                            {item.customImageUrl && (
+                              <p className="text-xs text-blue-700 mt-1">
+                                <span className="font-medium">Custom Photo:</span> ✓ Uploaded
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                         {/* Price and Quantity */}
                         <div className="flex items-center gap-6 mb-4">
                           <div className="flex items-center gap-2">
