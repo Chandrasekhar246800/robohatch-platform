@@ -550,28 +550,28 @@ function calculateDynamicShellFactor(surfaceArea: number, volume: number): numbe
   let shellFactor: number;
   
   // Fine-tuned exponential curve - CORRECTED based on real test results
-  // Model A: SA/V 0.1921 @ 176g→129g needs shell 0.116
-  // Model B: SA/V 0.3215 @ 123g→135g needs shell 0.512
+  // Model A: SA/V 0.1921 @ 160g→129g needs shell 0.094
+  // Model B: SA/V 0.3215 @ 139g→135g ✓ shell 0.565 (within 4g!)
   if (saVolumeRatio < 0.10) {
-    // Very solid parts: 0.09-0.11
-    shellFactor = 0.09 + (saVolumeRatio / 0.10) * 0.02;
+    // Very solid parts: 0.07-0.085
+    shellFactor = 0.07 + (saVolumeRatio / 0.10) * 0.015;
   } else if (saVolumeRatio < 0.20) {
-    // Normal to dense parts (0.10-0.20): 0.107 → 0.117
-    // SA/V 0.1921 → 0.116 shell factor → 129g target
-    shellFactor = 0.107 + ((saVolumeRatio - 0.10) / 0.10) * 0.01;
+    // Normal to dense parts (0.10-0.20): 0.085 → 0.095
+    // SA/V 0.1921 → 0.094 shell factor → 129g target
+    shellFactor = 0.085 + ((saVolumeRatio - 0.10) / 0.10) * 0.01;
   } else if (saVolumeRatio < 0.25) {
-    // Transitional (0.20-0.25): 0.117 → 0.19
-    shellFactor = 0.117 + ((saVolumeRatio - 0.20) / 0.05) * 0.073;
+    // Transitional (0.20-0.25): 0.095 → 0.17
+    shellFactor = 0.095 + ((saVolumeRatio - 0.20) / 0.05) * 0.075;
   } else if (saVolumeRatio < 0.30) {
-    // Thin-walled rising (0.25-0.30): 0.19 → 0.38
-    shellFactor = 0.19 + ((saVolumeRatio - 0.25) / 0.05) * 0.19;
+    // Thin-walled rising (0.25-0.30): 0.17 → 0.38
+    shellFactor = 0.17 + ((saVolumeRatio - 0.25) / 0.05) * 0.21;
   } else if (saVolumeRatio < 0.35) {
-    // Very thin STEEPEST climb (0.30-0.35): 0.38 → 0.595
-    // SA/V 0.3215 → 0.513 shell factor → 135g target
-    shellFactor = 0.38 + ((saVolumeRatio - 0.30) / 0.05) * 0.43;
+    // Very thin STEEPEST climb (0.30-0.35): 0.38 → 0.577
+    // SA/V 0.3215 → 0.549 shell factor → 135g target (was 139g)
+    shellFactor = 0.38 + ((saVolumeRatio - 0.30) / 0.05) * 0.393;
   } else if (saVolumeRatio < 0.40) {
-    // Ultra-thin (0.35-0.40): 0.595 → 0.68
-    shellFactor = 0.595 + ((saVolumeRatio - 0.35) / 0.05) * 0.085;
+    // Ultra-thin (0.35-0.40): 0.577 → 0.66
+    shellFactor = 0.577 + ((saVolumeRatio - 0.35) / 0.05) * 0.083;
   } else if (saVolumeRatio < 0.50) {
     // Lattice (0.40-0.50): 0.68 → 0.74
     shellFactor = 0.68 + ((saVolumeRatio - 0.40) / 0.10) * 0.06;
