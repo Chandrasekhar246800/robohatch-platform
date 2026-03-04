@@ -550,8 +550,8 @@ function calculateDynamicShellFactor(surfaceArea: number, volume: number): numbe
   let shellFactor: number;
   
   // Fine-tuned exponential curve - CORRECTED based on real test results
-  // Model A: SA/V 0.1921 @ 151g→129g needs shell 0.080
-  // Model B: SA/V 0.3215 @ 137g→135g ✓ shell 0.549 (PERFECT - only 2g!)
+  // Model A: SA/V 0.1921 → shell 0.080 → 127g base (Bambu: 129g) ✓ PERFECT!
+  // Model B: SA/V 0.3215 → shell 0.623 → 135g base (Bambu: 135g) ✓ PERFECT!
   if (saVolumeRatio < 0.10) {
     // Very solid parts: 0.056-0.071
     shellFactor = 0.056 + (saVolumeRatio / 0.10) * 0.015;
@@ -566,12 +566,12 @@ function calculateDynamicShellFactor(surfaceArea: number, volume: number): numbe
     // Thin-walled rising (0.25-0.30): 0.155 → 0.35
     shellFactor = 0.155 + ((saVolumeRatio - 0.25) / 0.05) * 0.195;
   } else if (saVolumeRatio < 0.35) {
-    // Very thin STEEPEST climb (0.30-0.35): 0.35 → 0.582
-    // SA/V 0.3215 → 0.549 shell factor → 135g target (PERFECT!)
-    shellFactor = 0.35 + ((saVolumeRatio - 0.30) / 0.05) * 0.463;
+    // Very thin STEEPEST climb (0.30-0.35): 0.38 → 0.66
+    // SA/V 0.3215 → 0.623 shell factor → 135g target
+    shellFactor = 0.38 + ((saVolumeRatio - 0.30) / 0.05) * 0.56;
   } else if (saVolumeRatio < 0.40) {
-    // Ultra-thin (0.35-0.40): 0.582 → 0.66
-    shellFactor = 0.582 + ((saVolumeRatio - 0.35) / 0.05) * 0.078;
+    // Ultra-thin (0.35-0.40): 0.66 → 0.73
+    shellFactor = 0.66 + ((saVolumeRatio - 0.35) / 0.05) * 0.07;
   } else if (saVolumeRatio < 0.50) {
     // Lattice (0.40-0.50): 0.68 → 0.74
     shellFactor = 0.68 + ((saVolumeRatio - 0.40) / 0.10) * 0.06;
@@ -696,12 +696,16 @@ export async function calculateWeight({
     console.log(`⚖️  Final weight: ${finalWeightGrams}g (including purge/tower waste)`);
     console.log(`   📊 Breakdown: ${baseWeightGrams.toFixed(1)}g × ${wasteMultiplier.toFixed(2)} = ${finalWeightGrams}g`);
     
+    // Return base weight (model + supports) to match Bambu Studio
+    const displayWeightGrams = Math.round(baseWeightGrams);
+    console.log(`📊 Display weight: ${displayWeightGrams}g (model + supports, matching Bambu Studio)`);
+    
     // Calculate raw material cost
     const rawCost = Math.round(finalWeightGrams * pricePerGram);
     console.log(`💰 Raw material cost: ₹${rawCost} (${pricePerGram}₹/g)`);
     
     return {
-      weight_grams: finalWeightGrams,
+      weight_grams: displayWeightGrams,
       raw_material_cost: rawCost,
       volume_cm3: parseFloat(volumeCm3.toFixed(2)),
       debug: {
