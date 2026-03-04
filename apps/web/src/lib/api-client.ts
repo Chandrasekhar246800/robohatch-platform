@@ -483,10 +483,8 @@ class ApiClient {
 
       const response = await fetch(`${this.baseUrl}/api/custom-photos/upload`, {
         method: 'POST',
-        headers: {
-          // Don't set Content-Type header - browser will set it with boundary
-          'Authorization': this.getAuthHeader(),
-        },
+        // Don't set headers - browser will set Content-Type with boundary
+        // Authentication handled via cookies with credentials: 'include'
         credentials: 'include',
         body: formData,
       });

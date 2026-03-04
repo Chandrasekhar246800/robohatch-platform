@@ -1,6 +1,6 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { CustomPhotoController } from '../controllers/customPhoto.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import { uploadCustomPhoto, handlePhotoUploadError } from '../middlewares/uploadCustomPhoto.middleware';
 
 const router = Router();
@@ -13,10 +13,10 @@ const customPhotoController = new CustomPhotoController();
  */
 router.post(
   '/upload',
-  authenticate,
+  authMiddleware,
   uploadCustomPhoto.single('photo'),
   handlePhotoUploadError,
-  (req, res) => customPhotoController.uploadPhoto(req, res)
+  (req: Request, res: Response) => customPhotoController.uploadPhoto(req, res)
 );
 
 export default router;
