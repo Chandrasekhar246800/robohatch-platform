@@ -8,7 +8,7 @@ import environment from '../config/environment';
 export class ProductController {
   async createProduct(req: AuthRequest, res: Response) {
     try {
-      const { name, description, price, stock, categoryIds } = req.body;
+      const { name, description, price, salePrice, stock, categoryIds } = req.body;
       const files = req.files as Express.MulterS3.File[];
 
       // Validate required fields
@@ -52,6 +52,24 @@ export class ProductController {
         });
       }
 
+      // Parse and validate sale price if provided
+      let parsedSalePrice: number | undefined = undefined;
+      if (salePrice !== undefined && salePrice !== null && salePrice !== '') {
+        parsedSalePrice = parseFloat(salePrice);
+        if (isNaN(parsedSalePrice) || parsedSalePrice < 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Sale price must be a non-negative number',
+          });
+        }
+        if (parsedSalePrice >= parsedPrice) {
+          return res.status(400).json({
+            success: false,
+            message: 'Sale price must be less than regular price',
+          });
+        }
+      }
+
       // Parse stock (default to 0 if not provided)
       const parsedStock = stock ? parseInt(stock, 10) : 0;
       if (isNaN(parsedStock) || parsedStock < 0) {
@@ -87,6 +105,7 @@ export class ProductController {
           name,
           description: description || '',
           price: parsedPrice,
+          ...(parsedSalePrice !== undefined && { salePrice: parsedSalePrice }),
           stock: parsedStock,
           images: {
             create: files.map((file, index) => ({
@@ -112,12 +131,12 @@ export class ProductController {
       });
 
       // Transform response to include single category instead of categories array
-      const transformedProduct = {
+      const transformedProduct: any = {
         ...product,
-        category: product.categories[0]?.category || null,
-        categoryId: product.categories[0]?.categoryId || null,
+        category: (product as any).categories[0]?.category || null,
+        categoryId: (product as any).categories[0]?.categoryId || null,
       };
-      delete (transformedProduct as any).categories;
+      delete transformedProduct.categories;
 
       return res.status(201).json({
         success: true,
@@ -310,7 +329,7 @@ export class ProductController {
   async updateProduct(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { name, description, price, stock, categoryIds } = req.body;
+      const { name, description, price, salePrice, stock, categoryIds } = req.body;
       const files = req.files as Express.MulterS3.File[];
 
       // Check if product exists
@@ -370,6 +389,27 @@ export class ProductController {
           });
         }
         updateData.price = parsedPrice;
+      }
+      if (salePrice !== undefined) {
+        if (salePrice === null || salePrice === '') {
+          updateData.salePrice = null;
+        } else {
+          const parsedSalePrice = parseFloat(salePrice);
+          if (isNaN(parsedSalePrice) || parsedSalePrice < 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'Sale price must be a non-negative number',
+            });
+          }
+          const currentPrice = updateData.price || existingProduct.price;
+          if (parsedSalePrice >= Number(currentPrice)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Sale price must be less than regular price',
+            });
+          }
+          updateData.salePrice = parsedSalePrice;
+        }
       }
       if (stock !== undefined) {
         const parsedStock = parseInt(stock, 10);
@@ -448,13 +488,25 @@ export class ProductController {
       // Check if product exists and get images
       const product = await prisma.product.findUnique({
         where: { id },
-        include: { images: true },
+        include: { 
+          images: true,
+          orderItems: true, // Check if product is in any orders
+        },
       });
 
       if (!product) {
         return res.status(404).json({
           success: false,
           message: 'Product not found',
+        });
+      }
+
+      // Prevent deletion if product is in any orders (historical data should be preserved)
+      if (product.orderItems && product.orderItems.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete product that has been ordered. Consider marking it as inactive instead.',
+          ordersCount: product.orderItems.length,
         });
       }
 

@@ -25,11 +25,13 @@ export default function AddProductPage() {
     name: '',
     description: '',
     price: '',
+    salePrice: '',
     stock: '',
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [createdProductId, setCreatedProductId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -168,6 +170,9 @@ export default function AddProductPage() {
       formDataToSend.append('name', formData.name);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('price', formData.price);
+      if (formData.salePrice) {
+        formDataToSend.append('salePrice', formData.salePrice);
+      }
       formDataToSend.append('stock', formData.stock);
       formDataToSend.append('categoryIds', JSON.stringify(selectedCategories));
 
@@ -194,6 +199,7 @@ export default function AddProductPage() {
           name: '',
           description: '',
           price: '',
+          salePrice: '',
           stock: '',
         });
         setSelectedCategories([]);
@@ -275,7 +281,7 @@ export default function AddProductPage() {
                   />
                 </div>
 
-                {/* Price, Stock, and Category Row */}
+                {/* Price, Sale Price, and Stock Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Price */}
                   <div>
@@ -286,6 +292,25 @@ export default function AddProductPage() {
                       type="number"
                       name="price"
                       value={formData.price}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      className="bg-gray-900 border-gray-700 text-white"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  {/* Sale Price */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Sale Price
+                      <span className="ml-2 text-xs text-gray-500">(Optional)</span>
+                    </label>
+                    <Input
+                      type="number"
+                      name="salePrice"
+                      value={formData.salePrice}
                       onChange={handleInputChange}
                       placeholder="0.00"
                       step="0.01"
@@ -311,15 +336,16 @@ export default function AddProductPage() {
                       disabled={loading}
                     />
                   </div>
+                </div>
 
-                  {/* Categories */}
-                  <div className="md:col-span-3">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Categories <span className="text-red-500">*</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        ({selectedCategories.length} selected)
-                      </span>
-                    </label>
+                {/* Categories */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Categories <span className="text-red-500">*</span>
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({selectedCategories.length} selected)
+                    </span>
+                  </label>
                     
                     {categories.length === 0 ? (
                       <p className="text-yellow-500 text-sm">No categories available. Please create categories first.</p>
@@ -380,7 +406,7 @@ export default function AddProductPage() {
                         )}
                       </div>
                     )}
-                  </div>
+
                 </div>
 
                 {/* Image Upload */}
@@ -456,10 +482,32 @@ export default function AddProductPage() {
                   </div>
                 )}
 
-                {/* Success Message */}
+                {/* Success Message with Edit Button */}
                 {success && (
                   <div className="bg-green-500/10 border border-green-500 text-green-500 px-4 py-3 rounded-lg">
-                    {success}
+                    <p className="mb-3">{success}</p>
+                    {createdProductId && (
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          onClick={() => router.push(`/admin/products/edit/${createdProductId}`)}
+                          className="bg-brand-gold hover:bg-brand-gold/90 text-black font-semibold"
+                        >
+                          Edit Product
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setSuccess('');
+                            setCreatedProductId(null);
+                          }}
+                          variant="secondary"
+                          className="border-green-500 text-green-500 hover:bg-green-500/10"
+                        >
+                          Add Another Product
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
