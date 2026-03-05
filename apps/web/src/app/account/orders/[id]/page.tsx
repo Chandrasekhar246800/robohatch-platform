@@ -55,6 +55,8 @@ interface ShippingAddress {
 
 interface Order {
   id: string;
+  subtotal?: number;
+  shippingCost?: number;
   total: number;
   status: string;
   createdAt: string;
