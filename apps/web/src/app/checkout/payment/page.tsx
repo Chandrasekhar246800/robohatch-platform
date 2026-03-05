@@ -255,82 +255,82 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment</h1>
-          <p className="text-gray-600">Review your order and complete payment</p>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Payment</h1>
+          <p className="text-sm sm:text-base text-gray-600">Review your order and complete payment</p>
         </div>
 
         {/* Progress Steps */}
         <CheckoutSteps currentStep="payment" />
 
-        <div className="grid lg:grid-cols-3 gap-8 mt-12">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mt-6 sm:mt-8 lg:mt-12">
           {/* Payment Section */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Shipping Address Review */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <MapPin className="w-5 h-5 text-primary mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Shipping Address</h3>
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="flex items-center flex-1 min-w-0">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary mr-2 flex-shrink-0" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">Shipping Address</h3>
                 </div>
                 <button
                   onClick={() => router.push('/checkout/address')}
-                  className="text-sm text-primary hover:underline"
+                  className="text-xs sm:text-sm text-primary hover:underline flex-shrink-0"
                 >
                   Edit
                 </button>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium text-gray-900">{shippingAddress.fullName}</p>
-                <p className="text-sm text-gray-600 mt-1">{shippingAddress.addressLine1}</p>
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <p className="font-medium text-sm sm:text-base text-gray-900">{shippingAddress.fullName}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">{shippingAddress.addressLine1}</p>
                 {shippingAddress.addressLine2 && (
-                  <p className="text-sm text-gray-600">{shippingAddress.addressLine2}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{shippingAddress.addressLine2}</p>
                 )}
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600">
                   {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.postalCode}
                 </p>
-                <p className="text-sm text-gray-600 mt-2">Phone: {shippingAddress.phone}</p>
-                <p className="text-sm text-gray-600">Email: {shippingAddress.email}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-2">Phone: {shippingAddress.phone}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Email: {shippingAddress.email}</p>
               </div>
             </div>
 
             {/* Payment Method */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center mb-4">
-                <CreditCard className="w-6 h-6 text-primary mr-3" />
-                <h3 className="text-lg font-semibold text-gray-900">Payment Method</h3>
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <div className="flex items-center mb-3 sm:mb-4">
+                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2 sm:mr-3 flex-shrink-0" />
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Payment Method</h3>
               </div>
 
               {error && (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  <p className="font-medium">Error</p>
-                  <p className="text-sm">{error}</p>
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
+                  <p className="font-medium text-sm sm:text-base">Error</p>
+                  <p className="text-xs sm:text-sm">{error}</p>
                 </div>
               )}
 
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
-                <div className="flex items-start gap-4">
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4 sm:p-6">
+                <div className="flex items-start gap-3 sm:gap-4">
                   <div className="flex-shrink-0">
-                    <Lock className="w-8 h-8 text-primary" />
+                    <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900 mb-2">Secure Payment via Razorpay</p>
-                    <p className="text-sm text-gray-700 mb-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm sm:text-base text-gray-900 mb-2">Secure Payment via Razorpay</p>
+                    <p className="text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
                       Pay securely using Credit Card, Debit Card, Net Banking, UPI, or Wallets. All transactions are encrypted and secure.
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-200">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white rounded-full text-[10px] sm:text-xs font-medium text-gray-700 border border-gray-200">
                         💳 Cards
                       </span>
-                      <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-200">
+                      <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white rounded-full text-[10px] sm:text-xs font-medium text-gray-700 border border-gray-200">
                         📱 UPI
                       </span>
-                      <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-200">
+                      <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white rounded-full text-[10px] sm:text-xs font-medium text-gray-700 border border-gray-200">
                         🏦 Net Banking
                       </span>
-                      <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-200">
+                      <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white rounded-full text-[10px] sm:text-xs font-medium text-gray-700 border border-gray-200">
                         👛 Wallets
                       </span>
                     </div>
@@ -339,17 +339,17 @@ export default function PaymentPage() {
               </div>
 
               {orderId && (
-                <div className="mt-4 text-sm text-gray-600">
-                  <p>Order ID: <span className="font-mono font-medium">{orderId}</span></p>
+                <div className="mt-4 text-xs sm:text-sm text-gray-600">
+                  <p>Order ID: <span className="font-mono font-medium text-[10px] sm:text-xs">{orderId}</span></p>
                   <p className="text-primary mt-1">Processing payment...</p>
                 </div>
               )}
 
-              <div className="mt-6 flex gap-4">
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => router.push('/checkout/address')}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
                   disabled={isCreatingOrder || isProcessingPayment}
                 >
                   Back
@@ -357,7 +357,7 @@ export default function PaymentPage() {
                 <button
                   onClick={handleCreateOrder}
                   disabled={isCreatingOrder || isProcessingPayment}
-                  className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-accent transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-primary text-white rounded-lg font-semibold hover:bg-accent transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {isCreatingOrder 
                     ? 'Creating Order...' 
@@ -367,7 +367,7 @@ export default function PaymentPage() {
                 </button>
               </div>
 
-              <p className="text-xs text-gray-500 text-center mt-4">
+              <p className="text-[10px] sm:text-xs text-gray-500 text-center mt-3 sm:mt-4 px-2">
                 By proceeding, you agree to our <a href="/terms" className="text-primary hover:underline">Terms & Conditions</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
               </p>
             </div>
@@ -375,28 +375,28 @@ export default function PaymentPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:sticky lg:top-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Order Summary</h3>
               
-              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+              <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4 max-h-64 overflow-y-auto">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0" />
+                  <div key={item.id} className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
-                      <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-600">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">₹{(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
+              <div className="border-t pt-3 sm:pt-4 space-y-1.5 sm:space-y-2">
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600">
                   <span>Subtotal ({items.length} items)</span>
                   <span>₹{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600">
                   <span>Shipping</span>
                   <span className={shippingCost === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
                     {shippingCost === 0 ? (
@@ -409,14 +409,14 @@ export default function PaymentPage() {
                     )}
                   </span>
                 </div>
-                <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t">
+                <div className="flex justify-between text-lg sm:text-xl font-bold text-gray-900 pt-2 sm:pt-3 border-t">
                   <span>Total</span>
                   <span className="text-primary">₹{grandTotal.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm text-green-800 text-center">
+              <div className="mt-4 sm:mt-6 bg-green-50 border border-green-200 rounded-lg p-2.5 sm:p-3">
+                <p className="text-xs sm:text-sm text-green-800 text-center">
                   🔒 Your payment is 100% secure
                 </p>
               </div>

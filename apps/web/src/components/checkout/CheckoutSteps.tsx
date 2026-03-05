@@ -45,10 +45,10 @@ export function CheckoutSteps({ currentStep }: CheckoutStepsProps) {
   ];
 
   return (
-    <nav aria-label="Progress" className="mb-8">
+    <nav aria-label="Progress" className="mb-6 sm:mb-8 px-2 sm:px-0">
       <ol role="list" className="flex items-center justify-center">
         {steps.map((step, stepIdx) => (
-          <li key={step.name} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
+          <li key={step.name} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-4 sm:pr-8 md:pr-20' : ''}`}>
             {step.status === 'complete' ? (
               <>
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -56,11 +56,11 @@ export function CheckoutSteps({ currentStep }: CheckoutStepsProps) {
                     <div className="h-0.5 w-full bg-primary" />
                   )}
                 </div>
-                <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary hover:bg-accent transition-colors">
-                  <Check className="h-5 w-5 text-white" aria-hidden="true" />
+                <div className="relative flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary hover:bg-accent transition-colors">
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5 text-white" aria-hidden="true" />
                   <span className="sr-only">{step.name}</span>
                 </div>
-                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-900 whitespace-nowrap">
+                <span className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-medium text-gray-900 whitespace-nowrap">
                   {step.name}
                 </span>
               </>
@@ -71,11 +71,11 @@ export function CheckoutSteps({ currentStep }: CheckoutStepsProps) {
                     <div className="h-0.5 w-full bg-gray-200" />
                   )}
                 </div>
-                <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary bg-white">
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden="true" />
+                <div className="relative flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full border-2 border-primary bg-white">
+                  <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-primary" aria-hidden="true" />
                   <span className="sr-only">{step.name}</span>
                 </div>
-                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-semibold text-primary whitespace-nowrap">
+                <span className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-semibold text-primary whitespace-nowrap">
                   {step.name}
                 </span>
               </>
@@ -86,11 +86,11 @@ export function CheckoutSteps({ currentStep }: CheckoutStepsProps) {
                     <div className="h-0.5 w-full bg-gray-200" />
                   )}
                 </div>
-                <div className="group relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
-                  <span className="h-2.5 w-2.5 rounded-full bg-transparent group-hover:bg-gray-300" aria-hidden="true" />
+                <div className="group relative flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
+                  <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-transparent group-hover:bg-gray-300" aria-hidden="true" />
                   <span className="sr-only">{step.name}</span>
                 </div>
-                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 whitespace-nowrap">
+                <span className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-medium text-gray-500 whitespace-nowrap">
                   {step.name}
                 </span>
               </>
