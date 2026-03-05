@@ -311,6 +311,11 @@ export default function ProductDetailPage() {
 
     // Check if file upload is required
     if ((categorySlug === 'photo-lamps' || categorySlug === 'photo-frames' || categorySlug === 'self-miniatures') && !customFile) {
+      toast.error('Please upload a photo for your custom product');
+      return;
+    }
+
+    setIsAdding(true);
     
     try {
       let uploadedImageUrl: string | undefined;
