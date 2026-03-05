@@ -201,8 +201,18 @@ function OrderDetailContent() {
             ))}
           </div>
           
-          <div className="mt-6 pt-4 border-t">
-            <div className="flex justify-between text-xl font-bold">
+          <div className="mt-6 pt-4 border-t space-y-2">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Subtotal</span>
+              <span>₹{(order.subtotal || order.total).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Shipping</span>
+              <span className={(order.shippingCost || 0) === 0 ? 'text-green-600 font-medium' : ''}>
+                {(order.shippingCost || 0) === 0 ? 'FREE' : `₹${(order.shippingCost || 0).toFixed(2)}`}
+              </span>
+            </div>
+            <div className="flex justify-between text-xl font-bold pt-2 border-t">
               <span>Total</span>
               <span>₹{Number(order.total).toFixed(2)}</span>
             </div>

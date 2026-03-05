@@ -332,9 +332,19 @@ export default function OrderDetailsPage() {
                     </div>
                   ))}
                   
-                  {/* Total */}
-                  <div className="pt-4 border-t">
-                    <div className="flex justify-between items-center">
+                  {/* Price Breakdown */}
+                  <div className="pt-4 border-t space-y-2">
+                    <div className="flex justify-between items-center text-sm text-gray-600">
+                      <span>Subtotal</span>
+                      <span>₹{(order.subtotal || order.total).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-gray-600">
+                      <span>Shipping</span>
+                      <span className={(order.shippingCost || 0) === 0 ? 'text-green-600 font-medium' : ''}>
+                        {(order.shippingCost || 0) === 0 ? 'FREE' : `₹${(order.shippingCost || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
                       <span className="text-lg font-semibold text-gray-900">Total</span>
                       <span className="text-xl font-bold text-primary">
                         ₹{order.total.toFixed(2)}

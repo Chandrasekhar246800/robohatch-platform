@@ -69,7 +69,8 @@ export default function PaymentPage() {
   }, [shippingAddress, mounted, router]);
 
   const subtotal = getTotal();
-  const grandTotal = subtotal; // No GST - business doesn't have GST number
+  const shippingCost = subtotal > 999 ? 0 : 89;
+  const grandTotal = subtotal + shippingCost;
 
   /**
    * Step 1: Create order from cart
@@ -388,7 +389,16 @@ export default function PaymentPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span className="text-green-600 font-medium">FREE</span>
+                  <span className={shippingCost === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
+                    {shippingCost === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <span className="line-through text-gray-400">₹89</span>
+                        <span>FREE</span>
+                      </span>
+                    ) : (
+                      `₹${shippingCost.toFixed(2)}`
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t">
                   <span>Total</span>
