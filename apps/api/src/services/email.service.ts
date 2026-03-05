@@ -51,15 +51,32 @@ export class EmailService {
         throw new Error('Order not found');
       }
 
+      const hasCustomProducts = order.items.some((item: any) => item.customText || item.customImageUrl);
+
       const itemsList = order.items
-        .map((item: any) => `
+        .map((item: any) => {
+          let customInfo = '';
+          if (item.customText || item.customImageUrl) {
+            customInfo = `
+              <tr>
+                <td colspan="4" style="padding: 10px; background: #e0f2fe; border-bottom: 1px solid #ddd;">
+                  <strong>✨ Your Custom Details:</strong><br>
+                  ${item.customText ? `<strong>Custom Text:</strong> "${item.customText}"<br>` : ''}
+                  ${item.customImageUrl ? `<strong>Uploaded Photo:</strong> Received ✓` : ''}
+                </td>
+              </tr>
+            `;
+          }
+          return `
           <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.product.name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.product.name}${item.customText || item.customImageUrl ? ' <span style="background: #dbeafe; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">CUSTOM</span>' : ''}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${item.price}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${Number(item.price) * item.quantity}</td>
           </tr>
-        `)
+          ${customInfo}
+        `;
+        })
         .join('');
 
       const html = `
@@ -694,15 +711,33 @@ export class EmailService {
         throw new Error('Order not found');
       }
 
+      // Check if order has any custom products
+      const hasCustomProducts = order.items.some((item: any) => item.customText || item.customImageUrl);
+
       const itemsList = order.items
-        .map((item: any) => `
+        .map((item: any) => {
+          let customInfo = '';
+          if (item.customText || item.customImageUrl) {
+            customInfo = `
+              <tr>
+                <td colspan="4" style="padding: 10px; background: #fef3c7; border-bottom: 1px solid #ddd;">
+                  <strong>✨ Custom Product Details:</strong><br>
+                  ${item.customText ? `<strong>Text:</strong> "${item.customText}"<br>` : ''}
+                  ${item.customImageUrl ? `<strong>Photo:</strong> <a href="${item.customImageUrl}" style="color: #F27405;" target="_blank">View Uploaded Image</a>` : ''}
+                </td>
+              </tr>
+            `;
+          }
+          return `
           <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.product.name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.product.name}${item.customText || item.customImageUrl ? ' <span style="background: #fef3c7; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">CUSTOM</span>' : ''}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${Number(item.price) * item.quantity}</td>
           </tr>
-        `)
+          ${customInfo}
+        `;
+        })
         .join('');
 
       const html = `
@@ -787,6 +822,36 @@ export class EmailService {
                 </div>
               </div>
 
+              ${hasCustomProducts ? `
+              <div class="alert-box" style="background: #fef3c7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0;">
+                <strong>✨ CUSTOM PRODUCT ORDER</strong><br>
+                <p style="margin: 10px 0 5px 0;">This order contains personalized items. Please review custom details below:</p>
+                ${order.items.filter((item: any) => item.customText || item.customImageUrl).map((item: any) => `
+                  <div style="background: #fff; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #fbbf24;">
+                    <strong>📦 ${item.product.name} (x${item.quantity})</strong><br>
+                    ${item.customText ? `
+                      <div style="margin: 8px 0;">
+                        <strong>📝 Custom Text:</strong><br>
+                        <span style="background: #fef3c7; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px; font-size: 15px;">"${item.customText}"</span>
+                      </div>
+                    ` : ''}
+                    ${item.customImageUrl ? `
+                      <div style="margin: 8px 0;">
+                        <strong>📷 Customer Photo:</strong><br>
+                        <a href="${item.customImageUrl}" style="display: inline-block; background: #F27405; color: #fff; padding: 8px 16px; text-decoration: none; border-radius: 5px; margin-top: 5px; font-weight: bold;" target="_blank">
+                          🖼️ View Uploaded Image
+                        </a>
+                        <p style="margin: 5px 0; font-size: 12px; color: #666;">Link: <a href="${item.customImageUrl}" style="color: #F27405;">${item.customImageUrl}</a></p>
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+                <p style="margin: 10px 0 0 0; font-size: 13px; color: #92400e;">
+                  <strong>⚡ Action Required:</strong> Download/save custom details before production. Photos are stored in AWS S3.
+                </p>
+              </div>
+              ` : ''}
+
               <div class="section">
                 <h3>📍 Shipping Address</h3>
                 <p style="margin: 10px 0; font-size: 15px; line-height: 1.8;">
@@ -859,7 +924,7 @@ export class EmailService {
           email: FROM_EMAIL,
           name: FROM_NAME,
         },
-        subject: `🚨 NEW ORDER #${order.id.substring(0, 8).toUpperCase()} - ₹${order.total} - ${order.user.name || 'Customer'}`,
+        subject: `🚨 NEW ORDER #${order.id.substring(0, 8).toUpperCase()} ${hasCustomProducts ? '✨ CUSTOM' : ''} - ₹${order.total} - ${order.user.name || 'Customer'}`,
         html,
       };
 
