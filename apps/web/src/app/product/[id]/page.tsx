@@ -304,18 +304,13 @@ export default function ProductDetailPage() {
     const categorySlug = product.category.slug || product.category.name.toLowerCase().replace(/\s+/g, '-');
     
     // Check if custom text is required
-    if ((categorySlug === 'keychains-custom' || categorySlug === 'logo-keychains') && !customText.trim()) {
+    if ((categorySlug === 'name-keychains' || categorySlug === 'logo-keychains') && !customText.trim()) {
       toast.error('Please enter custom text for your keychain');
       return;
     }
-    
+
     // Check if file upload is required
-    if ((categorySlug === 'moon-lamps' || categorySlug === 'photo-frames' || categorySlug === 'self-miniatures') && !customFile) {
-      toast.error('Please upload a photo for your custom product');
-      return;
-    }
-    
-    setIsAdding(true);
+    if ((categorySlug === 'photo-lamps' || categorySlug === 'photo-frames' || categorySlug === 'self-miniatures') && !customFile) {
     
     try {
       let uploadedImageUrl: string | undefined;
@@ -549,9 +544,9 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Custom Product Notice */}
-            {(product.category.slug === 'keychains-custom' || 
+            {(product.category.slug === 'name-keychains' || 
               product.category.slug === 'logo-keychains' || 
-              product.category.slug === 'moon-lamps' || 
+              product.category.slug === 'photo-lamps' || 
               product.category.slug === 'photo-frames' || 
               product.category.slug === 'self-miniatures') && (
               <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -595,17 +590,17 @@ export default function ProductDetailPage() {
             )}
 
             {/* Custom Text Input for Keychains */}
-            {(product.category.slug === 'keychains-custom' || product.category.slug === 'logo-keychains') && (
+            {(product.category.slug === 'name-keychains' || product.category.slug === 'logo-keychains') && (
               <div className="mb-6">
                 <label className="block font-semibold mb-2">
-                  {product.category.slug === 'keychains-custom' ? 'Custom Name/Text' : 'Logo/Business Name'}
+                  {product.category.slug === 'name-keychains' ? 'Custom Name/Text' : 'Logo/Business Name'}
                   <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="text"
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
-                  placeholder={product.category.slug === 'keychains-custom' ? 'Enter your custom text (e.g., John Doe)' : 'Enter your business/logo name'}
+                  placeholder={product.category.slug === 'name-keychains' ? 'Enter your custom text (e.g., John Doe)' : 'Enter your business/logo name'}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   maxLength={50}
                 />
@@ -614,10 +609,10 @@ export default function ProductDetailPage() {
             )}
 
             {/* File Upload for Photo Products */}
-            {(product.category.slug === 'moon-lamps' || product.category.slug === 'photo-frames' || product.category.slug === 'self-miniatures') && (
+            {(product.category.slug === 'photo-lamps' || product.category.slug === 'photo-frames' || product.category.slug === 'self-miniatures') && (
               <div className="mb-6">
                 <label className="block font-semibold mb-2">
-                  Upload Your {product.category.slug === 'moon-lamps' ? 'Photo for Moon Lamp' : product.category.slug === 'photo-frames' ? 'Photo' : 'Reference Photos'}
+                  Upload Your {product.category.slug === 'photo-lamps' ? 'Photo for Moon Lamp' : product.category.slug === 'photo-frames' ? 'Photo' : 'Reference Photos'}
                   <span className="text-red-500 ml-1">*</span>
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
