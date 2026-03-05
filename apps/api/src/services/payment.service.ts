@@ -78,8 +78,11 @@ export class PaymentService {
       return sum + Number(item.product.price) * item.quantity;
     }, 0);
 
-    // Calculate total (no GST - business doesn't have GST number)
-    const total = subtotal;
+    // Calculate shipping cost (free shipping for orders above ₹999)
+    const shippingCost = subtotal > 999 ? 0 : 89;
+
+    // Calculate total
+    const total = subtotal + shippingCost;
 
     // ✅ ATOMIC TRANSACTION: Reserve stock FIRST, then create order
     // Why this order? Fail fast before any DB writes. More efficient.
@@ -121,6 +124,8 @@ export class PaymentService {
       const newOrder = await tx.order.create({
         data: {
           userId,
+          subtotal,
+          shippingCost,
           total,
           status: 'CREATED',
         },

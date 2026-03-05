@@ -84,6 +84,8 @@ model Order {
   id              String           @id @default(uuid())
   userId          String
   status          OrderStatus      @default(PENDING)
+  subtotal        Decimal?
+  shippingCost    Decimal          @default(0)
   total           Decimal
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
