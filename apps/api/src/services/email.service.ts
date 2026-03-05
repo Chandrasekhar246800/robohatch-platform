@@ -1080,6 +1080,125 @@ export class EmailService {
   }
 
   /**
+   * Send confirmation email to customer after contact form submission
+   * Assures the customer that their message was received
+   */
+  async sendContactFormConfirmation(contactData: {
+    name: string;
+    email: string;
+    subject: string;
+  }): Promise<void> {
+    try {
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: #3B82F6; color: #fff; padding: 20px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 20px; background: #fff; }
+            .message-box { background: #f0fdf4; border: 2px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center; }
+            .info-box { background: #f9f9f9; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #3B82F6; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f3f4f6; }
+            .button { display: inline-block; background: #3B82F6; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Thank You for Contacting Us! 🙏</h1>
+              <p style="margin: 5px 0 0 0; font-size: 14px;">RoboHatch - 3D Printing Services</p>
+            </div>
+            
+            <div class="content">
+              <p style="margin: 0 0 15px 0; font-size: 16px;">Hi <strong>${contactData.name}</strong>,</p>
+              
+              <div class="message-box">
+                <h2 style="margin: 0 0 10px 0; color: #166534; font-size: 20px;">✅ Message Received!</h2>
+                <p style="margin: 0; font-size: 16px; color: #166534;">
+                  We've received your inquiry and will get back to you as soon as possible.
+                </p>
+              </div>
+
+              <p style="font-size: 15px; color: #555;">
+                Our team is reviewing your message regarding "<strong>${contactData.subject}</strong>" and will respond within 24 hours during business days.
+              </p>
+
+              <div class="info-box">
+                <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>📧 Your inquiry about:</strong></p>
+                <p style="margin: 0; font-size: 15px; color: #3B82F6;">${contactData.subject}</p>
+              </div>
+
+              <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #1e40af; font-size: 16px;">📞 Need Immediate Assistance?</h3>
+                <p style="margin: 5px 0; font-size: 14px;">
+                  <strong>Phone:</strong> <a href="tel:+919505551727" style="color: #3B82F6; text-decoration: none;">+91 95055 51727</a><br>
+                  <strong>Email:</strong> <a href="mailto:founder@robohatch.in" style="color: #3B82F6; text-decoration: none;">founder@robohatch.in</a><br>
+                  <strong>Hours:</strong> Monday - Saturday, 9:00 AM - 6:00 PM IST
+                </p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0 20px 0;">
+                <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                  While you wait, explore our services:
+                </p>
+                <a href="https://www.robohatch.in/products" class="button">
+                  Browse Products
+                </a>
+                <a href="https://www.robohatch.in/custom-design" class="button" style="background: #10b981;">
+                  Upload Custom Design
+                </a>
+              </div>
+
+              <p style="font-size: 14px; color: #666; margin-top: 25px;">
+                We appreciate your interest in RoboHatch and look forward to helping you with your 3D printing needs!
+              </p>
+
+              <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                Best regards,<br>
+                <strong style="color: #333;">The RoboHatch Team</strong>
+              </p>
+            </div>
+
+            <div class="footer">
+              <p><strong>RoboHatch - Professional 3D Printing Services</strong></p>
+              <p>🌐 <a href="https://www.robohatch.in" style="color: #3B82F6; text-decoration: none;">www.robohatch.in</a></p>
+              <p style="margin-top: 10px; font-size: 11px; color: #999;">
+                This is an automated confirmation email. Please do not reply directly to this message.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const msg = {
+        to: contactData.email,
+        from: {
+          email: FROM_EMAIL,
+          name: FROM_NAME,
+        },
+        replyTo: CONTACT_EMAIL, // Allow customer to reply to this email
+        subject: `Thank You for Contacting RoboHatch - We'll Be in Touch Soon!`,
+        html,
+      };
+
+      if (SENDGRID_ENABLED) {
+        await sgMail.send(msg);
+        console.log(`✅ Contact form confirmation sent to ${contactData.email}`);
+      } else {
+        console.log(`📧 [MOCK] Contact form confirmation would be sent to ${contactData.email}`);
+        console.log(`   Subject: ${msg.subject}`);
+      }
+    } catch (error: any) {
+      console.error('❌ Failed to send contact form confirmation:', error.message);
+      // Don't throw - email failure shouldn't break contact form submission
+    }
+  }
+
+  /**
    * Send 3D design upload notification to admin
    */
   async send3DDesignNotification(designData: {

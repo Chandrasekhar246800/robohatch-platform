@@ -47,6 +47,15 @@ export class ContactController {
         console.error('⚠️  Email notification failed (non-critical):', error.message);
       });
 
+      // Send confirmation email to customer (non-blocking)
+      emailService.sendContactFormConfirmation({
+        name: validatedData.name,
+        email: validatedData.email,
+        subject: validatedData.subject,
+      }).catch(error => {
+        console.error('⚠️  Customer confirmation email failed (non-critical):', error.message);
+      });
+
       // Send WhatsApp notification (non-blocking)
       whatsappService.sendContactFormNotification({
         name: validatedData.name,
