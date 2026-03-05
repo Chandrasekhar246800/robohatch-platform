@@ -18,7 +18,7 @@ declare global {
 
 export default function PaymentPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   const { items, getTotal, mergeLocalCartWithBackend } = useCartStore();
   const { 
     shippingAddress, 
@@ -47,12 +47,12 @@ export default function PaymentPage() {
     }
   }, [setCurrentStep, isAuthenticated, mergeLocalCartWithBackend]);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for hydration)
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && _hasHydrated && !isAuthenticated) {
       router.push('/login?redirect=/checkout/payment');
     }
-  }, [isAuthenticated, mounted, router]);
+  }, [isAuthenticated, mounted, _hasHydrated, router]);
 
   // Redirect if no items in cart
   useEffect(() => {
@@ -234,6 +234,15 @@ export default function PaymentPage() {
 
   if (!mounted) {
     return null;
+  }
+
+  // Show loading while hydrating
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
   }
 
   if (!isAuthenticated || items.length === 0 || !shippingAddress) {

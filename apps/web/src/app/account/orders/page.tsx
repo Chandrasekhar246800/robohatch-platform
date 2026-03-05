@@ -74,7 +74,7 @@ const formatDate = (dateString: string): string => {
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,17 +86,17 @@ export default function OrdersPage() {
 
   // Client-side auth check (backup for middleware)
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && _hasHydrated && !isAuthenticated) {
       router.push('/login?redirect=/account/orders');
     }
-  }, [isAuthenticated, mounted, router]);
+  }, [isAuthenticated, mounted, _hasHydrated, router]);
 
   // Fetch orders
   useEffect(() => {
-    if (mounted && isAuthenticated) {
+    if (mounted && _hasHydrated && isAuthenticated) {
       fetchOrders();
     }
-  }, [mounted, isAuthenticated]);
+  }, [mounted, _hasHydrated, isAuthenticated]);
 
   const fetchOrders = async () => {
     try {

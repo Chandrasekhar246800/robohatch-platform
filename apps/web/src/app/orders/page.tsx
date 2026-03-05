@@ -11,7 +11,7 @@ import { OrderListSkeleton } from '@/components/ui';
 
 function OrdersContent() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   
   const [orders, setOrders] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -24,17 +24,17 @@ function OrdersContent() {
   }, []);
 
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && _hasHydrated && !isAuthenticated) {
       router.push('/auth/login');
     }
-  }, [isAuthenticated, mounted, router]);
+  }, [isAuthenticated, mounted, _hasHydrated, router]);
 
   useEffect(() => {
-    if (mounted && isAuthenticated) {
+    if (mounted && _hasHydrated && isAuthenticated) {
       fetchOrders();
       fetchStats();
     }
-  }, [mounted, isAuthenticated]);
+  }, [mounted, _hasHydrated, isAuthenticated]);
 
   const fetchOrders = async () => {
     try {

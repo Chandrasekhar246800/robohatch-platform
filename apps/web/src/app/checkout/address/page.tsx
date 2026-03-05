@@ -11,7 +11,7 @@ import { apiClient } from '@/lib/api-client';
 
 export default function AddressPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   const { items, getTotal } = useCartStore();
   const { shippingAddress, setShippingAddress, setCurrentStep } = useCheckoutStore();
 
@@ -39,10 +39,10 @@ export default function AddressPage() {
   }, [setCurrentStep]);
 
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && _hasHydrated && !isAuthenticated) {
       router.push('/login?redirect=/checkout/address');
     }
-  }, [isAuthenticated, mounted, router]);
+  }, [isAuthenticated, mounted, _hasHydrated, router]);
 
   useEffect(() => {
     if (mounted && items.length === 0) {
@@ -60,7 +60,7 @@ export default function AddressPage() {
   // Fetch saved addresses
   useEffect(() => {
     const fetchAddresses = async () => {
-      if (!isAuthenticated) return;
+      if (!_hasHydrated || !isAuthenticated) return;
       
       try {
         const response = await apiClient.getAddresses();
@@ -80,7 +80,7 @@ export default function AddressPage() {
     };
 
     fetchAddresses();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, _hasHydrated, shippingAddress]);
 
   const handleSelectAddress = (addressId: string, addresses: any[] = savedAddresses) => {
     setSelectedAddressId(addressId);
@@ -190,6 +190,15 @@ export default function AddressPage() {
 
   if (!mounted) {
     return null;
+  }
+
+  // Show loading while hydrating
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
   }
 
   if (!isAuthenticated || items.length === 0) {

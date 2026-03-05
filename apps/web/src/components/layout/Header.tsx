@@ -329,12 +329,10 @@ export const Header: React.FC = () => {
               </Link>
             )}
 
-            {/* Cart - Show on mobile only when authenticated */}
+            {/* Cart - Always visible on all screens */}
             <Link
               href="/cart"
-              className={`relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 items-center space-x-1 ${
-                mounted && !isAuthenticated ? 'hidden sm:flex' : 'flex'
-              }`}
+              className="flex relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 items-center space-x-1"
               aria-label="Shopping Cart"
             >
               <ShoppingCart size={22} />
@@ -435,12 +433,12 @@ export const Header: React.FC = () => {
                 </AnimatePresence>
               </div>
             ) : mounted ? (
-              // Not Logged In: Login Button (Show on mobile and desktop)
+              // Not Logged In: Login Button
               <Link href="/login">
                 <Button 
                   variant="primary" 
                   size="sm"
-                  className="px-4 sm:px-6 font-medium shadow-sm hover:shadow-md transition-shadow"
+                  className="px-3 sm:px-6 font-medium shadow-sm hover:shadow-md transition-shadow text-xs sm:text-sm"
                 >
                   Login
                 </Button>
@@ -448,6 +446,15 @@ export const Header: React.FC = () => {
             ) : (
               <div className="w-16 sm:w-20 h-9"></div>
             )}
+
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={toggleMobileMenu}
+              className="md:hidden p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
 
