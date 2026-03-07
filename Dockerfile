@@ -10,10 +10,14 @@ RUN apt-get update && apt-get install -y \
     openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install PrusaSlicer
+# Download and extract PrusaSlicer AppImage
 RUN wget -O /tmp/prusaslicer.AppImage https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200.AppImage \
     && chmod +x /tmp/prusaslicer.AppImage \
-    && mv /tmp/prusaslicer.AppImage /usr/local/bin/prusa-slicer
+    && cd /tmp \
+    && ./prusaslicer.AppImage --appimage-extract \
+    && mv squashfs-root /opt/prusaslicer \
+    && ln -s /opt/prusaslicer/usr/bin/prusa-slicer /usr/local/bin/prusa-slicer \
+    && rm /tmp/prusaslicer.AppImage
 
 # Set working directory for API service
 WORKDIR /app
