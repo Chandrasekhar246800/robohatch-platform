@@ -16,13 +16,7 @@ export async function runPrusaSlicer(filePath: string) {
         "src/slicer/default_config.ini"
       );
 
-      const command = `
-        prusa-slicer
-        --load "${configPath}"
-        "${filePath}"
-        --export-gcode
-        --output "${gcodePath}"
-      `;
+      const command = `prusa-slicer --load "${configPath}" "${filePath}" --export-gcode --output "${gcodePath}"`;
 
       console.log(`   Running command: prusa-slicer --load ${configPath} ${filePath}`);
 
