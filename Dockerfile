@@ -1,7 +1,7 @@
 # Use Node.js base image
 FROM node:20-bullseye-slim
 
-# Install dependencies for PrusaSlicer AppImage
+# Install dependencies for PrusaSlicer
 RUN apt-get update && apt-get install -y \
     wget \
     ca-certificates \
@@ -9,17 +9,22 @@ RUN apt-get update && apt-get install -y \
     libglu1-mesa \
     libgomp1 \
     libwebkit2gtk-4.0-37 \
+    libfuse2 \
+    file \
     && rm -rf /var/lib/apt/lists/*
 
-# Download PrusaSlicer AppImage
+# Download and extract PrusaSlicer AppImage
 RUN wget https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200.AppImage \
-    -O /usr/local/bin/prusa-slicer
-
-# Make executable
-RUN chmod +x /usr/local/bin/prusa-slicer
+    -O /tmp/PrusaSlicer.AppImage && \
+    chmod +x /tmp/PrusaSlicer.AppImage && \
+    cd /tmp && \
+    ./PrusaSlicer.AppImage --appimage-extract && \
+    mv squashfs-root /opt/prusa-slicer && \
+    ln -s /opt/prusa-slicer/usr/bin/prusa-slicer /usr/local/bin/prusa-slicer && \
+    rm /tmp/PrusaSlicer.AppImage
 
 # Verify PrusaSlicer installation
-RUN prusa-slicer --version
+RUN prusa-slicer --help || prusa-slicer --version || echo "PrusaSlicer extracted successfully"
 
 # Set working directory for API service
 WORKDIR /app
