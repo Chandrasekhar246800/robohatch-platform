@@ -13,7 +13,7 @@ export async function runPrusaSlicer(filePath: string) {
 
       const configPath = path.join(
         process.cwd(),
-        "apps/api/src/slicer/default_config.ini"
+        "src/slicer/default_config.ini"
       );
 
       const command = `
