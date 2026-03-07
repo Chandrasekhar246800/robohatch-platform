@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libgtk-3-0 \
     libglu1-mesa \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install PrusaSlicer
@@ -15,21 +16,21 @@ RUN wget -O /tmp/prusaslicer.tar.bz2 https://github.com/prusa3d/PrusaSlicer/rele
     && ln -s /opt/PrusaSlicer-2.9.4+linux-x64-GTK3-202412101502/prusa-slicer /usr/local/bin/prusa-slicer \
     && rm /tmp/prusaslicer.tar.bz2
 
-# Set working directory
+# Set working directory for API service
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY turbo.json ./
+# Copy API package files
+COPY apps/api/package*.json ./
+COPY apps/api/prisma ./prisma
 
-# Copy workspace structure
-COPY apps ./apps
-COPY packages ./packages
+# Install API dependencies
+RUN npm install
 
-# Install dependencies
-RUN npm install --production=false
+# Copy API source code and slicer config
+COPY apps/api/src ./src
+COPY apps/api/tsconfig.json ./
 
-# Build the application
+# Build the API
 RUN npm run build
 
 # Expose port
