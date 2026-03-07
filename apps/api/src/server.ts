@@ -1,3 +1,4 @@
+// Trigger Railway Dockerfile rebuild - March 8, 2026
 import "dotenv/config";
 import app from "./app";
 import environment from "./config/environment";
