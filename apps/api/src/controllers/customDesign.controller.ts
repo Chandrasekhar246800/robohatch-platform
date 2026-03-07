@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
-import { calculateWeight } from '../services/meshWeight.service';
 import { runPrusaSlicer } from '../services/prusaSlicer.service';
 import { s3 } from '../config/s3';
 import path from 'path';
@@ -89,53 +88,6 @@ const getMaterialCostPerGram = (material: string): number => {
   return costs[material] || 4; // Default to PLA cost
 };
 
-/**
- * Calculate estimated price based on 3D design parameters (fallback)
- * Used when STL analysis fails or for non-STL files
- */
-const calculateEstimatedPrice = (params: {
-  fileSize: number; // in bytes
-  material: string;
-  quantity: number;
-  infillPercentage?: number;
-  layerHeight?: number;
-}): number => {
-  const { fileSize, material, quantity, infillPercentage = 20, layerHeight = 0.2 } = params;
-  const materialLower = material.toLowerCase();
-
-  // Base price calculation
-  const basePrice = 300;
-
-  // Only allow FDM materials
-  const allowed = ['pla', 'abs', 'petg', 'tpu'];
-  if (!allowed.includes(materialLower)) {
-    throw new Error('Only PLA, ABS, PETG, TPU are supported');
-  }
-
-  // FDM material pricing
-  const materialPrices: Record<string, number> = {
-    pla: 0,
-    abs: 50,
-    petg: 75,
-    tpu: 100,
-  };
-  const materialPrice = materialPrices[materialLower] || 0;
-
-  // File size factor
-  const fileSizeFactor = Math.round((fileSize / (1024 * 1024)) * 100);
-
-  // Infill percentage factor
-  const infillFactor = Math.round((infillPercentage / 20) * 50);
-
-  // Layer height factor
-  const layerHeightFactor = layerHeight === 0.1 ? 100 : layerHeight === 0.2 ? 50 : 25;
-
-  // Calculate total per unit
-  const pricePerUnit = basePrice + materialPrice + fileSizeFactor + infillFactor + layerHeightFactor;
-
-  return Math.round(pricePerUnit * quantity);
-};
-
 export const createCustomDesign = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -197,154 +149,57 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
 
     try {
       if (is3DFile && (fileExtension === '.stl' || fileExtension === '.3mf')) {
-        console.log(`🔬 3D file detected (${fileExtension}) - starting analysis...`);
-        try {
-          // Step 1: Download file from S3 to temp location
-          const s3Key = getS3KeyFromUrl(file.key || file.location);
-          console.log(`📥 Downloading file from S3: ${s3Key}`);
-          tempFilePath = await downloadFromS3(s3Key);
-          console.log(`✓ Downloaded to: ${tempFilePath}`);
+        console.log(`🔬 3D file detected (${fileExtension}) - starting PrusaSlicer analysis...`);
+        
+        // Step 1: Download file from S3 to temp location
+        const s3Key = getS3KeyFromUrl(file.key || file.location);
+        console.log(`📥 Downloading file from S3: ${s3Key}`);
+        tempFilePath = await downloadFromS3(s3Key);
+        console.log(`✓ Downloaded to: ${tempFilePath}`);
 
-          const scalePercent = parseInt(req.body.scalePercent) || 100;
-          const infillPercent = parseInt(infillPercentage) || 20;
-          const pricePerGram = getMaterialCostPerGram(materialLower);
+        const pricePerGram = getMaterialCostPerGram(materialLower);
 
-          // Step 2: Try PrusaSlicer first for STL files (most accurate)
-          if (fileExtension === '.stl') {
-            try {
-              console.log(`🔧 Running PrusaSlicer analysis...`);
-              const slicerResult = await runPrusaSlicer(tempFilePath) as any;
-              
-              const weightGrams = Math.round(slicerResult.totalWeight);
-              const rawCost = Math.round(weightGrams * pricePerGram);
-              estimatedPrice = rawCost * quantityInt;
+        // Step 2: Run PrusaSlicer (ONLY method - no fallback)
+        console.log(`🔧 Running PrusaSlicer analysis...`);
+        const slicerResult = await runPrusaSlicer(tempFilePath) as any;
+        
+        const weightGrams = Math.round(slicerResult.totalWeight);
+        const rawCost = Math.round(weightGrams * pricePerGram);
+        estimatedPrice = rawCost * quantityInt;
 
-              // Parse print time string to seconds
-              let printTimeSeconds: number | undefined = undefined;
-              if (slicerResult.printTime) {
-                const timeStr = slicerResult.printTime;
-                let seconds = 0;
-                const hours = timeStr.match(/(\d+)h/);
-                const minutes = timeStr.match(/(\d+)m/);
-                if (hours) seconds += parseInt(hours[1]) * 3600;
-                if (minutes) seconds += parseInt(minutes[1]) * 60;
-                printTimeSeconds = seconds;
-              }
-              
-              pricingData = {
-                accurate: true,
-                filament_grams: weightGrams,
-                print_time_seconds: printTimeSeconds,
-                final_price: estimatedPrice,
-              };
-              
-              console.log(`✅ PrusaSlicer analysis complete:`);
-              console.log(`   Model weight: ${slicerResult.modelWeight}g`);
-              console.log(`   Support weight: ${slicerResult.supportWeight}g`);
-              console.log(`   Total weight: ${weightGrams}g`);
-              console.log(`   Print time: ${slicerResult.printTime || 'N/A'}`);
-              console.log(`   Raw cost: ₹${rawCost} (single unit)`);
-              console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
-              
-            } catch (prusaError: any) {
-              console.error('⚠️  PrusaSlicer failed, falling back to mesh analysis:', prusaError.message);
-              throw prusaError; // Fall through to mesh calculation
-            }
-          } else {
-            // For 3MF files, use mesh calculation directly
-            throw new Error('3MF files use mesh calculation');
-          }
-          
-        } catch (analysisError: any) {
-          console.log('📐 Using mesh volume calculation as fallback...');
-          
-          // Fallback: Mesh volume analysis
-          try {
-            const scalePercent = parseInt(req.body.scalePercent) || 100;
-            const infillPercent = parseInt(infillPercentage) || 20;
-            const pricePerGram = getMaterialCostPerGram(materialLower);
-            
-            console.log(`⏳ Calculating mesh weight...`);
-            console.log(`   Scale: ${scalePercent}%`);
-            console.log(`   Infill: ${infillPercent}%`);
-            console.log(`   Material: ${materialLower}`);
-            console.log(`   Price per gram: ₹${pricePerGram}/g`);
-            
-            const result = await calculateWeight({
-              filePath: tempFilePath!,
-              material: materialLower,
-              scalePercent,
-              infillPercent,
-              pricePerGram,
-            });
-
-            const weightGrams = result.weight_grams;
-            const rawCost = result.raw_material_cost;
-            estimatedPrice = rawCost * quantityInt;
-            
-            pricingData = {
-              accurate: true,
-              filament_grams: weightGrams,
-              final_price: estimatedPrice,
-            };
-            
-            console.log(`✅ Mesh weight calculation complete:`);
-            console.log(`   Weight: ${weightGrams}g`);
-            console.log(`   Raw cost: ₹${rawCost} (single unit)`);
-            console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
-            
-          } catch (meshError: any) {
-            console.error('⚠️  Mesh weight calculation also failed:', meshError.message);
-            console.error('Error stack:', meshError.stack);
-            console.error('File details:', {
-              filename: file.originalname,
-              mimetype: file.mimetype,
-              size: file.size,
-              extension: fileExtension
-            });
-            console.log('Falling back to file-size estimation...');
-            // Fallback to simple calculation
-            estimatedPrice = calculateEstimatedPrice({
-              fileSize: file.size,
-              material: materialLower,
-              quantity: quantityInt,
-              infillPercentage: parseInt(infillPercentage) || 20,
-              layerHeight: parseFloat(layerHeight) || 0.2,
-            });
-            pricingData = {
-              accurate: false,
-              final_price: estimatedPrice,
-            };
-          }
+        // Parse print time string to seconds
+        let printTimeSeconds: number | undefined = undefined;
+        if (slicerResult.printTime) {
+          const timeStr = slicerResult.printTime;
+          let seconds = 0;
+          const hours = timeStr.match(/(\d+)h/);
+          const minutes = timeStr.match(/(\d+)m/);
+          if (hours) seconds += parseInt(hours[1]) * 3600;
+          if (minutes) seconds += parseInt(minutes[1]) * 60;
+          printTimeSeconds = seconds;
         }
-      } else if (is3DFile) {
-        // Non-STL/3MF 3D files (.obj, .gcode): use file-size estimation
-        console.log(`📄 3D file (${fileExtension}) - mesh parser only supports .stl/.3mf, using estimation`);
-        estimatedPrice = calculateEstimatedPrice({
-          fileSize: file.size,
-          material: materialLower,
-          quantity: quantityInt,
-          infillPercentage: parseInt(infillPercentage) || 20,
-          layerHeight: parseFloat(layerHeight) || 0.2,
-        });
+        
         pricingData = {
-          accurate: false,
+          accurate: true,
+          filament_grams: weightGrams,
+          print_time_seconds: printTimeSeconds,
           final_price: estimatedPrice,
         };
+        
+        console.log(`✅ PrusaSlicer analysis complete:`);
+        console.log(`   Model weight: ${slicerResult.modelWeight}g`);
+        console.log(`   Support weight: ${slicerResult.supportWeight}g`);
+        console.log(`   Total weight: ${weightGrams}g`);
+        console.log(`   Print time: ${slicerResult.printTime || 'N/A'}`);
+        console.log(`   Raw cost: ₹${rawCost} (single unit)`);
+        console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
+        
       } else {
-        // Non-3D files: use file-size estimation
-        console.log(`📄 Non-3D file (${fileExtension}) - using estimation`);
-        estimatedPrice = calculateEstimatedPrice({
-          fileSize: file.size,
-          material: materialLower,
-          quantity: quantityInt,
-          infillPercentage: parseInt(infillPercentage) || 20,
-          layerHeight: parseFloat(layerHeight) || 0.2,
+        // Only STL and 3MF files are supported
+        return res.status(400).json({
+          success: false,
+          message: `File type ${fileExtension} is not supported. Please upload STL or 3MF files only.`,
         });
-        pricingData = {
-          accurate: false,
-          final_price: estimatedPrice,
-        };
       }
     } finally {
       // Step 5: Cleanup temp file
@@ -356,19 +211,6 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           console.error('Failed to cleanup temp file:', cleanupError.message);
         }
       }
-    }
-
-    // Ensure estimatedPrice is set
-    if (!estimatedPrice || estimatedPrice === 0) {
-      console.log('⚠️  No price calculated - using fallback estimation');
-      estimatedPrice = calculateEstimatedPrice({
-        fileSize: file.size,
-        material: materialLower,
-        quantity: quantityInt,
-        infillPercentage: parseInt(infillPercentage) || 20,
-        layerHeight: parseFloat(layerHeight) || 0.2,
-      });
-      pricingData.final_price = estimatedPrice;
     }
 
     console.log('💰 Final pricing:', { estimatedPrice, pricingData });

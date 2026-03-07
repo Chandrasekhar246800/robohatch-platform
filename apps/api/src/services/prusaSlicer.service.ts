@@ -2,12 +2,14 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 
-export async function runPrusaSlicer(stlPath: string) {
+export async function runPrusaSlicer(filePath: string) {
   return new Promise((resolve, reject) => {
 
     try {
 
-      const gcodePath = stlPath.replace(".stl", ".gcode");
+      // Generate gcode path (works for both .stl and .3mf)
+      const ext = path.extname(filePath);
+      const gcodePath = filePath.replace(ext, ".gcode");
 
       const configPath = path.join(
         process.cwd(),
@@ -17,15 +19,23 @@ export async function runPrusaSlicer(stlPath: string) {
       const command = `
         prusa-slicer
         --load "${configPath}"
-        "${stlPath}"
+        "${filePath}"
         --export-gcode
         --output "${gcodePath}"
       `;
 
+      console.log(`   Running command: prusa-slicer --load ${configPath} ${filePath}`);
+
       exec(command, (error) => {
 
         if (error) {
-          reject(error);
+          console.error(`   ❌ PrusaSlicer error: ${error.message}`);
+          reject(new Error(`PrusaSlicer failed: ${error.message}`));
+          return;
+        }
+
+        if (!fs.existsSync(gcodePath)) {
+          reject(new Error('PrusaSlicer did not generate gcode file'));
           return;
         }
 
@@ -37,6 +47,13 @@ export async function runPrusaSlicer(stlPath: string) {
 
         const modelWeight = filamentMatch ? parseFloat(filamentMatch[1]) : 0;
         const supportWeight = supportMatch ? parseFloat(supportMatch[1]) : 0;
+
+        // Clean up gcode file
+        try {
+          fs.unlinkSync(gcodePath);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup gcode file:', cleanupError);
+        }
 
         resolve({
           modelWeight,
