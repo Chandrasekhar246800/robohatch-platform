@@ -216,6 +216,8 @@ class OrderService {
     // ✅ ATOMIC TRANSACTION: Restore all items
     await prisma.$transaction(async (tx: any) => {
       for (const item of order.items) {
+        if (!item.productId || !item.product) continue; // Skip custom designs
+        
         const result = await StockManager.restoreStock(
           tx,
           item.productId,

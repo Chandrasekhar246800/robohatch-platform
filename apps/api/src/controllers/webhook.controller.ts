@@ -234,8 +234,10 @@ export class WebhookController {
           },
         });
 
-        // ✅ RESTORE STOCK: Add items back to inventory
+        // ✅ RESTORE STOCK: Add items back to inventory (only products)
         for (const item of payment.order.items) {
+          if (!item.productId || !item.product) continue; // Skip custom designs
+          
           await tx.product.update({
             where: { id: item.productId },
             data: {

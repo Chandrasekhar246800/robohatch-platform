@@ -101,7 +101,7 @@ export class PaymentService {
       // Note: Custom designs don't have stock - they're made on demand
       for (const cartItem of cart.items) {
         // Only reserve stock for products, skip custom designs
-        if (!cartItem.product) continue;
+        if (!cartItem.product || !cartItem.productId) continue;
 
         const reservationResult = await StockManager.reserveStock(
           tx,
@@ -482,8 +482,9 @@ export class PaymentService {
           data: { status: 'REFUNDED' },
         });
 
-        // ✅ RESTORE STOCK: Add items back to inventory
+        // ✅ RESTORE STOCK: Add items back to inventory (only products)
         for (const item of payment.order.items) {
+          if (!item.productId) continue; // Skip custom designs
           await tx.product.update({
             where: { id: item.productId },
             data: {
@@ -555,6 +556,8 @@ export class PaymentService {
 
       // ✅ RESTORE STOCK: Payment failed, release reserved stock
       for (const item of payment.order.items) {
+        if (!item.productId || !item.product) continue; // Skip custom designs
+        
         const restorationResult = await StockManager.restoreStock(
           tx,
           item.productId,
@@ -636,6 +639,7 @@ export class PaymentService {
           items: {
             include: {
               product: true,
+              customDesign: true,
             },
           },
           shippingAddress: true,
@@ -654,7 +658,7 @@ export class PaymentService {
 
       // Format items for notification
       const items = order.items.map(item => ({
-        name: item.product.name,
+        name: item.product?.name || item.customDesign?.name || 'Custom Item',
         quantity: item.quantity,
         price: Number(item.price),
       }));

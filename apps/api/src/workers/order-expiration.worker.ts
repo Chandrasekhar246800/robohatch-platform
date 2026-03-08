@@ -83,11 +83,12 @@ export async function expireAbandonedOrders() {
     for (const order of abandonedOrders) {
       try {
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-          // Restore stock for all items
+          // Restore stock for all product items (filter out custom designs)
+          const productItems = order.items.filter(item => item.productId !== null);
           const restorationResults = await StockManager.batchRestoreStock(
             tx,
-            order.items.map(item => ({
-              productId: item.productId,
+            productItems.map(item => ({
+              productId: item.productId!,
               quantity: item.quantity,
             }))
           );
@@ -192,11 +193,12 @@ export async function manuallyExpireOrder(orderId: string, reason?: string) {
   }
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Restore stock
+    // Restore stock for product items only (filter out custom designs)
+    const productItems = order.items.filter(item => item.productId !== null);
     await StockManager.batchRestoreStock(
       tx,
-      order.items.map(item => ({
-        productId: item.productId,
+      productItems.map(item => ({
+        productId: item.productId!,
         quantity: item.quantity,
       }))
     );

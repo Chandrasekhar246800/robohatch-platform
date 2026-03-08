@@ -181,12 +181,10 @@ export class CartService {
     }
 
     // Check if item already exists in cart
-    const existingItem = await prisma.cartItem.findUnique({
+    const existingItem = await prisma.cartItem.findFirst({
       where: {
-        cartId_productId: {
-          cartId: cart.id,
-          productId,
-        },
+        cartId: cart.id,
+        productId: productId,
       },
       select: { id: true, quantity: true },
     });
