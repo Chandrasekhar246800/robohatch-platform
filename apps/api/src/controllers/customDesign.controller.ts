@@ -138,6 +138,11 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     let pricingData: {
       accurate: boolean;
       filament_grams?: number;
+      model_weight_grams?: number;
+      support_weight_grams?: number;
+      tower_weight_grams?: number;
+      purge_weight_grams?: number;
+      extruder_count?: number;
       print_time_seconds?: number;
       final_price: number;
     } = {
