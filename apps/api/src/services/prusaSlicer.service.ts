@@ -35,43 +35,10 @@ export async function runPrusaSlicer(filePath: string) {
 
         const gcode = fs.readFileSync(gcodePath, "utf8");
 
-        // DEBUG: Show actual gcode structure (unfiltered samples)
-        console.log(`   🔍 Analyzing gcode format...`);
-        const gcodeLines = gcode.split('\n');
-        console.log(`   📏 Total gcode lines: ${gcodeLines.length}`);
-        
-        // Show first 10 lines (unfiltered)
-        console.log(`   📄 First 10 lines:`);
-        gcodeLines.slice(0, 10).forEach((line, idx) => {
-          console.log(`     ${idx}: ${line.substring(0, 100)}`);
-        });
-        
-        // Show last 10 lines (unfiltered)
-        console.log(`   📄 Last 10 lines:`);
-        const startIdx = gcodeLines.length - 10;
-        gcodeLines.slice(-10).forEach((line, idx) => {
-          console.log(`     ${startIdx + idx}: ${line.substring(0, 100)}`);
-        });
-        
-        // Search for ANY line with "filament" keyword
-        console.log(`   🔎 Lines containing "filament":`);
-        gcodeLines.forEach((line, idx) => {
-          if (line.toLowerCase().includes('filament')) {
-            console.log(`     ${idx}: ${line.substring(0, 120)}`);
-          }
-        });
-
-        // Try multiple regex patterns for filament weight (different PrusaSlicer versions)
-        const filamentMatch = gcode.match(/filament used \[g\] = ([\d\.]+)/) ||
-                            gcode.match(/filament_used_g = ([\d\.]+)/) ||
-                            gcode.match(/total filament used \[g\] = ([\d\.]+)/) ||
-                            gcode.match(/; filament used \[g\] = ([\d\.]+)/);
-        
-        const supportMatch = gcode.match(/support material = ([\d\.]+)/) ||
-                           gcode.match(/support_material_used \[g\] = ([\d\.]+)/);
-        
-        const timeMatch = gcode.match(/estimated printing time.*= (.+)/) ||
-                         gcode.match(/; estimated printing time \(normal mode\) = (.+)/);
+        // Extract filament weight and print time from gcode comments
+        const filamentMatch = gcode.match(/; total filament used \[g\] = ([\d\.]+)/);
+        const supportMatch = gcode.match(/; total filament used for wipe tower \[g\] = ([\d\.]+)/);
+        const timeMatch = gcode.match(/; estimated printing time \(normal mode\) = (.+)/);
 
         const modelWeight = filamentMatch ? parseFloat(filamentMatch[1]) : 0;
         const supportWeight = supportMatch ? parseFloat(supportMatch[1]) : 0;
