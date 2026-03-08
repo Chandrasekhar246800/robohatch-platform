@@ -15,9 +15,9 @@ RUN apt-get update && apt-get install -y \
 
 # Download and install PrusaSlicer standalone Linux tarball
 RUN cd /tmp && \
-    wget -O PrusaSlicer.tar.bz2 "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200.tar.bz2" && \
+    wget -O PrusaSlicer.tar.bz2 "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928.tar.bz2" && \
     tar -xjf PrusaSlicer.tar.bz2 && \
-    mv PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200 /opt/prusa-slicer && \
+    mv PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928 /opt/prusa-slicer && \
     ln -s /opt/prusa-slicer/prusa-slicer /usr/local/bin/prusa-slicer && \
     rm PrusaSlicer.tar.bz2
 
