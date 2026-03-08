@@ -187,10 +187,18 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         }
         
         // Calculate explicit sum of all weight components
-        const modelWt = Math.round(slicerResult.modelWeight * 100) / 100;
-        const supportWt = Math.round(slicerResult.supportWeight * 100) / 100;
-        const towerWt = Math.round(slicerResult.towerWeight * 100) / 100;
-        const purgeWt = Math.round(slicerResult.purgeWeight * 100) / 100;
+        // Store exact values for logging/debugging
+        const modelWtExact = slicerResult.modelWeight;
+        const supportWtExact = slicerResult.supportWeight;
+        const towerWtExact = slicerResult.towerWeight;
+        const purgeWtExact = slicerResult.purgeWeight;
+        const totalWtExact = slicerResult.totalWeight;
+        
+        // Rounded values for database storage (2 decimal places)
+        const modelWt = Math.round(modelWtExact * 100) / 100;
+        const supportWt = Math.round(supportWtExact * 100) / 100;
+        const towerWt = Math.round(towerWtExact * 100) / 100;
+        const purgeWt = Math.round(purgeWtExact * 100) / 100;
         const totalWt = Math.round((modelWt + supportWt + towerWt + purgeWt) * 100) / 100;
         
         pricingData = {
@@ -209,11 +217,11 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         
         console.log(`✅ PrusaSlicer analysis complete:`);
         console.log(`   📊 Weight Breakdown:`);
-        console.log(`      • Model: ${modelWt}g (actual part)`);
-        console.log(`      • Support: ${supportWt}g`);
-        console.log(`      • Tower: ${towerWt}g (wipe tower)`);
-        console.log(`      • Purged: ${purgeWt}g (waste)`);
-        console.log(`      • TOTAL: ${totalWt}g (sum of all components)`);
+        console.log(`      • Model: ${modelWtExact.toFixed(4)}g exact → ${modelWt}g DB (actual part)`);
+        console.log(`      • Support: ${supportWtExact.toFixed(4)}g exact → ${supportWt}g DB`);
+        console.log(`      • Tower: ${towerWtExact.toFixed(4)}g exact → ${towerWt}g DB (wipe tower)`);
+        console.log(`      • Purged: ${purgeWtExact.toFixed(4)}g exact → ${purgeWt}g DB (waste)`);
+        console.log(`      • TOTAL: ${totalWtExact.toFixed(4)}g exact → ${totalWt}g DB (sum of all)`);
         console.log(`   Colors/Extruders: ${slicerResult.extruderCount}`);
         console.log(`   Infill: 15%`);
         console.log(`   Print time: ${slicerResult.printTime || 'N/A'}`);
