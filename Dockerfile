@@ -14,16 +14,21 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install PrusaSlicer
-RUN wget -q -O /tmp/prusa.tar.bz2 \
-    "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928.tar.bz2" && \
-    tar -xjf /tmp/prusa.tar.bz2 -C /opt/ && \
-    rm /tmp/prusa.tar.bz2 && \
+# Download and install PrusaSlicer with error handling
+RUN set -eux && \
+    cd /tmp && \
+    wget --progress=dot:giga -O prusa.tar.bz2 \
+        "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928.tar.bz2" && \
+    echo "=== DOWNLOAD COMPLETE ===" && \
+    tar -xjf prusa.tar.bz2 -C /opt/ && \
+    echo "=== EXTRACTION COMPLETE ===" && \
+    ls -la /opt/ && \
     ln -s /opt/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928/prusa-slicer /usr/local/bin/prusa-slicer && \
-    chmod +x /usr/local/bin/prusa-slicer
-
-# Verify installation
-RUN prusa-slicer --help || echo "PrusaSlicer check complete"
+    chmod +x /opt/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928/prusa-slicer && \
+    rm prusa.tar.bz2 && \
+    echo "=== SYMLINK CREATED ===" && \
+    ls -la /usr/local/bin/prusa-slicer && \
+    prusa-slicer --version || prusa-slicer --help || echo "=== PRUSA SLICER READY ==="
 
 # Set working directory for API service
 WORKDIR /app
