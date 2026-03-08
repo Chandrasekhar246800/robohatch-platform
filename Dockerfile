@@ -9,22 +9,20 @@ RUN apt-get update && apt-get install -y \
     libglu1-mesa \
     libgomp1 \
     libwebkit2gtk-4.0-37 \
-    libfuse2 \
-    file \
+    libosmesa6 \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and extract PrusaSlicer AppImage
-RUN wget https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200.AppImage \
-    -O /tmp/PrusaSlicer.AppImage && \
-    chmod +x /tmp/PrusaSlicer.AppImage && \
-    cd /tmp && \
-    ./PrusaSlicer.AppImage --appimage-extract && \
-    mv squashfs-root /opt/prusa-slicer && \
-    ln -s /opt/prusa-slicer/usr/bin/prusa-slicer /usr/local/bin/prusa-slicer && \
-    rm /tmp/PrusaSlicer.AppImage
+# Download and install PrusaSlicer standalone Linux tarball
+RUN cd /tmp && \
+    wget -O PrusaSlicer.tar.bz2 "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200.tar.bz2" && \
+    tar -xjf PrusaSlicer.tar.bz2 && \
+    mv PrusaSlicer-2.7.4+linux-x64-GTK3-202401171200 /opt/prusa-slicer && \
+    ln -s /opt/prusa-slicer/prusa-slicer /usr/local/bin/prusa-slicer && \
+    rm PrusaSlicer.tar.bz2
 
 # Verify PrusaSlicer installation
-RUN prusa-slicer --help || prusa-slicer --version || echo "PrusaSlicer extracted successfully"
+RUN which prusa-slicer && ls -la /opt/prusa-slicer/ && prusa-slicer --help || echo "PrusaSlicer installed"
 
 # Set working directory for API service
 WORKDIR /app
