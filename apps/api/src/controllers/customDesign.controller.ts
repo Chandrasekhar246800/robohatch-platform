@@ -182,6 +182,11 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         pricingData = {
           accurate: true,
           filament_grams: weightGrams,
+          model_weight_grams: Math.round(slicerResult.modelWeight * 100) / 100,
+          support_weight_grams: Math.round(slicerResult.supportWeight * 100) / 100,
+          tower_weight_grams: Math.round(slicerResult.towerWeight * 100) / 100,
+          purge_weight_grams: Math.round(slicerResult.purgeWeight * 100) / 100,
+          extruder_count: slicerResult.extruderCount || 1,
           print_time_seconds: printTimeSeconds,
           final_price: estimatedPrice,
         };
@@ -189,7 +194,10 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         console.log(`✅ PrusaSlicer analysis complete:`);
         console.log(`   Model weight: ${slicerResult.modelWeight}g`);
         console.log(`   Support weight: ${slicerResult.supportWeight}g`);
+        if (slicerResult.towerWeight > 0) console.log(`   Tower weight: ${slicerResult.towerWeight}g`);
+        if (slicerResult.purgeWeight > 0) console.log(`   Purge weight: ${slicerResult.purgeWeight}g`);
         console.log(`   Total weight: ${weightGrams}g`);
+        if (slicerResult.extruderCount > 1) console.log(`   Colors/Extruders: ${slicerResult.extruderCount}`);
         console.log(`   Print time: ${slicerResult.printTime || 'N/A'}`);
         console.log(`   Raw cost: ₹${rawCost} (single unit)`);
         console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
@@ -232,6 +240,11 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         estimatedPrice: finalEstimatedPrice,
         filamentGrams: pricingData?.filament_grams || null,
         printTimeSeconds: pricingData?.print_time_seconds || null,
+        modelWeightGrams: pricingData?.model_weight_grams || null,
+        supportWeightGrams: pricingData?.support_weight_grams || null,
+        towerWeightGrams: pricingData?.tower_weight_grams || null,
+        purgeWeightGrams: pricingData?.purge_weight_grams || null,
+        extruderCount: pricingData?.extruder_count || null,
       },
     });
 

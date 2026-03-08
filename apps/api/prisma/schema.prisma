@@ -192,22 +192,27 @@ model Upload {
 }
 
 model CustomDesign {
-  id               String             @id @default(uuid())
-  userId           String
-  name             String
-  description      String?            @db.Text
-  material         String?
-  color            String?
-  size             String?
-  quantity         Int                @default(1)
-  fileUrl          String?
-  status           CustomDesignStatus @default(PENDING)
-  estimatedPrice   Decimal?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  filamentGrams    Decimal?
-  printTimeSeconds Int?
-  user             User               @relation(fields: [userId], references: [id])
+  id                  String             @id @default(uuid())
+  userId              String
+  name                String
+  description         String?            @db.Text
+  material            String?
+  color               String?
+  size                String?
+  quantity            Int                @default(1)
+  fileUrl             String?
+  status              CustomDesignStatus @default(PENDING)
+  estimatedPrice      Decimal?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  filamentGrams       Decimal?
+  printTimeSeconds    Int?
+  modelWeightGrams    Decimal?           // Model weight (actual part)
+  supportWeightGrams  Decimal?           // Support structures weight
+  towerWeightGrams    Decimal?           // Wipe tower weight (multi-color)
+  purgeWeightGrams    Decimal?           // Purged material weight
+  extruderCount       Int?               // Number of extruders/colors used
+  user                User               @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "CustomDesign_userId_fkey")
 }
