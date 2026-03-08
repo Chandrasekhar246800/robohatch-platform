@@ -273,12 +273,22 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     });
 
     console.log('📝 Preparing response payload...');
+    
+    // Convert Prisma Decimal fields to numbers for JSON serialization
+    const customDesignResponse = {
+      ...customDesign,
+      estimatedPrice: customDesign.estimatedPrice ? Number(customDesign.estimatedPrice) : null,
+      filamentGrams: customDesign.filamentGrams ? Number(customDesign.filamentGrams) : null,
+      modelWeightGrams: customDesign.modelWeightGrams ? Number(customDesign.modelWeightGrams) : null,
+      supportWeightGrams: customDesign.supportWeightGrams ? Number(customDesign.supportWeightGrams) : null,
+      towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
+      purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
+    };
+    
     const responsePayload = {
       success: true,
       message: 'Custom design request submitted successfully',
-      customDesign: {
-        ...customDesign,
-      },
+      customDesign: customDesignResponse,
       pricing: pricingData,
       // Raw material calculation results (top-level for convenience)
       weight_grams: pricingData?.filament_grams || null,
@@ -329,10 +339,21 @@ export const getUserCustomDesigns = async (req: AuthRequest, res: Response) => {
       where: { userId },
     });
 
+    // Convert Decimal fields to numbers for JSON serialization
+    const customDesignsResponse = customDesigns.map(design => ({
+      ...design,
+      estimatedPrice: design.estimatedPrice ? Number(design.estimatedPrice) : null,
+      filamentGrams: design.filamentGrams ? Number(design.filamentGrams) : null,
+      modelWeightGrams: design.modelWeightGrams ? Number(design.modelWeightGrams) : null,
+      supportWeightGrams: design.supportWeightGrams ? Number(design.supportWeightGrams) : null,
+      towerWeightGrams: design.towerWeightGrams ? Number(design.towerWeightGrams) : null,
+      purgeWeightGrams: design.purgeWeightGrams ? Number(design.purgeWeightGrams) : null,
+    }));
+
     res.json({
       success: true,
       data: {
-        customDesigns,
+        customDesigns: customDesignsResponse,
         total,
         limit: Number(limit),
         offset: Number(offset),
@@ -388,9 +409,20 @@ export const getCustomDesignById = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Convert Decimal fields to numbers for JSON serialization
+    const customDesignResponse = {
+      ...customDesign,
+      estimatedPrice: customDesign.estimatedPrice ? Number(customDesign.estimatedPrice) : null,
+      filamentGrams: customDesign.filamentGrams ? Number(customDesign.filamentGrams) : null,
+      modelWeightGrams: customDesign.modelWeightGrams ? Number(customDesign.modelWeightGrams) : null,
+      supportWeightGrams: customDesign.supportWeightGrams ? Number(customDesign.supportWeightGrams) : null,
+      towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
+      purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
+    };
+
     res.json({
       success: true,
-      data: { customDesign },
+      data: { customDesign: customDesignResponse },
     });
   } catch (error) {
     console.error('Get custom design by ID error:', error);
@@ -439,10 +471,21 @@ export const updateCustomDesignStatus = async (req: AuthRequest, res: Response) 
       data: updateData,
     });
 
+    // Convert Decimal fields to numbers for JSON serialization
+    const customDesignResponse = {
+      ...customDesign,
+      estimatedPrice: customDesign.estimatedPrice ? Number(customDesign.estimatedPrice) : null,
+      filamentGrams: customDesign.filamentGrams ? Number(customDesign.filamentGrams) : null,
+      modelWeightGrams: customDesign.modelWeightGrams ? Number(customDesign.modelWeightGrams) : null,
+      supportWeightGrams: customDesign.supportWeightGrams ? Number(customDesign.supportWeightGrams) : null,
+      towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
+      purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
+    };
+
     res.json({
       success: true,
       message: 'Custom design status updated successfully',
-      data: { customDesign },
+      data: { customDesign: customDesignResponse },
     });
   } catch (error) {
     console.error('Update custom design status error:', error);
@@ -489,10 +532,21 @@ export const getAllCustomDesigns = async (req: AuthRequest, res: Response) => {
 
     const total = await prisma.customDesign.count({ where });
 
+    // Convert Decimal fields to numbers for JSON serialization
+    const customDesignsResponse = customDesigns.map(design => ({
+      ...design,
+      estimatedPrice: design.estimatedPrice ? Number(design.estimatedPrice) : null,
+      filamentGrams: design.filamentGrams ? Number(design.filamentGrams) : null,
+      modelWeightGrams: design.modelWeightGrams ? Number(design.modelWeightGrams) : null,
+      supportWeightGrams: design.supportWeightGrams ? Number(design.supportWeightGrams) : null,
+      towerWeightGrams: design.towerWeightGrams ? Number(design.towerWeightGrams) : null,
+      purgeWeightGrams: design.purgeWeightGrams ? Number(design.purgeWeightGrams) : null,
+    }));
+
     res.json({
       success: true,
       data: {
-        customDesigns,
+        customDesigns: customDesignsResponse,
         total,
         limit: Number(limit),
         offset: Number(offset),
