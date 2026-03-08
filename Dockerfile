@@ -13,13 +13,16 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install PrusaSlicer standalone Linux tarball
+# Download and install PrusaSlicer standalone Linux tarball (v2024-04-05)
 RUN cd /tmp && \
-    wget -O PrusaSlicer.tar.bz2 "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4%2Blinux-x64-GTK3-202404050928.tar.bz2" && \
+    wget --no-check-certificate -O PrusaSlicer.tar.bz2 "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4%2Blinux-x64-GTK3-202404050928.tar.bz2" && \
+    echo "Downloaded PrusaSlicer tarball" && \
     tar -xjf PrusaSlicer.tar.bz2 && \
+    echo "Extracted tarball, contents:" && ls -la && \
     mv PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928 /opt/prusa-slicer && \
     ln -s /opt/prusa-slicer/prusa-slicer /usr/local/bin/prusa-slicer && \
-    rm PrusaSlicer.tar.bz2
+    rm PrusaSlicer.tar.bz2 && \
+    echo "PrusaSlicer installation completed"
 
 # Verify PrusaSlicer installation
 RUN which prusa-slicer && ls -la /opt/prusa-slicer/ && prusa-slicer --help || echo "PrusaSlicer installed"
