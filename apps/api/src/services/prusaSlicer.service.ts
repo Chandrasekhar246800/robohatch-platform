@@ -35,12 +35,14 @@ export async function runPrusaSlicer(filePath: string) {
 
         const gcode = fs.readFileSync(gcodePath, "utf8");
 
-        // DEBUG: Log first 100 lines of gcode to see actual format
-        const gcodeLines = gcode.split('\n').slice(0, 100);
-        console.log(`   🔍 GCODE HEADER (first 100 lines):`);
-        gcodeLines.forEach((line, idx) => {
-          if (line.includes('filament') || line.includes('weight') || line.includes('used') || line.includes('time')) {
-            console.log(`   Line ${idx}: ${line}`);
+        // DEBUG: Log LAST 150 lines of gcode (metadata is at the end)
+        const gcodeLines = gcode.split('\n');
+        const lastLines = gcodeLines.slice(-150);
+        console.log(`   🔍 GCODE FOOTER (last 150 lines):`);
+        lastLines.forEach((line, idx) => {
+          const actualLineNum = gcodeLines.length - 150 + idx;
+          if (line.includes('filament') || line.includes('weight') || line.includes('used') || line.includes('time') || line.trim().startsWith(';')) {
+            console.log(`   Line ${actualLineNum}: ${line.substring(0, 200)}`);
           }
         });
 
