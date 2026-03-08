@@ -35,27 +35,29 @@ export async function runPrusaSlicer(filePath: string) {
 
         const gcode = fs.readFileSync(gcodePath, "utf8");
 
-        // DEBUG: Check both start and end for filament stats (only specific keywords)
-        console.log(`   🔍 Searching for filament stats in gcode...`);
+        // DEBUG: Show actual gcode structure (unfiltered samples)
+        console.log(`   🔍 Analyzing gcode format...`);
         const gcodeLines = gcode.split('\n');
+        console.log(`   📏 Total gcode lines: ${gcodeLines.length}`);
         
-        // Check first 100 lines for summary stats
-        const headerLines = gcodeLines.slice(0, 100);
-        headerLines.forEach((line, idx) => {
-          const lower = line.toLowerCase();
-          if ((lower.includes('filament') && (lower.includes('used') || lower.includes('weight') || lower.includes('g]'))) 
-              || (lower.includes('time') && lower.includes('print'))) {
-            console.log(`   Header ${idx}: ${line}`);
-          }
+        // Show first 10 lines (unfiltered)
+        console.log(`   📄 First 10 lines:`);
+        gcodeLines.slice(0, 10).forEach((line, idx) => {
+          console.log(`     ${idx}: ${line.substring(0, 100)}`);
         });
         
-        // Check last 50 lines for stats (not config)
-        const footerLines = gcodeLines.slice(-50);
-        footerLines.forEach((line, idx) => {
-          const lower = line.toLowerCase();
-          if ((lower.includes('filament') && (lower.includes('used') || lower.includes('weight'))) 
-              || (lower.includes('time') && lower.includes('print'))) {
-            console.log(`   Footer ${gcodeLines.length - 50 + idx}: ${line}`);
+        // Show last 10 lines (unfiltered)
+        console.log(`   📄 Last 10 lines:`);
+        const startIdx = gcodeLines.length - 10;
+        gcodeLines.slice(-10).forEach((line, idx) => {
+          console.log(`     ${startIdx + idx}: ${line.substring(0, 100)}`);
+        });
+        
+        // Search for ANY line with "filament" keyword
+        console.log(`   🔎 Lines containing "filament":`);
+        gcodeLines.forEach((line, idx) => {
+          if (line.toLowerCase().includes('filament')) {
+            console.log(`     ${idx}: ${line.substring(0, 120)}`);
           }
         });
 
