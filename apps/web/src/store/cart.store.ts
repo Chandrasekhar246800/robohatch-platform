@@ -47,12 +47,12 @@ export const useCartStore = create<CartStore>()(
           // Optimistic update - update UI immediately
           set((state) => {
             const existingItem = state.items.find(
-              (item) => item.product.id === product.id
+              (item) => item.product?.id === product.id
             );
             if (existingItem) {
               return {
                 items: state.items.map((item) =>
-                  item.product.id === product.id
+                  item.product?.id === product.id
                     ? { ...item, quantity: item.quantity + quantity }
                     : item
                 ),
@@ -74,7 +74,7 @@ export const useCartStore = create<CartStore>()(
             // Only revert on other errors (product not found, out of stock, etc.)
             if (!error.message?.includes('401')) {
               set((state) => ({
-                items: state.items.filter((item) => item.product.id !== product.id),
+                items: state.items.filter((item) => item.product?.id !== product.id),
               }));
             } else {
               console.log('Cart saved locally - will sync when authenticated');
@@ -84,12 +84,12 @@ export const useCartStore = create<CartStore>()(
           // Local cart for non-authenticated users
           set((state) => {
             const existingItem = state.items.find(
-              (item) => item.product.id === product.id
+              (item) => item.product?.id === product.id
             );
             if (existingItem) {
               return {
                 items: state.items.map((item) =>
-                  item.product.id === product.id
+                  item.product?.id === product.id
                     ? { ...item, quantity: item.quantity + quantity }
                     : item
                 ),
@@ -105,9 +105,9 @@ export const useCartStore = create<CartStore>()(
       removeItem: async (productId, isAuthenticated = false) => {
         if (isAuthenticated) {
           // Optimistic update - remove from UI immediately
-          const itemToRemove = get().items.find((item) => item.product.id === productId);
+          const itemToRemove = get().items.find((item) => item.product?.id === productId || item.customDesign?.id === productId);
           set((state) => ({
-            items: state.items.filter((item) => item.product.id !== productId),
+            items: state.items.filter((item) => item.product?.id !== productId && item.customDesign?.id !== productId),
           }));
 
           // Sync with backend in background
@@ -127,7 +127,7 @@ export const useCartStore = create<CartStore>()(
           }
         } else {
           set((state) => ({
-            items: state.items.filter((item) => item.product.id !== productId),
+            items: state.items.filter((item) => item.product?.id !== productId && item.customDesign?.id !== productId),
           }));
         }
       },
@@ -140,10 +140,10 @@ export const useCartStore = create<CartStore>()(
 
         if (isAuthenticated) {
           // Optimistic update - update UI immediately
-          const oldItem = get().items.find((item) => item.product.id === productId);
+          const oldItem = get().items.find((item) => item.product?.id === productId || item.customDesign?.id === productId);
           set((state) => ({
             items: state.items.map((item) =>
-              item.product.id === productId ? { ...item, quantity } : item
+              item.product?.id === productId || item.customDesign?.id === productId ? { ...item, quantity } : item
             ),
           }));
 
@@ -158,7 +158,7 @@ export const useCartStore = create<CartStore>()(
             if (oldItem) {
               set((state) => ({
                 items: state.items.map((item) =>
-                  item.product.id === productId ? { ...item, quantity: oldItem.quantity } : item
+                  item.product?.id === productId || item.customDesign?.id === productId ? { ...item, quantity: oldItem.quantity } : item
                 ),
               }));
             }
@@ -167,7 +167,7 @@ export const useCartStore = create<CartStore>()(
         } else {
           set((state) => ({
             items: state.items.map((item) =>
-              item.product.id === productId ? { ...item, quantity } : item
+              item.product?.id === productId || item.customDesign?.id === productId ? { ...item, quantity } : item
             ),
           }));
         }
@@ -205,34 +205,67 @@ export const useCartStore = create<CartStore>()(
           // Silently skip sync if request fails (user not authenticated)
           const response = await apiClient.getCart();
           if (response.cart) {
-            const backendItems: CartItem[] = (response.cart.items || []).map((item: any) => ({
-              id: item.id,
-              product: {
-                id: item.product.id,
-                name: item.product.name,
-                description: item.product.description,
-                price: Number(item.product.price),
-                originalPrice: item.product.originalPrice ? Number(item.product.originalPrice) : undefined,
-                category: item.product.category || {
-                  id: 'default',
-                  name: 'Product',
-                  slug: 'product',
-                  image: '',
-                  description: '',
-                },
-                images: item.product.images?.map((img: any) => img.url) || ['/placeholder-product.jpg'],
-                rating: item.product.rating || 4.5,
-                reviews: item.product.reviews || 0,
-                inStock: item.product.isActive !== false,
-                featured: false,
-                customizable: false,
-                material: item.product.material,
-                dimensions: item.product.dimensions,
-                weight: item.product.weight,
-                tags: item.product.tags || [],
-              },
-              quantity: item.quantity,
-            }));
+            const backendItems: CartItem[] = (response.cart.items || []).map((item: any) => {
+              const cartItem: CartItem = {
+                id: item.id,
+                quantity: item.quantity,
+              };
+
+              // Handle product items
+              if (item.product) {
+                cartItem.product = {
+                  id: item.product.id,
+                  name: item.product.name,
+                  description: item.product.description,
+                  price: Number(item.product.price),
+                  originalPrice: item.product.originalPrice ? Number(item.product.originalPrice) : undefined,
+                  stock: item.product.stock || 0,
+                  category: item.product.category || {
+                    id: 'default',
+                    name: 'Product',
+                    slug: 'product',
+                    image: '',
+                    description: '',
+                    isActive: true,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  },
+                  images: item.product.images?.map((img: any) => img.url) || ['/placeholder-product.jpg'],
+                  rating: item.product.rating || 4.5,
+                  reviews: item.product.reviews || 0,
+                  inStock: item.product.isActive !== false,
+                  featured: false,
+                  customizable: false,
+                  material: item.product.material,
+                  dimensions: item.product.dimensions,
+                  weight: item.product.weight,
+                  tags: item.product.tags || [],
+                  isActive: item.product.isActive !== false,
+                  createdAt: item.product.createdAt || new Date(),
+                };
+              }
+
+              // Handle custom design items
+              if (item.customDesign) {
+                cartItem.customDesign = {
+                  id: item.customDesign.id,
+                  name: item.customDesign.name,
+                  description: item.customDesign.description,
+                  material: item.customDesign.material,
+                  color: item.customDesign.color,
+                  estimatedPrice: item.customDesign.estimatedPrice ? Number(item.customDesign.estimatedPrice) : undefined,
+                  fileUrl: item.customDesign.fileUrl,
+                  status: item.customDesign.status,
+                  modelWeightGrams: item.customDesign.modelWeightGrams ? Number(item.customDesign.modelWeightGrams) : undefined,
+                  totalWeightGrams: item.customDesign.totalWeightGrams ? Number(item.customDesign.totalWeightGrams) : undefined,
+                  infillPercentage: item.customDesign.infillPercentage,
+                  extruderCount: item.customDesign.extruderCount,
+                  createdAt: item.customDesign.createdAt || new Date(),
+                };
+              }
+
+              return cartItem;
+            });
             set({ items: backendItems, lastSyncTime: now });
           }
         } catch (error: any) {
@@ -259,18 +292,21 @@ export const useCartStore = create<CartStore>()(
 
           // Create a map of backend items by product ID
           const backendMap = new Map(
-            backendItems.map((item: any) => [item.product.id, item])
+            backendItems.map((item: any) => [item.product?.id || item.customDesign?.id, item])
           );
 
           // Add or update local items to backend
           for (const localItem of localItems) {
-            const backendItem = backendMap.get(localItem.product.id) as any;
+            const itemId = localItem.product?.id || localItem.customDesign?.id;
+            if (!itemId) continue;
+            
+            const backendItem = backendMap.get(itemId) as any;
             
             if (backendItem && backendItem.id) {
               // Item exists in backend, sync quantity to match local state
               await apiClient.updateCartItem(backendItem.id, localItem.quantity);
-            } else {
-              // Item doesn't exist in backend, add it
+            } else if (localItem.product?.id) {
+              // Item doesn't exist in backend, add it (only for products)
               await apiClient.addToCart(localItem.product.id, localItem.quantity);
             }
           }
@@ -290,7 +326,10 @@ export const useCartStore = create<CartStore>()(
 
       getTotal: () => {
         return get().items.reduce(
-          (total, item) => total + item.product.price * item.quantity,
+          (total, item) => {
+            const price = item.product?.price || item.customDesign?.estimatedPrice || 0;
+            return total + price * item.quantity;
+          },
           0
         );
       },
@@ -300,7 +339,7 @@ export const useCartStore = create<CartStore>()(
       },
 
       getItemQuantity: (productId) => {
-        const item = get().items.find((item) => item.product.id === productId);
+        const item = get().items.find((item) => item.product?.id === productId || item.customDesign?.id === productId);
         return item ? item.quantity : 0;
       },
     }),
