@@ -35,6 +35,15 @@ export async function runPrusaSlicer(filePath: string) {
 
         const gcode = fs.readFileSync(gcodePath, "utf8");
 
+        // DEBUG: Log first 100 lines of gcode to see actual format
+        const gcodeLines = gcode.split('\n').slice(0, 100);
+        console.log(`   🔍 GCODE HEADER (first 100 lines):`);
+        gcodeLines.forEach((line, idx) => {
+          if (line.includes('filament') || line.includes('weight') || line.includes('used') || line.includes('time')) {
+            console.log(`   Line ${idx}: ${line}`);
+          }
+        });
+
         // Try multiple regex patterns for filament weight (different PrusaSlicer versions)
         const filamentMatch = gcode.match(/filament used \[g\] = ([\d\.]+)/) ||
                             gcode.match(/filament_used_g = ([\d\.]+)/) ||
