@@ -35,12 +35,22 @@ export async function runPrusaSlicer(filePath: string) {
 
         const gcode = fs.readFileSync(gcodePath, "utf8");
 
-        const filamentMatch = gcode.match(/filament used \[g\] = ([\d\.]+)/);
-        const supportMatch = gcode.match(/support material = ([\d\.]+)/);
-        const timeMatch = gcode.match(/estimated printing time.*= (.+)/);
+        // Try multiple regex patterns for filament weight (different PrusaSlicer versions)
+        const filamentMatch = gcode.match(/filament used \[g\] = ([\d\.]+)/) ||
+                            gcode.match(/filament_used_g = ([\d\.]+)/) ||
+                            gcode.match(/total filament used \[g\] = ([\d\.]+)/) ||
+                            gcode.match(/; filament used \[g\] = ([\d\.]+)/);
+        
+        const supportMatch = gcode.match(/support material = ([\d\.]+)/) ||
+                           gcode.match(/support_material_used \[g\] = ([\d\.]+)/);
+        
+        const timeMatch = gcode.match(/estimated printing time.*= (.+)/) ||
+                         gcode.match(/; estimated printing time \(normal mode\) = (.+)/);
 
         const modelWeight = filamentMatch ? parseFloat(filamentMatch[1]) : 0;
         const supportWeight = supportMatch ? parseFloat(supportMatch[1]) : 0;
+        
+        console.log(`   📊 Extracted from gcode: modelWeight=${modelWeight}g, supportWeight=${supportWeight}g`);
 
         // Clean up gcode file
         try {

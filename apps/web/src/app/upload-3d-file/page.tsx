@@ -59,7 +59,7 @@ export default function Upload3DFilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Backend pricing data from mesh weight calculation
+  // Backend pricing data from PrusaSlicer calculation
   const [filamentGrams, setFilamentGrams] = useState<number | null>(null);
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [customDesignId, setCustomDesignId] = useState<string | null>(null);
@@ -202,7 +202,7 @@ export default function Upload3DFilePage() {
       setUploadProgress(100);
 
       if (result.success) {
-        // Store pricing data from mesh weight calculation
+        // Store pricing data from PrusaSlicer calculation
         if (typeof result.weight_grams === 'number') {
           setFilamentGrams(result.weight_grams);
         }
@@ -320,18 +320,18 @@ export default function Upload3DFilePage() {
                       </button>
                     </div>
 
-                    {/* Mesh Weight Analysis */}
+                    {/* PrusaSlicer Analysis */}
                     {uploadComplete && (
                       <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <CheckCircle className="text-green-600" size={20} />
                             <p className="font-medium text-green-900">
-                              Mesh Weight Analysis
+                              PrusaSlicer Analysis
                             </p>
                           </div>
                           <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
-                            Calculated from mesh volume
+                            Analyzed with PrusaSlicer
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
