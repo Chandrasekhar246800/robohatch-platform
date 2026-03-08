@@ -211,7 +211,9 @@ model CustomDesign {
   supportWeightGrams  Decimal?           // Support structures weight
   towerWeightGrams    Decimal?           // Wipe tower weight (multi-color)
   purgeWeightGrams    Decimal?           // Purged material weight
+  totalWeightGrams    Decimal?           // Total weight (model+support+tower+purge)
   extruderCount       Int?               // Number of extruders/colors used
+  infillPercentage    Int?               // Infill density percentage (default: 15%)
   user                User               @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "CustomDesign_userId_fkey")

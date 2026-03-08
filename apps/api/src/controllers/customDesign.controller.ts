@@ -142,7 +142,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       support_weight_grams?: number;
       tower_weight_grams?: number;
       purge_weight_grams?: number;
+      total_weight_grams?: number;
       extruder_count?: number;
+      infill_percentage?: number;
       print_time_seconds?: number;
       final_price: number;
     } = {
@@ -191,7 +193,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           support_weight_grams: Math.round(slicerResult.supportWeight * 100) / 100,
           tower_weight_grams: Math.round(slicerResult.towerWeight * 100) / 100,
           purge_weight_grams: Math.round(slicerResult.purgeWeight * 100) / 100,
+          total_weight_grams: Math.round(slicerResult.totalWeight * 100) / 100,
           extruder_count: slicerResult.extruderCount || 1,
+          infill_percentage: 15, // Default infill from PrusaSlicer config
           print_time_seconds: printTimeSeconds,
           final_price: estimatedPrice,
         };
@@ -249,7 +253,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         supportWeightGrams: pricingData?.support_weight_grams || null,
         towerWeightGrams: pricingData?.tower_weight_grams || null,
         purgeWeightGrams: pricingData?.purge_weight_grams || null,
+        totalWeightGrams: pricingData?.total_weight_grams || null,
         extruderCount: pricingData?.extruder_count || null,
+        infillPercentage: pricingData?.infill_percentage || null,
       },
     });
 
@@ -283,6 +289,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       supportWeightGrams: customDesign.supportWeightGrams ? Number(customDesign.supportWeightGrams) : null,
       towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
       purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
+      totalWeightGrams: customDesign.totalWeightGrams ? Number(customDesign.totalWeightGrams) : null,
     };
     
     const responsePayload = {
@@ -348,6 +355,7 @@ export const getUserCustomDesigns = async (req: AuthRequest, res: Response) => {
       supportWeightGrams: design.supportWeightGrams ? Number(design.supportWeightGrams) : null,
       towerWeightGrams: design.towerWeightGrams ? Number(design.towerWeightGrams) : null,
       purgeWeightGrams: design.purgeWeightGrams ? Number(design.purgeWeightGrams) : null,
+      totalWeightGrams: design.totalWeightGrams ? Number(design.totalWeightGrams) : null,
     }));
 
     res.json({
@@ -418,6 +426,7 @@ export const getCustomDesignById = async (req: AuthRequest, res: Response) => {
       supportWeightGrams: customDesign.supportWeightGrams ? Number(customDesign.supportWeightGrams) : null,
       towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
       purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
+      totalWeightGrams: customDesign.totalWeightGrams ? Number(customDesign.totalWeightGrams) : null,
     };
 
     res.json({
@@ -480,6 +489,7 @@ export const updateCustomDesignStatus = async (req: AuthRequest, res: Response) 
       supportWeightGrams: customDesign.supportWeightGrams ? Number(customDesign.supportWeightGrams) : null,
       towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
       purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
+      totalWeightGrams: customDesign.totalWeightGrams ? Number(customDesign.totalWeightGrams) : null,
     };
 
     res.json({
@@ -541,6 +551,7 @@ export const getAllCustomDesigns = async (req: AuthRequest, res: Response) => {
       supportWeightGrams: design.supportWeightGrams ? Number(design.supportWeightGrams) : null,
       towerWeightGrams: design.towerWeightGrams ? Number(design.towerWeightGrams) : null,
       purgeWeightGrams: design.purgeWeightGrams ? Number(design.purgeWeightGrams) : null,
+      totalWeightGrams: design.totalWeightGrams ? Number(design.totalWeightGrams) : null,
     }));
 
     res.json({
