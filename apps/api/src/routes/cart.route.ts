@@ -17,6 +17,9 @@ router.get('/summary', (req, res) => cartController.getCartSummary(req, res));
 // Add item to cart
 router.post('/items', (req, res) => cartController.addToCart(req, res));
 
+// Add custom design to cart
+router.post('/custom-designs', (req, res) => cartController.addCustomDesignToCart(req, res));
+
 // Update cart item quantity
 router.put('/items/:itemId', (req, res) => cartController.updateCartItem(req, res));
 

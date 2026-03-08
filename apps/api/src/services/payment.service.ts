@@ -53,6 +53,7 @@ export class PaymentService {
         items: {
           include: {
             product: true,
+            customDesign: true,
           },
         },
       },
@@ -62,20 +63,29 @@ export class PaymentService {
       throw new Error('Cart is empty');
     }
 
-    // ✅ INVENTORY CHECK: Verify stock availability
+    // ✅ INVENTORY CHECK: Verify stock availability (only for products)
     for (const item of cart.items) {
-      if (!item.product.isActive) {
-        throw new Error(`Product ${item.product.name} is no longer available`);
-      }
-      
-      if (item.product.stock < item.quantity) {
-        throw new Error(`Insufficient stock for ${item.product.name}. Available: ${item.product.stock}`);
+      // Check if it's a product (not a custom design)
+      if (item.product) {
+        if (!item.product.isActive) {
+          throw new Error(`Product ${item.product.name} is no longer available`);
+        }
+        
+        if (item.product.stock < item.quantity) {
+          throw new Error(`Insufficient stock for ${item.product.name}. Available: ${item.product.stock}`);
+        }
       }
     }
 
-    // Calculate subtotal
+    // Calculate subtotal (handle both products and custom designs)
     const subtotal = cart.items.reduce((sum: number, item: typeof cart.items[0]) => {
-      return sum + Number(item.product.price) * item.quantity;
+      if (item.product) {
+        return sum + Number(item.product.price) * item.quantity;
+      } else if (item.customDesign) {
+        const price = item.customDesign.estimatedPrice || 0;
+        return sum + Number(price) * item.quantity;
+      }
+      return sum;
     }, 0);
 
     // Calculate shipping cost (free shipping for orders above ₹999)
@@ -87,8 +97,12 @@ export class PaymentService {
     // ✅ ATOMIC TRANSACTION: Reserve stock FIRST, then create order
     // Why this order? Fail fast before any DB writes. More efficient.
     const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // STEP 1: Reserve stock for ALL items FIRST (fails early, no wasted writes)
+      // STEP 1: Reserve stock for PRODUCTS FIRST (fails early, no wasted writes)
+      // Note: Custom designs don't have stock - they're made on demand
       for (const cartItem of cart.items) {
+        // Only reserve stock for products, skip custom designs
+        if (!cartItem.product) continue;
+
         const reservationResult = await StockManager.reserveStock(
           tx,
           cartItem.productId,
@@ -131,16 +145,29 @@ export class PaymentService {
         },
       });
 
-      // STEP 3: Create order items (stock already reserved above)
+      // STEP 3: Create order items (stock already reserved above for products)
       for (const cartItem of cart.items) {
-        await tx.orderItem.create({
-          data: {
-            orderId: newOrder.id,
-            productId: cartItem.productId,
-            quantity: cartItem.quantity,
-            price: cartItem.product.price,
-          },
-        });
+        if (cartItem.product) {
+          // Product order item
+          await tx.orderItem.create({
+            data: {
+              orderId: newOrder.id,
+              productId: cartItem.productId,
+              quantity: cartItem.quantity,
+              price: cartItem.product.price,
+            },
+          });
+        } else if (cartItem.customDesign) {
+          // Custom design order item
+          await tx.orderItem.create({
+            data: {
+              orderId: newOrder.id,
+              customDesignId: cartItem.customDesignId,
+              quantity: cartItem.quantity,
+              price: cartItem.customDesign.estimatedPrice || new Prisma.Decimal(0),
+            },
+          });
+        }
       }
 
       // ✅ CRITICAL FIX: Store shipping address

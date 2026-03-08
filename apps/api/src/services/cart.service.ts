@@ -56,6 +56,22 @@ export class CartService {
                 },
               },
             },
+            customDesign: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                estimatedPrice: true,
+                material: true,
+                color: true,
+                fileUrl: true,
+                status: true,
+                modelWeightGrams: true,
+                totalWeightGrams: true,
+                infillPercentage: true,
+                extruderCount: true,
+              },
+            },
           },
           orderBy: {
             createdAt: 'desc',
@@ -98,6 +114,22 @@ export class CartService {
                       },
                     },
                   },
+                },
+              },
+              customDesign: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  estimatedPrice: true,
+                  material: true,
+                  color: true,
+                  fileUrl: true,
+                  status: true,
+                  modelWeightGrams: true,
+                  totalWeightGrams: true,
+                  infillPercentage: true,
+                  extruderCount: true,
                 },
               },
             },
@@ -195,6 +227,83 @@ export class CartService {
           cartId: true,
           customText: true,
           customImageUrl: true,
+        },
+      });
+    }
+
+    return cartItem;
+  }
+
+  // Add custom design to cart
+  async addCustomDesignToCart(userId: string, customDesignId: string, quantity: number = 1) {
+    // Verify custom design exists and belongs to user
+    const customDesign = await prisma.customDesign.findUnique({
+      where: { id: customDesignId },
+      select: { id: true, userId: true, estimatedPrice: true },
+    });
+
+    if (!customDesign) {
+      throw new Error('Custom design not found');
+    }
+
+    if(customDesign.userId !== userId) {
+      throw new Error('Unauthorized: This design belongs to another user');
+    }
+
+    if (quantity < 1) {
+      throw new Error('Quantity must be at least 1');
+    }
+
+    // Get or create cart
+    let cart = await prisma.cart.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!cart) {
+      cart = await prisma.cart.create({
+        data: { userId },
+        select: { id: true },
+      });
+    }
+
+    // Check if item already exists in cart
+    const existingItem = await prisma.cartItem.findFirst({
+      where: {
+        cartId: cart.id,
+        customDesignId,
+      },
+      select: { id: true, quantity: true },
+    });
+
+    let cartItem;
+    if (existingItem) {
+      // Update quantity
+      cartItem = await prisma.cartItem.update({
+        where: { id: existingItem.id },
+        data: { 
+          quantity: existingItem.quantity + quantity,
+        },
+        select: {
+          id: true,
+          quantity: true,
+          customDesignId: true,
+          cartId: true,
+        },
+      });
+    } else {
+      // Create new cart item
+      cartItem = await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          customDesignId,
+          quantity,
+        },
+        select: {
+          id: true,
+          quantity: true,
+          customDesignId: true,
+          cartId: true,
         },
       });
     }

@@ -101,18 +101,21 @@ model Order {
 }
 
 model OrderItem {
-  id             String  @id @default(uuid())
+  id             String        @id @default(uuid())
   orderId        String
-  productId      String
+  productId      String?
+  customDesignId String?
   quantity       Int
   price          Decimal
-  customImageUrl String? @db.Text
-  customText     String? @db.Text
-  order          Order   @relation(fields: [orderId], references: [id])
-  product        Product @relation(fields: [productId], references: [id])
+  customImageUrl String?       @db.Text
+  customText     String?       @db.Text
+  order          Order         @relation(fields: [orderId], references: [id])
+  product        Product?      @relation(fields: [productId], references: [id])
+  customDesign   CustomDesign? @relation(fields: [customDesignId], references: [id])
 
   @@index([orderId], map: "OrderItem_orderId_fkey")
   @@index([productId], map: "OrderItem_productId_fkey")
+  @@index([customDesignId], map: "OrderItem_customDesignId_fkey")
 }
 
 model ShippingAddress {
@@ -215,6 +218,8 @@ model CustomDesign {
   infillPercentage   Int?
   totalWeightGrams   Decimal?
   user               User               @relation(fields: [userId], references: [id])
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
 
   @@index([userId], map: "CustomDesign_userId_fkey")
 }
@@ -229,19 +234,21 @@ model Cart {
 }
 
 model CartItem {
-  id             String   @id @default(uuid())
-  cartId         String
-  productId      String
-  quantity       Int      @default(1)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  customImageUrl String?  @db.Text
-  customText     String?  @db.Text
-  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String        @id @default(uuid())
+  cartId          String
+  productId       String?
+  customDesignId  String?
+  quantity        Int           @default(1)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  customImageUrl  String?       @db.Text
+  customText      String?       @db.Text
+  cart            Cart          @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product         Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customDesign    CustomDesign? @relation(fields: [customDesignId], references: [id], onDelete: Cascade)
 
-  @@unique([cartId, productId])
   @@index([productId], map: "CartItem_productId_fkey")
+  @@index([customDesignId], map: "CartItem_customDesignId_fkey")
 }
 
 model ContactSubmission {

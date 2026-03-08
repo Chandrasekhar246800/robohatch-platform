@@ -68,6 +68,50 @@ export class CartController {
     }
   }
 
+  // Add custom design to cart
+  async addCustomDesignToCart(req: Request, res: Response) {
+    try {
+      const userId = (req as AuthRequest).user?.userId;
+      const { customDesignId, quantity } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+      }
+
+      if (!customDesignId) {
+        return res.status(400).json({ success: false, error: 'Custom Design ID is required' });
+      }
+
+      if (quantity && (isNaN(quantity) || quantity < 1)) {
+        return res.status(400).json({ success: false, error: 'Quantity must be a positive number' });
+      }
+
+      const cartItem = await cartService.addCustomDesignToCart(
+        userId,
+        customDesignId,
+        quantity || 1
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Custom design added to cart',
+        data: { cartItem },
+      });
+    } catch (error: any) {
+      console.error('Add custom design to cart error:', error);
+
+      if (error.message === 'Custom design not found') {
+        return res.status(404).json({ success: false, error: error.message });
+      }
+
+      if (error.message === 'Unauthorized: This design belongs to another user') {
+        return res.status(403).json({ success: false, error: error.message });
+      }
+
+      res.status(500).json({ success: false, error: 'Failed to add custom design to cart' });
+    }
+  }
+
   // Update cart item quantity
   async updateCartItem(req: Request, res: Response) {
     try {
