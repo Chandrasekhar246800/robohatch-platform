@@ -29,7 +29,6 @@ model Product {
   name          String
   description   String            @db.Text
   price         Decimal
-  salePrice     Decimal?
   stock         Int               @default(0)
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
@@ -37,6 +36,7 @@ model Product {
   dimensions    String?
   material      String?
   weight        String?
+  salePrice     Decimal?
   cartItems     CartItem[]
   orderItems    OrderItem[]
   categories    ProductCategory[]
@@ -85,11 +85,11 @@ model Order {
   id              String           @id @default(uuid())
   userId          String
   status          OrderStatus      @default(PENDING)
-  subtotal        Decimal?
-  shippingCost    Decimal          @default(0)
   total           Decimal
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  shippingCost    Decimal          @default(0.000000000000000000000000000000)
+  subtotal        Decimal?
   user            User             @relation(fields: [userId], references: [id])
   items           OrderItem[]
   payment         Payment?
@@ -106,8 +106,8 @@ model OrderItem {
   productId      String
   quantity       Int
   price          Decimal
-  customText     String? @db.Text
   customImageUrl String? @db.Text
+  customText     String? @db.Text
   order          Order   @relation(fields: [orderId], references: [id])
   product        Product @relation(fields: [productId], references: [id])
 
@@ -192,29 +192,29 @@ model Upload {
 }
 
 model CustomDesign {
-  id                  String             @id @default(uuid())
-  userId              String
-  name                String
-  description         String?            @db.Text
-  material            String?
-  color               String?
-  size                String?
-  quantity            Int                @default(1)
-  fileUrl             String?
-  status              CustomDesignStatus @default(PENDING)
-  estimatedPrice      Decimal?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  filamentGrams       Decimal?
-  printTimeSeconds    Int?
-  modelWeightGrams    Decimal?           // Model weight (actual part)
-  supportWeightGrams  Decimal?           // Support structures weight
-  towerWeightGrams    Decimal?           // Wipe tower weight (multi-color)
-  purgeWeightGrams    Decimal?           // Purged material weight
-  totalWeightGrams    Decimal?           // Total weight (model+support+tower+purge)
-  extruderCount       Int?               // Number of extruders/colors used
-  infillPercentage    Int?               // Infill density percentage (default: 15%)
-  user                User               @relation(fields: [userId], references: [id])
+  id                 String             @id @default(uuid())
+  userId             String
+  name               String
+  description        String?            @db.Text
+  material           String?
+  color              String?
+  size               String?
+  quantity           Int                @default(1)
+  fileUrl            String?
+  status             CustomDesignStatus @default(PENDING)
+  estimatedPrice     Decimal?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  filamentGrams      Decimal?
+  printTimeSeconds   Int?
+  extruderCount      Int?
+  modelWeightGrams   Decimal?
+  purgeWeightGrams   Decimal?
+  supportWeightGrams Decimal?
+  towerWeightGrams   Decimal?
+  infillPercentage   Int?
+  totalWeightGrams   Decimal?
+  user               User               @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "CustomDesign_userId_fkey")
 }
@@ -233,10 +233,10 @@ model CartItem {
   cartId         String
   productId      String
   quantity       Int      @default(1)
-  customText     String?  @db.Text
-  customImageUrl String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  customImageUrl String?  @db.Text
+  customText     String?  @db.Text
   cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 

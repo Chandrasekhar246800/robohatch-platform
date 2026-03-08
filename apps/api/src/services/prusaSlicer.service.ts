@@ -61,29 +61,37 @@ export async function runPrusaSlicer(filePath: string) {
         const supportVolumeMatch = gcode.match(/; support material used \[cm3\] = ([\d\.]+)/);
         const supportVolume = supportVolumeMatch ? parseFloat(supportVolumeMatch[1]) : 0;
         
+        // Extract purge/waste info if available
+        // Note: PrusaSlicer may not output this, but Bambu/Orca slicers do
+        const purgeMatch = gcode.match(/; filament purged \[cm3\] = ([\d\.]+)/);
+        const purgeVolume = purgeMatch ? parseFloat(purgeMatch[1]) : 0;
+        
         // Calculate weights
         const towerWeight = Math.round(towerVolume * PLA_DENSITY * 100) / 100;
         const supportWeight = Math.round(supportVolume * PLA_DENSITY * 100) / 100;
+        const purgeWeight = Math.round(purgeVolume * PLA_DENSITY * 100) / 100;
         
-        // Model weight = total - tower - support
-        const modelVolume = totalVolume - towerVolume - supportVolume;
+        // Model weight = total - tower - support - purge
+        // This gives us the actual part weight excluding all waste
+        const modelVolume = totalVolume - towerVolume - supportVolume - purgeVolume;
         const modelWeight = Math.round(modelVolume * PLA_DENSITY * 100) / 100;
         
-        // Total weight
+        // Total weight (everything that goes through the nozzle)
         const totalWeight = Math.round(totalVolume * PLA_DENSITY * 100) / 100;
-        
-        // Extract purge/waste info if available (some slicers log this separately)
-        const purgeMatch = gcode.match(/; filament purged \[cm3\] = ([\d\.]+)/);
-        const purgeVolume = purgeMatch ? parseFloat(purgeMatch[1]) : 0;
-        const purgeWeight = Math.round(purgeVolume * PLA_DENSITY * 100) / 100;
         
         console.log(`   📊 Volume Breakdown:`);
         console.log(`      • Total: ${totalVolume.toFixed(2)} cm³ → ${totalWeight}g`);
-        console.log(`      • Model: ${modelVolume.toFixed(2)} cm³ → ${modelWeight}g`);
+        console.log(`      • Model: ${modelVolume.toFixed(2)} cm³ → ${modelWeight}g (actual part)`);
         if (supportWeight > 0) console.log(`      • Support: ${supportVolume.toFixed(2)} cm³ → ${supportWeight}g`);
-        if (towerWeight > 0) console.log(`      • Wipe Tower: ${towerVolume.toFixed(2)} cm³ → ${towerWeight}g`);
-        if (purgeWeight > 0) console.log(`      • Purged: ${purgeVolume.toFixed(2)} cm³ → ${purgeWeight}g`);
+        if (towerWeight > 0) console.log(`      • Tower: ${towerVolume.toFixed(2)} cm³ → ${towerWeight}g (wipe tower)`);
+        if (purgeWeight > 0) console.log(`      • Purged: ${purgeVolume.toFixed(2)} cm³ → ${purgeWeight}g (waste)`);
         if (volumes.length > 1) console.log(`      • Extruders: ${volumes.length} colors/materials`);
+        
+        // Verification: model + support + tower + purge should equal total
+        const calculatedTotal = modelWeight + supportWeight + towerWeight + purgeWeight;
+        if (Math.abs(calculatedTotal - totalWeight) > 0.5) {
+          console.warn(`      ⚠️  Weight mismatch: calculated ${calculatedTotal}g vs total ${totalWeight}g`);
+        }
 
         // Clean up gcode file
         try {
