@@ -414,6 +414,27 @@ class ApiClient {
     }
   }
 
+  async addCustomDesignToCart(customDesignId: string, quantity: number = 1) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/cart/custom-designs`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ customDesignId, quantity }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Add custom design to cart error:', error);
+      throw error;
+    }
+  }
+
   async updateCartItem(itemId: string, quantity: number) {
     try {
       const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {

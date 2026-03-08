@@ -91,45 +91,86 @@ export default function CartPage() {
               </div>
 
               {/* Cart Items List */}
-              <div className="bg-white shadow-sm rounded-lg">{items.map((item, index) => (
+              <div className="bg-white shadow-sm rounded-lg">
+                {items.map((item, index) => {
+                  const isCustomDesign = !!item.customDesign;
+                  const displayName = isCustomDesign ? item.customDesign!.name : item.product!.name;
+                  const displayPrice = isCustomDesign 
+                    ? (item.customDesign!.estimatedPrice || 0) 
+                    : item.product!.price;
+                  const itemId = isCustomDesign ? item.customDesign!.id : item.product!.id;
+                  
+                  return (
                   <div
-                    key={item.product.id}
+                    key={itemId}
                     className={`p-4 hover:bg-gray-50 transition-colors ${index !== items.length - 1 ? 'border-b border-gray-200' : ''}`}
                   >
                     <div className="flex gap-4">
-                      {/* Product Image */}
+                      {/* Product/Design Image */}
+                      {isCustomDesign ? (
+                        <div className="relative w-28 h-28 flex-shrink-0 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 overflow-hidden flex items-center justify-center">
+                          <Package size={48} className="text-blue-400" />
+                        </div>
+                      ) : (
                       <Link
-                        href={`/product/${item.product.id}`}
+                        href={`/product/${item.product!.id}`}
                         className="relative w-28 h-28 flex-shrink-0 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:border-primary transition-colors"
                       >
                         <Image
-                          src={item.product.images && item.product.images.length > 0
-                            ? (typeof item.product.images[0] === 'string' 
-                                ? item.product.images[0] 
-                                : (item.product.images[0] as any)?.url || '/placeholder-product.jpg')
+                          src={item.product!.images && item.product!.images.length > 0
+                            ? (typeof item.product!.images[0] === 'string' 
+                                ? item.product!.images[0] 
+                                : (item.product!.images[0] as any)?.url || '/placeholder-product.jpg')
                             : '/placeholder-product.jpg'}
-                          alt={item.product.name}
+                          alt={item.product!.name}
                           fill
                           className="object-contain p-2"
                         />
                       </Link>
+                      )}
 
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
-                        <Link href={`/product/${item.product.id}`}>
+                        {isCustomDesign ? (
+                          <div>
+                            <h3 className="text-base font-normal text-gray-800 mb-1 line-clamp-2">
+                              {displayName}
+                            </h3>
+                            <div className="mb-2 px-2 py-1 bg-purple-50 border border-purple-200 rounded-md inline-block">
+                              <p className="text-xs font-semibold text-purple-900">
+                                🎨 Custom 3D Design
+                              </p>
+                            </div>
+                            {item.customDesign!.material && (
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                                <span>Material: {item.customDesign!.material}</span>
+                                {item.customDesign!.color && (
+                                  <>
+                                    <span>•</span>
+                                    <span>Color: {item.customDesign!.color}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                        <Link href={`/product/${item.product!.id}`}>
                           <h3 className="text-base font-normal text-gray-800 hover:text-primary transition-colors mb-1 line-clamp-2">
-                            {item.product.name}
+                            {item.product!.name}
                           </h3>
                         </Link>
+                        )}
+                        {!isCustomDesign && (
                         <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                          <span>{item.product.category.name}</span>
-                          {item.product.weight && (
+                          <span>{item.product!.category.name}</span>
+                          {item.product!.weight && (
                             <>
                               <span>•</span>
-                              <span>Weight: {item.product.weight}</span>
+                              <span>Weight: {item.product!.weight}</span>
                             </>
                           )}
                         </div>
+                        )}
 
                         {/* Custom Personalization Details */}
                         {(item.customText || item.customImageUrl) && (
@@ -154,15 +195,15 @@ export default function CartPage() {
                         <div className="flex items-center gap-6 mb-4">
                           <div className="flex items-center gap-2">
                             <span className="text-xl font-medium text-gray-900">
-                              {formatPrice(item.product.price)}
+                              {formatPrice(displayPrice)}
                             </span>
-                            {item.product.originalPrice && (
+                            {!isCustomDesign && item.product!.originalPrice && (
                               <>
                                 <span className="text-sm text-gray-400 line-through">
-                                  {formatPrice(item.product.originalPrice)}
+                                  {formatPrice(item.product!.originalPrice)}
                                 </span>
                                 <span className="text-sm text-green-600 font-medium">
-                                  {Math.round(((parseFloat(String(item.product.originalPrice)) - parseFloat(String(item.product.price))) / parseFloat(String(item.product.originalPrice))) * 100)}% off
+                                  {Math.round(((parseFloat(String(item.product!.originalPrice)) - parseFloat(String(item.product!.price))) / parseFloat(String(item.product!.originalPrice))) * 100)}% off
                                 </span>
                               </>
                             )}
@@ -176,8 +217,8 @@ export default function CartPage() {
                             <button
                               onClick={() =>
                                 item.quantity > 1 
-                                  ? updateQuantity(item.product.id, item.quantity - 1, isAuthenticated)
-                                  : removeItem(item.product.id, isAuthenticated)
+                                  ? updateQuantity(itemId, item.quantity - 1, isAuthenticated)
+                                  : removeItem(itemId, isAuthenticated)
                               }
                               className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 transition-colors"
                             >
@@ -191,7 +232,7 @@ export default function CartPage() {
                             />
                             <button
                               onClick={() =>
-                                updateQuantity(item.product.id, item.quantity + 1, isAuthenticated)
+                                updateQuantity(itemId, item.quantity + 1, isAuthenticated)
                               }
                               disabled={item.quantity >= 10}
                               className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -202,7 +243,7 @@ export default function CartPage() {
 
                           {/* Remove Button */}
                           <button
-                            onClick={() => removeItem(item.product.id, isAuthenticated)}
+                            onClick={() => removeItem(itemId, isAuthenticated)}
                             className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors flex items-center gap-1"
                           >
                             <Trash2 size={14} />
@@ -218,7 +259,8 @@ export default function CartPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {/* Place Order Button - Mobile Only */}
                 <div className="p-4 border-t border-gray-200 lg:hidden">

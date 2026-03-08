@@ -44,10 +44,29 @@ export interface Product {
   updatedAt?: Date | string;
 }
 
+export interface CustomDesign {
+  id: string;
+  name: string;
+  description?: string;
+  material?: string;
+  color?: string;
+  estimatedPrice?: number;
+  fileUrl?: string;
+  status: 'PENDING' | 'ANALYZING' | 'PROCESSED' | 'FAILED';
+  modelWeightGrams?: number;
+  totalWeightGrams?: number;
+  infillPercentage?: number;
+  extruderCount?: number;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+}
+
 export interface CartItem {
   id: string;
-  productId: string;
-  product: Product;
+  productId?: string;
+  customDesignId?: string;
+  product?: Product;
+  customDesign?: CustomDesign;
   quantity: number;
   price: number;
   customText?: string;

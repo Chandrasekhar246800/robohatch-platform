@@ -209,6 +209,10 @@ export default function Upload3DFilePage() {
         if (typeof result.raw_material_cost === 'number') {
           setFinalPrice(result.raw_material_cost);
         }
+        // Store customDesignId for cart operations
+        if (result.customDesign?.id) {
+          setCustomDesignId(result.customDesign.id);
+        }
         setUploadComplete(true);
         toast.success('Mesh analysis complete! Weight calculated from volume.', {
           id: uploadToast,
@@ -556,6 +560,12 @@ export default function Upload3DFilePage() {
                         <span className="text-gray-700">Weight:</span>
                         <span className="font-semibold text-gray-900">{filamentGrams !== null ? filamentGrams.toFixed(1) : '--'}g</span>
                       </div>
+                      {finalPrice !== null && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Estimated Price:</span>
+                          <span className="font-semibold text-green-600">₹{finalPrice}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -575,6 +585,32 @@ export default function Upload3DFilePage() {
                   </Button>
                 ) : (
                   <div className="space-y-3">
+                    <Button
+                      onClick={async () => {
+                        if (!customDesignId) {
+                          toast.error('No design ID found. Please upload again.');
+                          return;
+                        }
+                        try {
+                          const addToCartToast = toast.loading('Adding to cart...');
+                          await apiClient.addCustomDesignToCart(customDesignId, formData.quantity);
+                          toast.success('Added to cart successfully!', {
+                            id: addToCartToast,
+                            duration: 3000,
+                          });
+                          // Redirect to cart after a short delay
+                          setTimeout(() => {
+                            router.push('/cart');
+                          }, 1000);
+                        } catch (error: any) {
+                          toast.error(error.message || 'Failed to add to cart');
+                        }
+                      }}
+                      className="w-full"
+                      disabled={!customDesignId}
+                    >
+                      Add to Cart
+                    </Button>
                     <Button
                       onClick={() => {
                         setUploadComplete(false);

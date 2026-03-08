@@ -383,10 +383,10 @@ export default function PaymentPage() {
                   <div key={item.id} className="flex items-center gap-2 sm:gap-3">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-600">Qty: {item.quantity}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.product?.name || item.customDesign?.name || 'Custom Item'}</p>
+                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900">₹{(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900">₹{((item.product?.price || item.customDesign?.estimatedPrice || 0) * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
               </div>

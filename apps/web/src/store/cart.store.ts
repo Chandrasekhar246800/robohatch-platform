@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Product } from '@/types';
+import { Product, CustomDesign } from '@/types';
 import { apiClient } from '@/lib/api-client';
 
 export interface CartItem {
-  product: Product;
+  product?: Product;
+  customDesign?: CustomDesign;
   quantity: number;
   id?: string; // Backend cart item ID
   customText?: string;
@@ -35,7 +36,10 @@ export const useCartStore = create<CartStore>()(
       isLoading: false,
       lastSyncTime: 0,
       get total() {
-        return get().items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+        return get().items.reduce((sum, item) => {
+          const price = item.product?.price || item.customDesign?.estimatedPrice || 0;
+          return sum + price * item.quantity;
+        }, 0);
       },
 
       addItem: async (product, quantity = 1, isAuthenticated = false) => {
