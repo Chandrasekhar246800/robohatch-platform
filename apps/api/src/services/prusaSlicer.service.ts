@@ -16,9 +16,10 @@ export async function runPrusaSlicer(filePath: string) {
         "src/slicer/default_config.ini"
       );
 
-      const command = `prusa-slicer --load "${configPath}" "${filePath}" --export-gcode --output "${gcodePath}"`;
+      // Set PLA density (1.24 g/cm³) explicitly via command line
+      const command = `prusa-slicer --load "${configPath}" --filament-density 1.24 "${filePath}" --export-gcode --output "${gcodePath}"`;
 
-      console.log(`   Running command: prusa-slicer --load ${configPath} ${filePath}`);
+      console.log(`   Running command: prusa-slicer --load ${configPath} --filament-density 1.24 ${filePath}`);
 
       exec(command, (error) => {
 
