@@ -35,14 +35,27 @@ export async function runPrusaSlicer(filePath: string) {
 
         const gcode = fs.readFileSync(gcodePath, "utf8");
 
-        // DEBUG: Log LAST 150 lines of gcode (metadata is at the end)
+        // DEBUG: Check both start and end for filament stats (only specific keywords)
+        console.log(`   🔍 Searching for filament stats in gcode...`);
         const gcodeLines = gcode.split('\n');
-        const lastLines = gcodeLines.slice(-150);
-        console.log(`   🔍 GCODE FOOTER (last 150 lines):`);
-        lastLines.forEach((line, idx) => {
-          const actualLineNum = gcodeLines.length - 150 + idx;
-          if (line.includes('filament') || line.includes('weight') || line.includes('used') || line.includes('time') || line.trim().startsWith(';')) {
-            console.log(`   Line ${actualLineNum}: ${line.substring(0, 200)}`);
+        
+        // Check first 100 lines for summary stats
+        const headerLines = gcodeLines.slice(0, 100);
+        headerLines.forEach((line, idx) => {
+          const lower = line.toLowerCase();
+          if ((lower.includes('filament') && (lower.includes('used') || lower.includes('weight') || lower.includes('g]'))) 
+              || (lower.includes('time') && lower.includes('print'))) {
+            console.log(`   Header ${idx}: ${line}`);
+          }
+        });
+        
+        // Check last 50 lines for stats (not config)
+        const footerLines = gcodeLines.slice(-50);
+        footerLines.forEach((line, idx) => {
+          const lower = line.toLowerCase();
+          if ((lower.includes('filament') && (lower.includes('used') || lower.includes('weight'))) 
+              || (lower.includes('time') && lower.includes('print'))) {
+            console.log(`   Footer ${gcodeLines.length - 50 + idx}: ${line}`);
           }
         });
 
