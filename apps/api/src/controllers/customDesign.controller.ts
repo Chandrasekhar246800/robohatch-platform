@@ -186,14 +186,21 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           printTimeSeconds = seconds;
         }
         
+        // Calculate explicit sum of all weight components
+        const modelWt = Math.round(slicerResult.modelWeight * 100) / 100;
+        const supportWt = Math.round(slicerResult.supportWeight * 100) / 100;
+        const towerWt = Math.round(slicerResult.towerWeight * 100) / 100;
+        const purgeWt = Math.round(slicerResult.purgeWeight * 100) / 100;
+        const totalWt = Math.round((modelWt + supportWt + towerWt + purgeWt) * 100) / 100;
+        
         pricingData = {
           accurate: true,
           filament_grams: weightGrams,
-          model_weight_grams: Math.round(slicerResult.modelWeight * 100) / 100,
-          support_weight_grams: Math.round(slicerResult.supportWeight * 100) / 100,
-          tower_weight_grams: Math.round(slicerResult.towerWeight * 100) / 100,
-          purge_weight_grams: Math.round(slicerResult.purgeWeight * 100) / 100,
-          total_weight_grams: Math.round(slicerResult.totalWeight * 100) / 100,
+          model_weight_grams: modelWt,
+          support_weight_grams: supportWt,
+          tower_weight_grams: towerWt,
+          purge_weight_grams: purgeWt,
+          total_weight_grams: totalWt, // Explicit sum: model + support + tower + purge
           extruder_count: slicerResult.extruderCount || 1,
           infill_percentage: 15, // Default infill from PrusaSlicer config
           print_time_seconds: printTimeSeconds,
@@ -201,12 +208,14 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         };
         
         console.log(`✅ PrusaSlicer analysis complete:`);
-        console.log(`   Model weight: ${slicerResult.modelWeight}g`);
-        console.log(`   Support weight: ${slicerResult.supportWeight}g`);
-        if (slicerResult.towerWeight > 0) console.log(`   Tower weight: ${slicerResult.towerWeight}g`);
-        if (slicerResult.purgeWeight > 0) console.log(`   Purge weight: ${slicerResult.purgeWeight}g`);
-        console.log(`   Total weight: ${weightGrams}g`);
-        if (slicerResult.extruderCount > 1) console.log(`   Colors/Extruders: ${slicerResult.extruderCount}`);
+        console.log(`   📊 Weight Breakdown:`);
+        console.log(`      • Model: ${modelWt}g (actual part)`);
+        console.log(`      • Support: ${supportWt}g`);
+        console.log(`      • Tower: ${towerWt}g (wipe tower)`);
+        console.log(`      • Purged: ${purgeWt}g (waste)`);
+        console.log(`      • TOTAL: ${totalWt}g (sum of all components)`);
+        console.log(`   Colors/Extruders: ${slicerResult.extruderCount}`);
+        console.log(`   Infill: 15%`);
         console.log(`   Print time: ${slicerResult.printTime || 'N/A'}`);
         console.log(`   Raw cost: ₹${rawCost} (single unit)`);
         console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
@@ -305,8 +314,19 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     };
 
     console.log('✅ Sending success response...');
-    res.status(201).json(responsePayload);
-    console.log('✅ Response sent successfully');
+    console.log('📤 Response payload keys:', Object.keys(responsePayload));
+    console.log('📤 CustomDesign keys:', Object.keys(customDesignResponse));
+    
+    try {
+      const jsonString = JSON.stringify(responsePayload);
+      console.log('📤 Response size:', jsonString.length, 'bytes');
+      res.status(201).json(responsePayload);
+      console.log('✅ Response sent successfully');
+    } catch (jsonError: any) {
+      console.error('❌ JSON serialization error:', jsonError.message);
+      console.error('❌ Problematic object:', responsePayload);
+      throw jsonError;
+    }
     
   } catch (error: any) {
     console.error('Create custom design error:', error);
