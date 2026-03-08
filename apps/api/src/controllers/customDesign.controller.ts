@@ -290,8 +290,21 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     console.log('📝 Preparing response payload...');
     
     // Convert Prisma Decimal fields to numbers for JSON serialization
+    // Build response manually to ensure all Decimal fields are converted
     const customDesignResponse = {
-      ...customDesign,
+      id: customDesign.id,
+      userId: customDesign.userId,
+      name: customDesign.name,
+      description: customDesign.description,
+      material: customDesign.material,
+      color: customDesign.color,
+      size: customDesign.size,
+      quantity: customDesign.quantity,
+      fileUrl: customDesign.fileUrl,
+      status: customDesign.status,
+      createdAt: customDesign.createdAt,
+      updatedAt: customDesign.updatedAt,
+      // Convert all Decimal fields to numbers
       estimatedPrice: customDesign.estimatedPrice ? Number(customDesign.estimatedPrice) : null,
       filamentGrams: customDesign.filamentGrams ? Number(customDesign.filamentGrams) : null,
       modelWeightGrams: customDesign.modelWeightGrams ? Number(customDesign.modelWeightGrams) : null,
@@ -299,6 +312,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       towerWeightGrams: customDesign.towerWeightGrams ? Number(customDesign.towerWeightGrams) : null,
       purgeWeightGrams: customDesign.purgeWeightGrams ? Number(customDesign.purgeWeightGrams) : null,
       totalWeightGrams: customDesign.totalWeightGrams ? Number(customDesign.totalWeightGrams) : null,
+      printTimeSeconds: customDesign.printTimeSeconds,
+      extruderCount: customDesign.extruderCount,
+      infillPercentage: customDesign.infillPercentage,
     };
     
     const responsePayload = {
@@ -316,10 +332,18 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     console.log('✅ Sending success response...');
     console.log('📤 Response payload keys:', Object.keys(responsePayload));
     console.log('📤 CustomDesign keys:', Object.keys(customDesignResponse));
+    console.log('📤 CustomDesign sample fields:', {
+      id: customDesignResponse.id,
+      estimatedPrice: customDesignResponse.estimatedPrice,
+      totalWeightGrams: customDesignResponse.totalWeightGrams,
+      estimatedPriceType: typeof customDesignResponse.estimatedPrice,
+      totalWeightGramsType: typeof customDesignResponse.totalWeightGrams,
+    });
     
     try {
       const jsonString = JSON.stringify(responsePayload);
       console.log('📤 Response size:', jsonString.length, 'bytes');
+      console.log('📤 Response preview (first 500 chars):', jsonString.substring(0, 500));
       res.status(201).json(responsePayload);
       console.log('✅ Response sent successfully');
     } catch (jsonError: any) {
