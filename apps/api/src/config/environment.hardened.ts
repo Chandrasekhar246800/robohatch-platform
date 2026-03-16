@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 /**
  * Environment Validator (Hardened Version)
  * ✅ Validates ALL required environment variables at startup
@@ -106,9 +108,9 @@ export function validateEnvironment(): HardenedEnvironmentConfig {
 
   // 🔒 FAIL FAST: Crash if any validation errors
   if (errors.length > 0) {
-    console.error('🚨 ENVIRONMENT VALIDATION FAILED:');
-    errors.forEach((error) => console.error(error));
-    console.error('\n💡 Set these variables in your .env file or deployment environment');
+    logger.error('🚨 ENVIRONMENT VALIDATION FAILED:');
+    errors.forEach((error) => logger.error(error));
+    logger.error('\n💡 Set these variables in your .env file or deployment environment');
     process.exit(1);
   }
 
@@ -128,8 +130,8 @@ export function validateEnvironment(): HardenedEnvironmentConfig {
   };
 
   // Log success
-  console.log('✅ Environment validation passed');
-  console.log('📋 Configuration:', {
+  logger.info('✅ Environment validation passed');
+  logger.info('📋 Configuration:', {
     NODE_ENV: config.NODE_ENV,
     PORT: config.PORT,
     DATABASE_URL: config.DATABASE_URL.replace(/\/\/.*:.*@/, '//***:***@'), // Hide credentials

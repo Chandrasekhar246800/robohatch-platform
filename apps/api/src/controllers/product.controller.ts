@@ -4,8 +4,48 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 import { s3 } from '../config/s3';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import environment from '../config/environment';
+import { validateImageSignatureFromS3 } from '../utils/fileSignature';
+import { getSignedS3UrlFromUrlOrKey } from '../utils/s3SignedUrl';
+
+import { logger } from '../utils/logger';
 
 export class ProductController {
+  private async withSignedImages<T extends { images?: Array<{ url: string }> }>(product: T): Promise<T> {
+    if (!product?.images || product.images.length === 0) {
+      return product;
+    }
+
+    const signedImages = await Promise.all(
+      product.images.map(async (image: any) => ({
+        ...image,
+        url: await getSignedS3UrlFromUrlOrKey(image.url, 3600),
+      }))
+    );
+
+    return {
+      ...product,
+      images: signedImages,
+    };
+  }
+
+  private async validateUploadedImages(files: Express.MulterS3.File[]) {
+    for (const file of files) {
+      const result = await validateImageSignatureFromS3(file.key || file.location);
+      if (!result.valid) {
+        if (file.key) {
+          await s3.send(
+            new DeleteObjectCommand({
+              Bucket: environment.AWS_S3_BUCKET,
+              Key: file.key,
+            })
+          );
+        }
+
+        throw new Error(result.reason || 'Invalid image file signature');
+      }
+    }
+  }
+
   async createProduct(req: AuthRequest, res: Response) {
     try {
       const { name, description, price, salePrice, stock, categoryIds } = req.body;
@@ -99,6 +139,8 @@ export class ProductController {
         });
       }
 
+      await this.validateUploadedImages(files);
+
       // Create product with images and categories in a transaction
       const product = await prisma.product.create({
         data: {
@@ -138,13 +180,15 @@ export class ProductController {
       };
       delete transformedProduct.categories;
 
+      const signedProduct = await this.withSignedImages(transformedProduct);
+
       return res.status(201).json({
         success: true,
         message: 'Product created successfully',
-        data: transformedProduct,
+        data: signedProduct,
       });
     } catch (error: any) {
-      console.error('Create product error:', error);
+      logger.error('Create product error:', error);
 
       // Handle Prisma-specific errors
       if (error.code === 'P2002') {
@@ -157,7 +201,6 @@ export class ProductController {
       return res.status(500).json({
         success: false,
         message: 'Failed to create product',
-        error: error.message,
       });
     }
   }
@@ -179,26 +222,25 @@ export class ProductController {
       });
 
       // Transform response to include single category instead of categories array
-      const transformedProducts = products.map((product: any) => {
+      const transformedProducts = await Promise.all(products.map(async (product: any) => {
         const transformed = {
           ...product,
           category: product.categories[0]?.category || null,
           categoryId: product.categories[0]?.categoryId || null,
         };
         delete (transformed as any).categories;
-        return transformed;
-      });
+        return this.withSignedImages(transformed);
+      }));
 
       return res.status(200).json({
         success: true,
         data: transformedProducts,
       });
     } catch (error: any) {
-      console.error('Get products error:', error);
+      logger.error('Get products error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch products',
-        error: error.message,
       });
     }
   }
@@ -254,15 +296,15 @@ export class ProductController {
       });
 
       // Transform response to include single category instead of categories array
-      const transformedProducts = products.map((product: any) => {
+      const transformedProducts = await Promise.all(products.map(async (product: any) => {
         const transformed = {
           ...product,
           category: product.categories[0]?.category || null,
           categoryId: product.categories[0]?.categoryId || null,
         };
         delete (transformed as any).categories;
-        return transformed;
-      });
+        return this.withSignedImages(transformed);
+      }));
 
       return res.status(200).json({
         success: true,
@@ -271,11 +313,10 @@ export class ProductController {
         query: q,
       });
     } catch (error: any) {
-      console.error('Search products error:', error);
+      logger.error('Search products error:', error);
       return res.status(500).json({
         success: false,
         message: 'Search failed',
-        error: error.message,
         data: [],
       });
     }
@@ -311,17 +352,17 @@ export class ProductController {
         categoryId: product.categories[0]?.categoryId || null,
       };
       delete (transformedProduct as any).categories;
+      const signedProduct = await this.withSignedImages(transformedProduct);
 
       return res.status(200).json({
         success: true,
-        data: transformedProduct,
+        data: signedProduct,
       });
     } catch (error: any) {
-      console.error('Get product error:', error);
+      logger.error('Get product error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch product',
-        error: error.message,
       });
     }
   }
@@ -432,6 +473,8 @@ export class ProductController {
 
       // Handle new images
       if (files && files.length > 0) {
+        await this.validateUploadedImages(files);
+
         const maxOrder = existingProduct.images.length > 0 
           ? Math.max(...existingProduct.images.map((img: any) => img.order), -1)
           : -1;
@@ -465,18 +508,18 @@ export class ProductController {
         categoryId: product.categories[0]?.categoryId || null,
       };
       delete (transformedProduct as any).categories;
+      const signedProduct = await this.withSignedImages(transformedProduct);
 
       return res.status(200).json({
         success: true,
         message: 'Product updated successfully',
-        data: transformedProduct,
+        data: signedProduct,
       });
     } catch (error: any) {
-      console.error('Update product error:', error);
+      logger.error('Update product error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to update product',
-        error: error.message,
       });
     }
   }
@@ -524,9 +567,9 @@ export class ProductController {
             });
             
             await s3.send(deleteCommand);
-            console.log(`✓ Deleted image from S3: ${key}`);
+            logger.info(`✓ Deleted image from S3: ${key}`);
           } catch (s3Error: any) {
-            console.error(`Failed to delete image from S3: ${image.url}`, s3Error.message);
+            logger.error(`Failed to delete image from S3: ${image.url}`, s3Error.message);
             // Continue even if S3 deletion fails
           }
         });
@@ -544,11 +587,10 @@ export class ProductController {
         message: 'Product deleted successfully from database and S3',
       });
     } catch (error: any) {
-      console.error('Delete product error:', error);
+      logger.error('Delete product error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to delete product',
-        error: error.message,
       });
     }
   }

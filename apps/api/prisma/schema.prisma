@@ -22,6 +22,7 @@ model User {
   payments      Payment[]
   uploads       Upload[]
   wishlist      Wishlist?
+  refreshTokens RefreshToken[]
 }
 
 model Product {
@@ -297,6 +298,21 @@ model PasswordResetToken {
   @@index([email])
   @@index([token])
   @@index([expiresAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
 }
 
 enum Role {

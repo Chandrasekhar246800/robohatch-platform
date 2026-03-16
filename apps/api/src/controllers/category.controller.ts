@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
+import { logger } from '../utils/logger';
+
 export class CategoryController {
   async getAllCategories(req: Request, res: Response) {
     try {
@@ -20,7 +22,7 @@ export class CategoryController {
         data: categories,
       });
     } catch (error: any) {
-      console.error('Get categories error:', error);
+      logger.error('Get categories error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch categories',
@@ -52,7 +54,7 @@ export class CategoryController {
         data: category,
       });
     } catch (error: any) {
-      console.error('Create category error:', error);
+      logger.error('Create category error:', error);
 
       // Handle unique constraint violation
       if (error.code === 'P2002') {
@@ -107,7 +109,7 @@ export class CategoryController {
         data: category,
       });
     } catch (error: any) {
-      console.error('Update category error:', error);
+      logger.error('Update category error:', error);
 
       // Handle unique constraint violation
       if (error.code === 'P2002') {
@@ -163,7 +165,7 @@ export class CategoryController {
         message: 'Category deleted successfully',
       });
     } catch (error: any) {
-      console.error('Delete category error:', error);
+      logger.error('Delete category error:', error);
 
       return res.status(500).json({
         success: false,
@@ -199,7 +201,7 @@ export class CategoryController {
         { name: 'Fidget Toys', type: CategoryType.DEFAULT, slug: 'fidget-toys', description: 'Stress relief and fidget toys' },
       ];
 
-      console.log('Starting category seeding...');
+      logger.info('Starting category seeding...');
 
       // Check if categories already exist
       const existingCount = await prisma.category.count();
@@ -219,10 +221,10 @@ export class CategoryController {
           data: category,
         });
         createdCategories.push(created);
-        console.log(`✓ Created: ${category.name} (${category.type})`);
+        logger.info(`✓ Created: ${category.name} (${category.type})`);
       }
 
-      console.log('✅ Category seeding complete!');
+      logger.info('✅ Category seeding complete!');
 
       return res.status(201).json({
         success: true,
@@ -235,7 +237,7 @@ export class CategoryController {
         },
       });
     } catch (error: any) {
-      console.error('Seed categories error:', error);
+      logger.error('Seed categories error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to seed categories',

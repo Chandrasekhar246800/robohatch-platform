@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
+import { logger } from '../utils/logger';
+
 export class AdminController {
   /**
    * Get dashboard statistics
@@ -77,11 +79,10 @@ export class AdminController {
         },
       });
     } catch (error: any) {
-      console.error('Dashboard stats error:', error);
+      logger.error('Dashboard stats error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch dashboard statistics',
-        error: error.message,
       });
     }
   }

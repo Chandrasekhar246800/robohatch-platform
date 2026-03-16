@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { PaymentService } from '../services/payment.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
+import { logger } from '../utils/logger';
+
 const paymentService = new PaymentService();
 
 export class PaymentController {
@@ -30,7 +32,7 @@ export class PaymentController {
         data: order,
       });
     } catch (error: any) {
-      console.error('Create order error:', error);
+      logger.error('Create order error:', error);
 
       // Return specific error messages for validation failures
       if (error.message === 'Cart is empty') {
@@ -71,7 +73,7 @@ export class PaymentController {
         data: razorpayOrder,
       });
     } catch (error: any) {
-      console.error('Create Razorpay order error:', error);
+      logger.error('Create Razorpay order error:', error);
 
       if (
         error.message === 'Order not found or unauthorized' ||
@@ -120,11 +122,11 @@ export class PaymentController {
         data: result,
       });
     } catch (error: any) {
-      console.error('Verify payment error:', error);
+      logger.error('Verify payment error:', error);
 
       // Log security-critical errors
       if (error.message === 'Invalid payment signature') {
-        console.error('⚠️ SECURITY ALERT: Invalid payment signature detected', {
+        logger.error('⚠️ SECURITY ALERT: Invalid payment signature detected', {
           userId: (req as AuthRequest).user?.userId,
           ip: req.ip,
           timestamp: new Date().toISOString(),
@@ -164,7 +166,7 @@ export class PaymentController {
 
       res.json({ success: true, data: result });
     } catch (error: any) {
-      console.error('Handle payment failure error:', error);
+      logger.error('Handle payment failure error:', error);
 
       if (error.message === 'Payment not found') {
         return res.status(404).json({ success: false, message: error.message });
@@ -190,7 +192,7 @@ export class PaymentController {
 
       res.json({ success: true, data: payment });
     } catch (error: any) {
-      console.error('Get payment status error:', error);
+      logger.error('Get payment status error:', error);
 
       if (error.message === 'Payment not found' || error.message === 'Unauthorized') {
         return res.status(404).json({ success: false, message: error.message });
@@ -216,7 +218,7 @@ export class PaymentController {
 
       res.json({ success: true, data: order });
     } catch (error: any) {
-      console.error('Get order error:', error);
+      logger.error('Get order error:', error);
 
       if (error.message === 'Order not found') {
         return res.status(404).json({ success: false, message: error.message });

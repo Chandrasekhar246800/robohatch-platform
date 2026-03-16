@@ -1,5 +1,7 @@
 import { prisma } from '../config/prisma';
 
+import { logger } from '../utils/logger';
+
 export class AddressService {
   /**
    * Get all addresses for a user
@@ -16,10 +18,10 @@ export class AddressService {
         ]
       });
 
-      console.log(`Found ${addresses.length} addresses for user ${userId}`);
+      logger.info(`Found ${addresses.length} addresses for user ${userId}`);
       return addresses;
     } catch (error) {
-      console.error('Error fetching user addresses:', error);
+      logger.error('Error fetching user addresses:', error);
       throw new Error('Failed to fetch addresses');
     }
   }
@@ -41,7 +43,7 @@ export class AddressService {
 
       return address;
     } catch (error) {
-      console.error('Error fetching address:', error);
+      logger.error('Error fetching address:', error);
       throw new Error('Failed to fetch address');
     }
   }
@@ -100,10 +102,10 @@ export class AddressService {
         }
       });
 
-      console.log(`Created address ${address.id} for user ${userId}`);
+      logger.info(`Created address ${address.id} for user ${userId}`);
       return address;
     } catch (error) {
-      console.error('Error creating address:', error);
+      logger.error('Error creating address:', error);
       throw new Error('Failed to create address');
     }
   }
@@ -150,10 +152,10 @@ export class AddressService {
         }
       });
 
-      console.log(`Updated address ${addressId}`);
+      logger.info(`Updated address ${addressId}`);
       return updatedAddress;
     } catch (error) {
-      console.error('Error updating address:', error);
+      logger.error('Error updating address:', error);
       throw error;
     }
   }
@@ -189,13 +191,13 @@ export class AddressService {
             where: { id: remainingAddresses.id },
             data: { isDefault: true }
           });
-          console.log(`Set address ${remainingAddresses.id} as new default`);
+          logger.info(`Set address ${remainingAddresses.id} as new default`);
         }
       }
 
-      console.log(`Deleted address ${addressId}`);
+      logger.info(`Deleted address ${addressId}`);
     } catch (error) {
-      console.error('Error deleting address:', error);
+      logger.error('Error deleting address:', error);
       throw error;
     }
   }
@@ -229,10 +231,10 @@ export class AddressService {
         data: { isDefault: true }
       });
 
-      console.log(`Set address ${addressId} as default for user ${userId}`);
+      logger.info(`Set address ${addressId} as default for user ${userId}`);
       return updatedAddress;
     } catch (error) {
-      console.error('Error setting default address:', error);
+      logger.error('Error setting default address:', error);
       throw error;
     }
   }
@@ -253,7 +255,7 @@ export class AddressService {
 
       return defaultAddress;
     } catch (error) {
-      console.error('Error fetching default address:', error);
+      logger.error('Error fetching default address:', error);
       throw new Error('Failed to fetch default address');
     }
   }

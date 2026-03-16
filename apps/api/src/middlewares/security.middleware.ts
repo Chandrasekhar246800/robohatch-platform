@@ -3,6 +3,8 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import environment from '../config/environment';
 
+import { logger } from '../utils/logger';
+
 /**
  * Helmet.js configuration for security headers
  * Protects against common web vulnerabilities
@@ -57,11 +59,11 @@ export const generalRateLimiter = rateLimit({
  * Prevents brute force attacks
  */
 export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Increased from 5 to 20 to avoid blocking legitimate users
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,
   message: {
     success: false,
-    message: 'Too many authentication attempts, please try again after 15 minutes.',
+    message: 'Too many authentication attempts, please try again after 1 minute.',
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -69,10 +71,10 @@ export const authRateLimiter = rateLimit({
   skipSuccessfulRequests: true, // Don't count successful requests
   skip: (req: Request) => req.method === 'OPTIONS', // Skip OPTIONS
   handler: (req: Request, res: Response) => {
-    console.warn(`⚠️  Rate limit exceeded for auth: ${req.method} ${req.path} from ${req.ip}`);
+    logger.warn(`⚠️  Rate limit exceeded for auth: ${req.method} ${req.path} from ${req.ip}`);
     res.status(429).json({
       success: false,
-      message: 'Too many authentication attempts, please try again after 15 minutes.',
+      message: 'Too many authentication attempts, please try again after 1 minute.',
     });
   },
 });
@@ -100,6 +102,47 @@ export const sensitiveOperationLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for webhook endpoint to reduce abuse and DB amplification.
+ */
+export const webhookRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  skip: (req: Request) => req.method === 'OPTIONS',
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      message: 'Webhook rate limit exceeded',
+    });
+  },
+});
+
+/**
+ * Upload rate limiter (per user if authenticated, else per IP).
+ */
+export const uploadRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  keyGenerator: (req: Request) => {
+    const authReq = req as any;
+    const userId = authReq?.user?.userId;
+    return userId ? `user:${userId}` : `ip:${req.ip}`;
+  },
+  skip: (req: Request) => req.method === 'OPTIONS',
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      message: 'Upload rate limit exceeded. Try again in a minute.',
+    });
+  },
+});
+
+/**
  * Request logger middleware
  * Logs all incoming requests for monitoring
  */
@@ -112,11 +155,11 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
     const logMessage = `${req.method} ${req.path} ${res.statusCode} - ${duration}ms`;
     
     if (res.statusCode >= 500) {
-      console.error(`❌ ${logMessage}`);
+      logger.error(`❌ ${logMessage}`);
     } else if (res.statusCode >= 400) {
-      console.warn(`⚠️  ${logMessage}`);
+      logger.warn(`⚠️  ${logMessage}`);
     } else if (environment.isDevelopment) {
-      console.log(`✓ ${logMessage}`);
+      logger.info(`✓ ${logMessage}`);
     }
   });
   

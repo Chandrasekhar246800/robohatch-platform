@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { CartService } from '../services/cart.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
+import { logger } from '../utils/logger';
+
 const cartService = new CartService();
 
 export class CartController {
@@ -17,7 +19,7 @@ export class CartController {
       const cart = await cartService.getUserCart(userId);
       res.json({ success: true, cart });
     } catch (error) {
-      console.error('Get cart error:', error);
+      logger.error('Get cart error:', error);
       res.status(500).json({ success: false, error: 'Failed to get cart' });
     }
   }
@@ -54,7 +56,7 @@ export class CartController {
         data: { cartItem },
       });
     } catch (error: any) {
-      console.error('Add to cart error:', error);
+      logger.error('Add to cart error:', error);
 
       if (error.message === 'Product not found') {
         return res.status(404).json({ success: false, error: error.message });
@@ -98,7 +100,7 @@ export class CartController {
         data: { cartItem },
       });
     } catch (error: any) {
-      console.error('Add custom design to cart error:', error);
+      logger.error('Add custom design to cart error:', error);
 
       if (error.message === 'Custom design not found') {
         return res.status(404).json({ success: false, error: error.message });
@@ -135,7 +137,7 @@ export class CartController {
         data: { cartItem },
       });
     } catch (error: any) {
-      console.error('Update cart item error:', error);
+      logger.error('Update cart item error:', error);
 
       if (error.message === 'Cart item not found') {
         return res.status(404).json({ success: false, error: error.message });
@@ -159,7 +161,7 @@ export class CartController {
 
       res.json({ success: true, message: 'Item removed from cart' });
     } catch (error: any) {
-      console.error('Remove from cart error:', error);
+      logger.error('Remove from cart error:', error);
 
       if (error.message === 'Cart item not found') {
         return res.status(404).json({ success: false, error: error.message });
@@ -182,7 +184,7 @@ export class CartController {
 
       res.json({ success: true, message: 'Cart cleared' });
     } catch (error: any) {
-      console.error('Clear cart error:', error);
+      logger.error('Clear cart error:', error);
 
       if (error.message === 'Cart not found') {
         return res.status(404).json({ success: false, error: error.message });
@@ -205,7 +207,7 @@ export class CartController {
 
       res.json({ summary });
     } catch (error) {
-      console.error('Get cart summary error:', error);
+      logger.error('Get cart summary error:', error);
       res.status(500).json({ error: 'Failed to get cart summary' });
     }
   }

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
+import { logger } from '../utils/logger';
+
 /**
  * Production Error Handler
  * ✅ NO STACK TRACES in production (information disclosure risk)
@@ -17,7 +19,7 @@ export const errorHandler = (
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   // 🔒 AUDIT LOG: All errors logged with request ID
-  console.error('❌ Error:', {
+  logger.error('❌ Error:', {
     requestId,
     message: err.message,
     method: req.method,
@@ -43,7 +45,7 @@ export const errorHandler = (
   );
 
   if (isSecurityRelated) {
-    console.error('🚨 SECURITY ALERT:', {
+    logger.error('🚨 SECURITY ALERT:', {
       requestId,
       message: err.message,
       ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
@@ -78,7 +80,7 @@ export const errorHandler = (
 export const notFoundHandler = (req: Request, res: Response) => {
   const requestId = req.requestId || 'N/A';
 
-  console.warn('⚠️ 404 Not Found:', {
+  logger.warn('⚠️ 404 Not Found:', {
     requestId,
     method: req.method,
     path: req.path,

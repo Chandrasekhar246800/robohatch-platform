@@ -3,6 +3,8 @@ import { OrderStatus } from '@prisma/client';
 import { emailService } from './email.service';
 import { StockManager } from '../utils/stock-manager';
 
+import { logger } from '../utils/logger';
+
 class OrderService {
   // Create order from cart
   async createOrderFromCart(userId: string) {
@@ -30,7 +32,7 @@ class OrderService {
     // Total = Subtotal (no GST - business doesn't have GST number)
     const total = subtotal;
     
-    console.log('💰 Real-time order calculation:', {
+    logger.info('💰 Real-time order calculation:', {
       items: cart.items.length,
       subtotal: `₹${subtotal}`,
       total: `₹${total}`,
@@ -121,10 +123,23 @@ class OrderService {
     };
   }
 
-  // Update order status (for admin/internal use)
-  async updateOrderStatus(orderId: string, userId: string, status: OrderStatus) {
-    // Validate order ownership
-    const order = await this.getOrderById(orderId, userId);
+  // Update order status (admin/internal use)
+  async adminUpdateOrderStatus(orderId: string, status: OrderStatus, adminId?: string) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        payment: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
 
     // Validate status transition
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
@@ -147,7 +162,11 @@ class OrderService {
     // ✅ STOCK REVERSAL: If cancelling a paid/processing order, restore stock
     if (status === OrderStatus.CANCELLED && ['PAID', 'CREATED', 'PROCESSING'].includes(currentStatus)) {
       await this.restoreStockForOrder(orderId);
-      console.log(`✅ Stock restored for cancelled order: ${orderId}`);
+      logger.info(`✅ Stock restored for cancelled order: ${orderId}`);
+    }
+
+    if (adminId) {
+      logger.info(`🔐 Admin ${adminId} updated order ${orderId}: ${currentStatus} -> ${status}`);
     }
 
     const updatedOrder = await prisma.order.update({
@@ -166,7 +185,7 @@ class OrderService {
     // 📧 Send shipping notification when order is shipped (non-blocking)
     if (status === OrderStatus.SHIPPED) {
       emailService.sendShippingNotification(orderId).catch(error => {
-        console.error('⚠️  Shipping email notification failed (non-critical):', error.message);
+        logger.error('⚠️  Shipping email notification failed (non-critical):', error.message);
       });
     }
 
@@ -225,11 +244,11 @@ class OrderService {
         );
 
         if (!result.success) {
-          console.warn(
+          logger.warn(
             `⚠️ Failed to restore stock for product ${item.productId}: ${result.error}`
           );
         } else {
-          console.log(
+          logger.info(
             `📦 Stock restored: ${item.product.name} +${item.quantity} (Order ${orderId} cancelled)`
           );
         }
@@ -270,12 +289,12 @@ class OrderService {
       },
     });
 
-    console.log(`✅ Order cancelled: ${orderId}, Reason: ${reason || 'User requested'}`);
+    logger.info(`✅ Order cancelled: ${orderId}, Reason: ${reason || 'User requested'}`);
 
     // Send cancellation email (non-blocking)
     if (emailService && typeof emailService.sendOrderCancellation === 'function') {
       emailService.sendOrderCancellation(orderId, reason).catch((error: any) => {
-        console.error('⚠️  Cancellation email failed (non-critical):', error.message);
+        logger.error('⚠️  Cancellation email failed (non-critical):', error.message);
       });
     }
 

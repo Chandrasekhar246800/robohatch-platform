@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
 // Validation schemas
+import { logger } from '../utils/logger';
+
 const createAddressSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters').max(100),
   phone: z.string().min(10, 'Phone number must be at least 10 digits').max(20),
@@ -49,7 +51,7 @@ export class AddressController {
         data: addresses
       });
     } catch (error) {
-      console.error('Error in getUserAddresses:', error);
+      logger.error('Error in getUserAddresses:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch addresses'
@@ -86,7 +88,7 @@ export class AddressController {
         data: address
       });
     } catch (error) {
-      console.error('Error in getAddressById:', error);
+      logger.error('Error in getAddressById:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch address'
@@ -127,7 +129,7 @@ export class AddressController {
         data: address
       });
     } catch (error) {
-      console.error('Error in createAddress:', error);
+      logger.error('Error in createAddress:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create address'
@@ -169,7 +171,7 @@ export class AddressController {
         data: address
       });
     } catch (error: any) {
-      console.error('Error in updateAddress:', error);
+      logger.error('Error in updateAddress:', error);
       
       if (error.message === 'Address not found or unauthorized') {
         return res.status(404).json({
@@ -207,7 +209,7 @@ export class AddressController {
         message: 'Address deleted successfully'
       });
     } catch (error: any) {
-      console.error('Error in deleteAddress:', error);
+      logger.error('Error in deleteAddress:', error);
 
       if (error.message === 'Address not found or unauthorized') {
         return res.status(404).json({
@@ -246,7 +248,7 @@ export class AddressController {
         data: address
       });
     } catch (error: any) {
-      console.error('Error in setDefaultAddress:', error);
+      logger.error('Error in setDefaultAddress:', error);
 
       if (error.message === 'Address not found or unauthorized') {
         return res.status(404).json({
@@ -290,7 +292,7 @@ export class AddressController {
         data: address
       });
     } catch (error) {
-      console.error('Error in getDefaultAddress:', error);
+      logger.error('Error in getDefaultAddress:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch default address'

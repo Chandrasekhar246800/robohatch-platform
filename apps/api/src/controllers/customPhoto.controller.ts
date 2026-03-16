@@ -1,5 +1,12 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { s3 } from '../config/s3';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import environment from '../config/environment';
+import { validateImageSignatureFromS3 } from '../utils/fileSignature';
+import { getSignedS3UrlFromUrlOrKey } from '../utils/s3SignedUrl';
+
+import { logger } from '../utils/logger';
 
 export class CustomPhotoController {
   /**
@@ -34,7 +41,26 @@ export class CustomPhotoController {
       const photoUrl = file.location; // S3 URL
       const photoKey = file.key; // S3 key
 
-      console.log(`✅ Photo uploaded successfully for user ${userId}:`, {
+      const signatureResult = await validateImageSignatureFromS3(photoKey || photoUrl);
+      if (!signatureResult.valid) {
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: environment.AWS_S3_BUCKET,
+            Key: photoKey,
+          })
+        );
+
+        return res.status(400).json({
+          success: false,
+          error: signatureResult.reason || 'Invalid image file',
+        });
+      }
+
+      const signedPhotoUrl = await getSignedS3UrlFromUrlOrKey(photoKey || photoUrl, 3600);
+
+      logger.info({
+        event: 'custom_photo_upload_success',
+        userId,
         url: photoUrl,
         key: photoKey,
         size: file.size,
@@ -45,18 +71,17 @@ export class CustomPhotoController {
         success: true,
         message: 'Photo uploaded successfully',
         data: {
-          url: photoUrl,
+          url: signedPhotoUrl,
           key: photoKey,
           size: file.size,
           mimetype: file.mimetype,
         },
       });
     } catch (error: any) {
-      console.error('❌ Photo upload error:', error);
+      logger.error({ event: 'custom_photo_upload_error', message: error?.message });
       return res.status(500).json({
         success: false,
         error: 'Failed to upload photo',
-        message: error.message,
       });
     }
   }

@@ -2,6 +2,20 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 
+import { logger } from '../utils/logger';
+
+const processedWebhookEvents = new Map<string, number>();
+const WEBHOOK_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+
+const pruneProcessedWebhookEvents = () => {
+  const now = Date.now();
+  for (const [eventId, timestamp] of processedWebhookEvents.entries()) {
+    if (now - timestamp > WEBHOOK_EVENT_TTL_MS) {
+      processedWebhookEvents.delete(eventId);
+    }
+  }
+};
+
 export class WebhookController {
   /**
    * Handle Razorpay webhook events
@@ -22,7 +36,7 @@ export class WebhookController {
       const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
       
       if (!webhookSecret) {
-        console.error('⚠️ RAZORPAY_WEBHOOK_SECRET not configured');
+        logger.error('⚠️ RAZORPAY_WEBHOOK_SECRET not configured');
         return res.status(500).json({
           success: false,
           message: 'Webhook not configured',
@@ -30,12 +44,21 @@ export class WebhookController {
       }
 
       const signature = req.headers['x-razorpay-signature'] as string;
+      const eventId = (req.headers['x-razorpay-event-id'] as string) || '';
       
       if (!signature) {
-        console.error('🚨 SECURITY ALERT: Webhook request without signature');
+        logger.error('🚨 SECURITY ALERT: Webhook request without signature');
         return res.status(400).json({
           success: false,
           message: 'Missing signature',
+        });
+      }
+
+      pruneProcessedWebhookEvents();
+      if (eventId && processedWebhookEvents.has(eventId)) {
+        return res.status(200).json({
+          success: true,
+          message: 'Webhook already processed',
         });
       }
 
@@ -54,7 +77,7 @@ export class WebhookController {
         );
 
       if (!isValid) {
-        console.error('🚨 SECURITY ALERT: Invalid webhook signature', {
+        logger.error('🚨 SECURITY ALERT: Invalid webhook signature', {
           timestamp: new Date().toISOString(),
           ip: req.ip,
           userAgent: req.headers['user-agent'],
@@ -68,7 +91,7 @@ export class WebhookController {
       // ✅ Signature verified - process webhook event
       const { event, payload } = req.body;
 
-      console.log(`📨 Webhook received: ${event}`, {
+      logger.info(`📨 Webhook received: ${event}`, {
         orderId: payload?.payment?.entity?.order_id,
         paymentId: payload?.payment?.entity?.id,
       });
@@ -88,16 +111,20 @@ export class WebhookController {
           break;
 
         default:
-          console.log(`ℹ️ Unhandled webhook event: ${event}`);
+          logger.info(`ℹ️ Unhandled webhook event: ${event}`);
       }
 
       // Always return 200 to acknowledge receipt
+      if (eventId) {
+        processedWebhookEvents.set(eventId, Date.now());
+      }
+
       return res.status(200).json({
         success: true,
         message: 'Webhook processed',
       });
     } catch (error: any) {
-      console.error('❌ Webhook processing error:', error);
+      logger.error('❌ Webhook processing error:', error);
       
       // Still return 200 to prevent Razorpay retries on server errors
       return res.status(200).json({
@@ -118,7 +145,7 @@ export class WebhookController {
       const razorpayPaymentId = paymentEntity.id;
       const amount = paymentEntity.amount; // Amount in paise
 
-      console.log('💰 Payment captured:', {
+      logger.info('💰 Payment captured:', {
         orderId: razorpayOrderId,
         paymentId: razorpayPaymentId,
         amount: amount / 100, // Convert to rupees
@@ -131,13 +158,13 @@ export class WebhookController {
       });
 
       if (!payment) {
-        console.error('❌ Payment record not found:', razorpayOrderId);
+        logger.error('❌ Payment record not found:', razorpayOrderId);
         return;
       }
 
       // 🔒 IDEMPOTENCY: Skip if already captured
       if (payment.status === 'CAPTURED') {
-        console.log('✓ Payment already captured (idempotent):', razorpayOrderId);
+        logger.info('✓ Payment already captured (idempotent):', razorpayOrderId);
         return;
       }
 
@@ -172,12 +199,12 @@ export class WebhookController {
         }
       });
 
-      console.log('✅ Payment captured via webhook:', {
+      logger.info('✅ Payment captured via webhook:', {
         orderId: payment.orderId,
         paymentId: razorpayPaymentId,
       });
     } catch (error: any) {
-      console.error('❌ Error handling payment.captured:', error);
+      logger.error('❌ Error handling payment.captured:', error);
       throw error;
     }
   }
@@ -192,7 +219,7 @@ export class WebhookController {
       const razorpayOrderId = paymentEntity.order_id;
       const errorReason = paymentEntity.error_description || 'Payment failed';
 
-      console.log('❌ Payment failed:', {
+      logger.info('❌ Payment failed:', {
         orderId: razorpayOrderId,
         reason: errorReason,
       });
@@ -214,13 +241,13 @@ export class WebhookController {
       });
 
       if (!payment) {
-        console.error('❌ Payment record not found:', razorpayOrderId);
+        logger.error('❌ Payment record not found:', razorpayOrderId);
         return;
       }
 
       // 🔒 PROTECTION: Only restore stock if payment is not already FAILED
       if (payment.status === 'FAILED') {
-        console.log('✓ Payment already marked as failed (idempotent):', razorpayOrderId);
+        logger.info('✓ Payment already marked as failed (idempotent):', razorpayOrderId);
         return;
       }
 
@@ -247,13 +274,13 @@ export class WebhookController {
             },
           });
 
-          console.log(`✅ Stock restored: ${item.product.name} +${item.quantity} (Payment Failed)`);
+          logger.info(`✅ Stock restored: ${item.product.name} +${item.quantity} (Payment Failed)`);
         }
       });
 
-      console.log('✓ Payment marked as failed and stock restored via webhook:', razorpayOrderId);
+      logger.info('✓ Payment marked as failed and stock restored via webhook:', razorpayOrderId);
     } catch (error: any) {
-      console.error('❌ Error handling payment.failed:', error);
+      logger.error('❌ Error handling payment.failed:', error);
       throw error;
     }
   }
@@ -267,12 +294,12 @@ export class WebhookController {
       const orderEntity = payload.order.entity;
       const razorpayOrderId = orderEntity.id;
 
-      console.log('✅ Order paid:', razorpayOrderId);
+      logger.info('✅ Order paid:', razorpayOrderId);
 
       // Optional: Additional order processing logic here
       // This is called AFTER payment.captured
     } catch (error: any) {
-      console.error('❌ Error handling order.paid:', error);
+      logger.error('❌ Error handling order.paid:', error);
       throw error;
     }
   }

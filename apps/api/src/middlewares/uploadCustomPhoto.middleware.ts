@@ -4,6 +4,8 @@ import { s3 } from "../config/s3";
 import environment from "../config/environment";
 import { Request, Response, NextFunction } from "express";
 
+import { logger } from '../utils/logger';
+
 /**
  * Multer configuration for uploading custom product photos to AWS S3
  * - Accepts image files: .jpg, .jpeg, .png, .webp
@@ -18,7 +20,7 @@ export const uploadCustomPhoto = multer({
     bucket: environment.AWS_S3_BUCKET,
     contentType: multerS3.AUTO_CONTENT_TYPE,
     metadata: (_, file, cb) => {
-      console.log(`📤 Starting S3 upload for custom photo: ${file.originalname}`);
+      logger.info(`📤 Starting S3 upload for custom photo: ${file.originalname}`);
       cb(null, {
         fieldName: file.fieldname,
         originalName: file.originalname,
@@ -31,7 +33,7 @@ export const uploadCustomPhoto = multer({
       const timestamp = Date.now();
       const extension = file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `custom-photos/${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`;
-      console.log(`🔑 S3 key: ${fileName}`);
+      logger.info(`🔑 S3 key: ${fileName}`);
       cb(null, fileName);
     },
   }),
@@ -40,6 +42,11 @@ export const uploadCustomPhoto = multer({
     files: 1, // Only 1 photo per upload
   },
   fileFilter: (_, file, cb) => {
+    if (file.fieldname !== 'photo') {
+      cb(new Error('Invalid upload field name'));
+      return;
+    }
+
     // Accept image files only
     const allowedMimes = [
       'image/jpeg',
@@ -49,13 +56,25 @@ export const uploadCustomPhoto = multer({
     ];
     
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-    const fileExtension = '.' + file.originalname.split('.').pop()?.toLowerCase();
+    const fileNameParts = file.originalname.toLowerCase().split('.');
+    const fileExtension = '.' + (fileNameParts.pop() || '');
+    const secondLastExtension = fileNameParts.length > 1 ? `.${fileNameParts[fileNameParts.length - 1]}` : '';
+    const dangerousExtensions = ['.php', '.js', '.ts', '.py', '.rb', '.sh', '.exe', '.bat', '.cmd'];
+
+    if (dangerousExtensions.includes(secondLastExtension)) {
+      logger.info(`❌ Suspicious double extension rejected: ${file.originalname}`);
+      cb(new Error('Suspicious filename rejected'));
+      return;
+    }
+
+    const extensionAllowed = allowedExtensions.includes(fileExtension);
+    const mimeAllowed = allowedMimes.includes(file.mimetype);
     
-    if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
-      console.log(`✅ Image file validated: ${file.originalname} (${file.mimetype})`);
+    if (extensionAllowed && mimeAllowed) {
+      logger.info(`✅ Image file validated: ${file.originalname} (${file.mimetype})`);
       cb(null, true);
     } else {
-      console.log(`❌ Invalid file type rejected: ${file.originalname} (${file.mimetype})`);
+      logger.info(`❌ Invalid file type rejected: ${file.originalname} (${file.mimetype})`);
       cb(new Error('Only image files (.jpg, .jpeg, .png, .webp) are allowed'));
     }
   },
@@ -66,8 +85,8 @@ export const uploadCustomPhoto = multer({
  */
 export const handlePhotoUploadError = (err: any, req: Request, res: Response, next: NextFunction) => {
   if (err) {
-    console.error('❌ Photo upload middleware error:', err);
-    console.error('Error details:', {
+    logger.error('❌ Photo upload middleware error:', err);
+    logger.error('Error details:', {
       name: err.name,
       message: err.message,
       code: err.code,
@@ -90,7 +109,7 @@ export const handlePhotoUploadError = (err: any, req: Request, res: Response, ne
 
     // S3/AWS errors
     if (err.name === 'SignatureDoesNotMatch' || err.message?.includes('signature')) {
-      console.error('🔐 AWS S3 Authentication Error - Check credentials and region');
+      logger.error('🔐 AWS S3 Authentication Error - Check credentials and region');
       return res.status(500).json({
         success: false,
         message: 'Storage service authentication error. Please contact support.',

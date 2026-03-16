@@ -4,6 +4,8 @@ import { prisma } from '../config/prisma';
 import whatsappService from '../services/whatsapp.service';
 import { emailService } from '../services/email.service';
 
+import { logger } from '../utils/logger';
+
 /**
  * Contact form submission schema
  */
@@ -44,7 +46,7 @@ export class ContactController {
         message: validatedData.message,
         timestamp: contact.createdAt,
       }).catch(error => {
-        console.error('⚠️  Email notification failed (non-critical):', error.message);
+        logger.error('⚠️  Email notification failed (non-critical):', error.message);
       });
 
       // Send confirmation email to customer (non-blocking)
@@ -53,7 +55,7 @@ export class ContactController {
         email: validatedData.email,
         subject: validatedData.subject,
       }).catch(error => {
-        console.error('⚠️  Customer confirmation email failed (non-critical):', error.message);
+        logger.error('⚠️  Customer confirmation email failed (non-critical):', error.message);
       });
 
       // Send WhatsApp notification (non-blocking)
@@ -65,7 +67,7 @@ export class ContactController {
         message: validatedData.message,
         timestamp: contact.createdAt,
       }).catch(error => {
-        console.error('⚠️  WhatsApp notification failed (non-critical):', error.message);
+        logger.error('⚠️  WhatsApp notification failed (non-critical):', error.message);
       });
 
       res.status(200).json({
@@ -73,7 +75,7 @@ export class ContactController {
         message: 'Thank you for contacting us! We will get back to you soon.',
       });
     } catch (error: any) {
-      console.error('Contact form error:', error);
+      logger.error('Contact form error:', error);
 
       // Return validation errors
       if (error instanceof z.ZodError) {
@@ -123,7 +125,7 @@ export class ContactController {
         },
       });
     } catch (error) {
-      console.error('Failed to fetch contact submissions:', error);
+      logger.error('Failed to fetch contact submissions:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch contact submissions',

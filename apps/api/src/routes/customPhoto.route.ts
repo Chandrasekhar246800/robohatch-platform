@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { CustomPhotoController } from '../controllers/customPhoto.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { uploadCustomPhoto, handlePhotoUploadError } from '../middlewares/uploadCustomPhoto.middleware';
+import { uploadRateLimiter } from '../middlewares/security.middleware';
 
 const router = Router();
 const customPhotoController = new CustomPhotoController();
@@ -14,6 +15,7 @@ const customPhotoController = new CustomPhotoController();
 router.post(
   '/upload',
   authMiddleware,
+  uploadRateLimiter,
   uploadCustomPhoto.single('photo'),
   handlePhotoUploadError,
   (req: Request, res: Response) => customPhotoController.uploadPhoto(req, res)

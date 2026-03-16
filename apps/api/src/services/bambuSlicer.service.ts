@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
+import { logger } from '../utils/logger';
+
 const execFileAsync = promisify(execFile);
 
 // Material cost per gram (industrial pricing)
@@ -174,7 +176,7 @@ export async function sliceModel({
   }
 
   activeSlicingJobs++;
-  console.log(`🔧 Starting slicing job (${activeSlicingJobs}/${MAX_CONCURRENT_JOBS} active)`);
+  logger.info(`🔧 Starting slicing job (${activeSlicingJobs}/${MAX_CONCURRENT_JOBS} active)`);
 
   let tempGcodePath: string | null = null;
 
@@ -186,7 +188,7 @@ export async function sliceModel({
 
     // Get printer profile
     const profilePath = getPrinterProfile(printerType);
-    console.log(`📋 Using profile: ${profilePath}`);
+    logger.info(`📋 Using profile: ${profilePath}`);
 
     // Create unique temp G-code output path
     const uniqueId = crypto.randomUUID();
@@ -195,11 +197,11 @@ export async function sliceModel({
     // Ensure temp directory exists
     fs.mkdirSync('/tmp/slicer', { recursive: true });
 
-    console.log(`🚀 Slicing with OrcaSlicer...`);
-    console.log(`   Input: ${path.basename(stlPath)}`);
-    console.log(`   Printer: ${printerType}`);
-    console.log(`   Material: ${material}`);
-    console.log(`   Output: ${tempGcodePath}`);
+    logger.info(`🚀 Slicing with OrcaSlicer...`);
+    logger.info(`   Input: ${path.basename(stlPath)}`);
+    logger.info(`   Printer: ${printerType}`);
+    logger.info(`   Material: ${material}`);
+    logger.info(`   Output: ${tempGcodePath}`);
 
     // Execute OrcaSlicer with xvfb (headless)
     const { stdout, stderr } = await execFileAsync(
@@ -218,8 +220,8 @@ export async function sliceModel({
       }
     );
 
-    if (stdout) console.log(`📤 OrcaSlicer stdout:`, stdout);
-    if (stderr) console.log(`⚠️  OrcaSlicer stderr:`, stderr);
+    if (stdout) logger.info(`📤 OrcaSlicer stdout:`, stdout);
+    if (stderr) logger.info(`⚠️  OrcaSlicer stderr:`, stderr);
 
     // Verify G-code was generated
     if (!fs.existsSync(tempGcodePath)) {
@@ -228,26 +230,26 @@ export async function sliceModel({
 
     // Read and parse G-code
     const gcodeContent = fs.readFileSync(tempGcodePath, 'utf-8');
-    console.log(`📊 G-code size: ${(gcodeContent.length / 1024).toFixed(2)} KB`);
+    logger.info(`📊 G-code size: ${(gcodeContent.length / 1024).toFixed(2)} KB`);
 
     // Extract metadata
     const filamentGrams = parseFilamentGrams(gcodeContent);
     const printTimeSeconds = parsePrintTimeSeconds(gcodeContent);
 
     if (filamentGrams === null || printTimeSeconds === null) {
-      console.error('❌ Failed to parse G-code metadata');
-      console.log('First 2000 chars of G-code:');
-      console.log(gcodeContent.substring(0, 2000));
+      logger.error('❌ Failed to parse G-code metadata');
+      logger.info('First 2000 chars of G-code:');
+      logger.info(gcodeContent.substring(0, 2000));
       throw new Error('Failed to parse filament usage or print time from G-code');
     }
 
-    console.log(`✅ Slicing complete!`);
-    console.log(`   Filament: ${filamentGrams.toFixed(2)}g`);
-    console.log(`   Print time: ${(printTimeSeconds / 3600).toFixed(2)}h (${printTimeSeconds}s)`);
+    logger.info(`✅ Slicing complete!`);
+    logger.info(`   Filament: ${filamentGrams.toFixed(2)}g`);
+    logger.info(`   Print time: ${(printTimeSeconds / 3600).toFixed(2)}h (${printTimeSeconds}s)`);
 
     // Calculate pricing
     const finalPrice = calculatePrice(filamentGrams, printTimeSeconds, material, quantity);
-    console.log(`   Price: ₹${finalPrice} (${quantity}x units)`);
+    logger.info(`   Price: ₹${finalPrice} (${quantity}x units)`);
 
     return {
       accurate: true,
@@ -257,7 +259,7 @@ export async function sliceModel({
     };
 
   } catch (error: any) {
-    console.error('❌ Slicing failed:', error.message);
+    logger.error('❌ Slicing failed:', error.message);
     
     return {
       accurate: false,
@@ -272,14 +274,14 @@ export async function sliceModel({
     if (tempGcodePath && fs.existsSync(tempGcodePath)) {
       try {
         fs.unlinkSync(tempGcodePath);
-        console.log(`🗑️  Cleaned up: ${path.basename(tempGcodePath)}`);
+        logger.info(`🗑️  Cleaned up: ${path.basename(tempGcodePath)}`);
       } catch (err) {
-        console.warn(`⚠️  Failed to cleanup ${tempGcodePath}:`, err);
+        logger.warn(`⚠️  Failed to cleanup ${tempGcodePath}:`, err);
       }
     }
 
     // Decrement active jobs
     activeSlicingJobs--;
-    console.log(`✓ Slicing job complete (${activeSlicingJobs}/${MAX_CONCURRENT_JOBS} active)`);
+    logger.info(`✓ Slicing job complete (${activeSlicingJobs}/${MAX_CONCURRENT_JOBS} active)`);
   }
 }

@@ -1,3 +1,9 @@
+import { prisma, Prisma } from '../config/prisma';
+import { StockManager } from '../utils/stock-manager';
+
+// Configuration
+import { logger } from '../utils/logger';
+
 /**
  * 🕐 ORDER EXPIRATION WORKER
  * 
@@ -22,8 +28,7 @@
  * @version 1.0.0
  */
 
-import { prisma, Prisma } from '../config/prisma';
-import { StockManager } from '../utils/stock-manager';
+
 
 // Configuration
 const ORDER_EXPIRATION_MINUTES = 15; // Orders expire after 15 minutes
@@ -35,7 +40,7 @@ const CHECK_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
 export async function expireAbandonedOrders() {
   const expirationThreshold = new Date(Date.now() - ORDER_EXPIRATION_MINUTES * 60 * 1000);
   
-  console.log(`🕐 Checking for abandoned orders older than ${ORDER_EXPIRATION_MINUTES} minutes...`);
+  logger.info(`🕐 Checking for abandoned orders older than ${ORDER_EXPIRATION_MINUTES} minutes...`);
 
   try {
     // Find orders that are:
@@ -70,11 +75,11 @@ export async function expireAbandonedOrders() {
     });
 
     if (abandonedOrders.length === 0) {
-      console.log('✅ No abandoned orders found');
+      logger.info('✅ No abandoned orders found');
       return { expired: 0, restored: 0 };
     }
 
-    console.log(`⚠️  Found ${abandonedOrders.length} abandoned orders to expire`);
+    logger.info(`⚠️  Found ${abandonedOrders.length} abandoned orders to expire`);
 
     let expiredCount = 0;
     let stockRestoredCount = 0;
@@ -101,7 +106,7 @@ export async function expireAbandonedOrders() {
           restorationResults
             .filter(r => !r.success)
             .forEach(result => {
-              console.warn(`⚠️  Failed to restore stock for ${result.productId}: ${result.error}`);
+              logger.warn(`⚠️  Failed to restore stock for ${result.productId}: ${result.error}`);
             });
 
           // Mark order as CANCELLED (expired orders are treated as cancelled)
@@ -124,17 +129,17 @@ export async function expireAbandonedOrders() {
 
           expiredCount++;
 
-          console.log(
+          logger.info(
             `✅ Order ${order.id} expired and stock restored (${order.items.length} items, age: ${Math.round((Date.now() - order.createdAt.getTime()) / 60000)} minutes)`
           );
         });
       } catch (error) {
-        console.error(`❌ Failed to expire order ${order.id}:`, error);
+        logger.error(`❌ Failed to expire order ${order.id}:`, error);
         // Continue with next order even if one fails
       }
     }
 
-    console.log(
+    logger.info(
       `✅ Expiration complete: ${expiredCount} orders expired, ${stockRestoredCount} items restored`
     );
 
@@ -143,7 +148,7 @@ export async function expireAbandonedOrders() {
       restored: stockRestoredCount,
     };
   } catch (error) {
-    console.error('❌ Error in order expiration worker:', error);
+    logger.error('❌ Error in order expiration worker:', error);
     throw error;
   }
 }
@@ -153,19 +158,19 @@ export async function expireAbandonedOrders() {
  * Runs continuously in background
  */
 export function startOrderExpirationWorker() {
-  console.log(
+  logger.info(
     `🚀 Starting order expiration worker (checks every ${CHECK_INTERVAL_MS / 1000 / 60} minutes, expires after ${ORDER_EXPIRATION_MINUTES} minutes)`
   );
 
   // Run immediately on startup
   expireAbandonedOrders().catch(error => {
-    console.error('❌ Initial order expiration check failed:', error);
+    logger.error('❌ Initial order expiration check failed:', error);
   });
 
   // Then run periodically
   setInterval(() => {
     expireAbandonedOrders().catch(error => {
-      console.error('❌ Order expiration check failed:', error);
+      logger.error('❌ Order expiration check failed:', error);
     });
   }, CHECK_INTERVAL_MS);
 }
@@ -174,7 +179,7 @@ export function startOrderExpirationWorker() {
  * Manually expire a specific order (for admin use)
  */
 export async function manuallyExpireOrder(orderId: string, reason?: string) {
-  console.log(`🔧 Manually expiring order ${orderId}${reason ? `: ${reason}` : ''}`);
+  logger.info(`🔧 Manually expiring order ${orderId}${reason ? `: ${reason}` : ''}`);
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -217,7 +222,7 @@ export async function manuallyExpireOrder(orderId: string, reason?: string) {
     }
   });
 
-  console.log(`✅ Order ${orderId} manually expired`);
+  logger.info(`✅ Order ${orderId} manually expired`);
 
   return { success: true };
 }

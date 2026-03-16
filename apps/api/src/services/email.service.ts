@@ -1,16 +1,18 @@
 import sgMail from '@sendgrid/mail';
 import { prisma } from '../config/prisma';
 
-// 🔒 SECURITY: Validate SendGrid credentials at startup
-// ✅ PRODUCTION REQUIREMENT: Fail fast if email not configured in production
+// =��� SECURITY: Validate SendGrid credentials at startup
+// G�� PRODUCTION REQUIREMENT: Fail fast if email not configured in production
+import { logger } from '../utils/logger';
+
 if (!process.env.SENDGRID_API_KEY) {
   if (process.env.NODE_ENV === 'production') {
-    console.error('🚨 CRITICAL: SENDGRID_API_KEY not set in production!');
-    console.error('   Email notifications are REQUIRED for production.');
-    console.error('   Set SENDGRID_API_KEY environment variable to fix this.');
+    logger.error('🚨 CRITICAL: SENDGRID_API_KEY not set in production!');
+    logger.error('   Email notifications are REQUIRED for production.');
+    logger.error('   Set SENDGRID_API_KEY environment variable to fix this.');
     throw new Error('SENDGRID_API_KEY is required in production');
   } else {
-    console.warn('⚠️  WARNING: SENDGRID_API_KEY not set - Email notifications disabled in development');
+    logger.warn('⚠️  WARNING: SENDGRID_API_KEY not set - Email notifications disabled in development');
   }
 }
 
@@ -22,12 +24,12 @@ const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'robohatchofficial@gmail.com'
 
 if (SENDGRID_ENABLED) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-  console.log('✅ SendGrid email service initialized');
-  console.log(`   From: ${FROM_NAME} <${FROM_EMAIL}>`);
-  console.log(`   Orders notifications: ${ORDERS_EMAIL}`);
-  console.log(`   Contact/Support: ${CONTACT_EMAIL}`);
+  logger.info('✅ SendGrid email service initialized');
+  logger.info(`   From: ${FROM_NAME} <${FROM_EMAIL}>`);
+  logger.info(`   Orders notifications: ${ORDERS_EMAIL}`);
+  logger.info(`   Contact/Support: ${CONTACT_EMAIL}`);
 } else {
-  console.warn('⚠️  Email notifications DISABLED - emails will be logged only (DEV MODE)');
+  logger.warn('⚠️  Email notifications DISABLED - emails will be logged only (DEV MODE)');
 }
 
 export class EmailService {
@@ -41,7 +43,10 @@ export class EmailService {
         include: {
           user: true,
           items: {
-            include: { product: true }
+            include: { 
+              product: true,
+              customDesign: true 
+            }
           },
           shippingAddress: true,
         }
@@ -56,6 +61,8 @@ export class EmailService {
       const itemsList = order.items
         .map((item: any) => {
           let customInfo = '';
+          
+          // Handle custom text/image on regular products
           if (item.customText || item.customImageUrl) {
             customInfo = `
               <tr>
@@ -67,9 +74,30 @@ export class EmailService {
               </tr>
             `;
           }
+          
+          // Handle custom 3D design items
+          if (item.customDesign) {
+            customInfo = `
+              <tr>
+                <td colspan="4" style="padding: 10px; background: #f3e8ff; border-bottom: 1px solid #ddd;">
+                  <strong>🎨 Custom 3D Design Details:</strong><br>
+                  <strong>Material:</strong> ${item.customDesign.material}<br>
+                  <strong>Color:</strong> ${item.customDesign.color}<br>
+                  <strong>Weight:</strong> ${item.customDesign.weight}g<br>
+                  <strong>STL File:</strong> ${item.customDesign.fileUrl.split('/').pop()}
+                </td>
+              </tr>
+            `;
+          }
+          
+          const itemName = item.product?.name || `Custom 3D Design (${item.customDesign?.material})`;
+          const badge = item.customDesign 
+            ? ' <span style="background: #c084fc; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">3D DESIGN</span>'
+            : (item.customText || item.customImageUrl ? ' <span style="background: #dbeafe; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">CUSTOM</span>' : '');
+          
           return `
           <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.product.name}${item.customText || item.customImageUrl ? ' <span style="background: #dbeafe; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">CUSTOM</span>' : ''}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${itemName}${badge}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${item.price}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${Number(item.price) * item.quantity}</td>
@@ -86,17 +114,17 @@ export class EmailService {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; }
-            .header { background: #1a1a1a; color: #fff; padding: 30px 20px; text-align: center; }
+            .header { background: #F27405; color: #fff; padding: 30px 20px; text-align: center; }
             .header h1 { margin: 0; font-size: 28px; }
             .content { padding: 30px 20px; background: #f9f9f9; }
-            .content h3 { color: #1a1a1a; margin-top: 20px; }
+            .content h3 { color: #260A03; margin-top: 20px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fff; }
-            th { padding: 12px 10px; text-align: left; background: #1a1a1a; color: #fff; border-bottom: 2px solid #ddd; }
+            th { padding: 12px 10px; text-align: left; background: #F27405; color: #fff; border-bottom: 2px solid #ddd; }
             td { padding: 10px; border-bottom: 1px solid #ddd; }
             .total { font-size: 18px; font-weight: bold; text-align: right; padding: 15px 0; background: #fff; margin: 10px 0; }
-            .button { display: inline-block; background: #1a1a1a; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #e5e5e5; }
-            .address-box { background: #fff; padding: 15px; border-left: 4px solid #1a1a1a; margin: 15px 0; }
+            .button { display: inline-block; background: #F27405; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f0f0f0; }
+            .address-box { background: #fff; padding: 15px; border-left: 4px solid #F27405; margin: 15px 0; }
           </style>
         </head>
         <body>
@@ -158,7 +186,7 @@ export class EmailService {
                 📞 ${order.shippingAddress?.phone}
               </div>
               
-              <p style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;">
+              <p style="background: #fff3cd; padding: 15px; border-left: 4px solid #F27405; margin: 20px 0;">
                 <strong>⏱️ Estimated Delivery:</strong> 5-7 business days<br>
                 Your order will be shipped within 2-3 business days.
               </p>
@@ -194,13 +222,13 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Order confirmation email sent to ${order.user.email} for order ${order.id}`);
+        logger.info(`✅ Order confirmation email sent to ${order.user.email} for order ${order.id}`);
       } else {
-        console.log(`📧 [MOCK] Order confirmation email would be sent to ${order.user.email}`);
-        console.log(`   Subject: ${msg.subject}`);
+        logger.info(`📧 [MOCK] Order confirmation email would be sent to ${order.user.email}`);
+        logger.info(`   Subject: ${msg.subject}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send order confirmation email:', error.message);
+      logger.error('❌ Failed to send order confirmation email:', error.message);
       // Don't throw - email failure shouldn't break order flow
     }
   }
@@ -233,7 +261,7 @@ export class EmailService {
             .content { padding: 30px 20px; background: #f9f9f9; }
             .receipt { background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #22c55e; }
             .amount { font-size: 32px; font-weight: bold; color: #22c55e; text-align: center; margin: 20px 0; }
-            .button { display: inline-block; background: #1a1a1a; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
+            .button { display: inline-block; background: #F27405; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #e5e5e5; }
             .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e5e5; }
           </style>
@@ -308,12 +336,12 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Payment success email sent to ${order.user.email}`);
+        logger.info(`✅ Payment success email sent to ${order.user.email}`);
       } else {
-        console.log(`📧 [MOCK] Payment success email would be sent to ${order.user.email}`);
+        logger.info(`📧 [MOCK] Payment success email would be sent to ${order.user.email}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send payment email:', error.message);
+      logger.error('❌ Failed to send payment email:', error.message);
     }
   }
 
@@ -338,10 +366,10 @@ export class EmailService {
       const trackingInfo = trackingId
         ? `<div style="background: #fff; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
              <h3 style="margin: 0 0 10px 0;">📦 Tracking Number</h3>
-             <p style="font-size: 24px; font-family: monospace; color: #1a1a1a; margin: 10px 0;">${trackingId}</p>
-             <a href="https://shiprocket.co/tracking/${trackingId}" style="color: #3b82f6; text-decoration: none;">Track Your Shipment →</a>
+             <p style="font-size: 24px; font-family: monospace; color: #260A03; margin: 10px 0;">${trackingId}</p>
+             <a href="https://shiprocket.co/tracking/${trackingId}" style="color: #F27405; text-decoration: none; font-weight: bold;">Track Your Shipment →</a>
            </div>`
-        : '<p style="background: #e0e7ff; padding: 15px; border-left: 4px solid #3b82f6;">Your tracking details will be updated shortly.</p>';
+        : '<p style="background: #FFF4ED; padding: 15px; border-left: 4px solid #F27405;">Your tracking details will be updated shortly.</p>';
 
       const itemsList = order.items.map((item: any) => 
         `<li>${item.quantity}x ${item.product.name}</li>`
@@ -352,7 +380,7 @@ export class EmailService {
         <html>
         <body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
           <div style="max-width: 600px; margin: 0 auto;">
-            <div style="background: #3b82f6; color: #fff; padding: 30px 20px; text-align: center;">
+            <div style="background: #F27405; color: #fff; padding: 30px 20px; text-align: center;">
               <h1 style="margin: 0;">📦 Your Order Has Shipped!</h1>
               <p style="margin: 10px 0 0 0;">Your RoboHatch order is on its way</p>
             </div>
@@ -362,15 +390,15 @@ export class EmailService {
               
               ${trackingInfo}
               
-              <h3 style="color: #1a1a1a;">📋 Order Summary</h3>
+              <h3 style="color: #260A03;">📋 Order Summary</h3>
               <div style="background: #fff; padding: 15px; border-radius: 5px;">
                 <p><strong>Order ID:</strong> ${order.id}</p>
                 <p><strong>Items:</strong></p>
                 <ul>${itemsList}</ul>
               </div>
               
-              <h3 style="color: #1a1a1a;">📍 Delivery Address</h3>
-              <div style="background: #fff; padding: 15px; border-left: 4px solid #3b82f6;">
+              <h3 style="color: #260A03;">📍 Delivery Address</h3>
+              <div style="background: #fff; padding: 15px; border-left: 4px solid #F27405;">
                 <strong>${order.shippingAddress?.fullName}</strong><br>
                 ${order.shippingAddress?.addressLine1}<br>
                 ${order.shippingAddress?.addressLine2 ? order.shippingAddress.addressLine2 + '<br>' : ''}
@@ -378,7 +406,7 @@ export class EmailService {
                 📞 ${order.shippingAddress?.phone}
               </div>
               
-              <p style="background: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+              <p style="background: #FFF4ED; padding: 15px; border-left: 4px solid #F27405; margin: 20px 0;">
                 <strong>⏱️ Estimated Delivery:</strong> 3-5 business days from shipment date
               </p>
               
@@ -405,12 +433,12 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Shipping notification sent to ${order.user.email}`);
+        logger.info(`✅ Shipping notification sent to ${order.user.email}`);
       } else {
-        console.log(`📧 [MOCK] Shipping notification would be sent to ${order.user.email}`);
+        logger.info(`📧 [MOCK] Shipping notification would be sent to ${order.user.email}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send shipping email:', error.message);
+      logger.error('❌ Failed to send shipping email:', error.message);
     }
   }
 
@@ -433,7 +461,7 @@ export class EmailService {
         <html>
         <body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
           <div style="max-width: 600px; margin: 0 auto;">
-            <div style="background: #ef4444; color: #fff; padding: 30px 20px; text-align: center;">
+            <div style="background: #F27405; color: #fff; padding: 30px 20px; text-align: center;">
               <h1 style="margin: 0;">💰 Refund Processed</h1>
               <p style="margin: 10px 0 0 0;">Your refund has been initiated</p>
             </div>
@@ -441,8 +469,8 @@ export class EmailService {
               <p>Hi <strong>${order.user.name || 'Customer'}</strong>,</p>
               <p>Your refund request has been processed successfully. The amount will be credited to your original payment method.</p>
               
-              <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #ef4444;">
-                <h3 style="margin-top: 0; text-align: center; color: #ef4444;">Refund Details</h3>
+              <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #F27405;">
+                <h3 style="margin-top: 0; text-align: center; color: #F27405;">Refund Details</h3>
                 <table style="width: 100%;">
                   <tr>
                     <td style="padding: 8px 0; color: #666;">Order ID:</td>
@@ -456,14 +484,14 @@ export class EmailService {
                     <td style="padding: 8px 0; color: #666;">Refund Date:</td>
                     <td style="padding: 8px 0; text-align: right;">${new Date().toLocaleString('en-IN')}</td>
                   </tr>
-                  <tr style="border-top: 2px solid #ef4444;">
+                  <tr style="border-top: 2px solid #F27405;">
                     <td style="padding: 12px 0; font-weight: bold;">Refund Amount:</td>
-                    <td style="padding: 12px 0; text-align: right; font-weight: bold; font-size: 24px; color: #ef4444;">₹${refundAmount}</td>
+                    <td style="padding: 12px 0; text-align: right; font-weight: bold; font-size: 24px; color: #F27405;">₹${refundAmount}</td>
                   </tr>
                 </table>
               </div>
               
-              <p style="background: #fee2e2; padding: 15px; border-left: 4px solid #ef4444;">
+              <p style="background: #FFF4ED; padding: 15px; border-left: 4px solid #F27405;">
                 <strong>⏱️ Processing Time:</strong> The refund will be credited to your original payment method within <strong>5-7 business days</strong>. 
                 The exact timeline depends on your bank or payment provider.
               </p>
@@ -496,12 +524,12 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Refund confirmation sent to ${order.user.email}`);
+        logger.info(`✅ Refund confirmation sent to ${order.user.email}`);
       } else {
-        console.log(`📧 [MOCK] Refund confirmation would be sent to ${order.user.email}`);
+        logger.info(`📧 [MOCK] Refund confirmation would be sent to ${order.user.email}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send refund email:', error.message);
+      logger.error('❌ Failed to send refund email:', error.message);
     }
   }
 
@@ -520,11 +548,11 @@ export class EmailService {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; }
-            .header { background: #1a1a1a; color: #fff; padding: 30px 20px; text-align: center; }
+            .header { background: #F27405; color: #fff; padding: 30px 20px; text-align: center; }
             .content { padding: 30px 20px; background: #f9f9f9; }
-            .button { display: inline-block; background: #1a1a1a; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #e5e5e5; }
-            .warning { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }
+            .button { display: inline-block; background: #F27405; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f0f0f0; }
+            .warning { background: #FFF4ED; padding: 15px; border-left: 4px solid #F27405; margin: 20px 0; }
           </style>
         </head>
         <body>
@@ -538,7 +566,7 @@ export class EmailService {
               <p>Click the button below to reset your password:</p>
               
               <div style="text-align: center;">
-                <a href="${resetLink}" class="button">
+                <a href="${resetLink}" class="button" style="background: #F27405; color: #fff; text-decoration: none;">
                   Reset Password
                 </a>
               </div>
@@ -581,13 +609,13 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Password reset email sent to ${email}`);
+        logger.info(`✅ Password reset email sent to ${email}`);
       } else {
-        console.log(`📧 [MOCK] Password reset email would be sent to ${email}`);
-        console.log(`   Reset link: ${resetLink}`);
+        logger.info(`📧 [MOCK] Password reset email would be sent to ${email}`);
+        logger.info(`   Reset link: ${resetLink}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send password reset email:', error.message);
+      logger.error('❌ Failed to send password reset email:', error.message);
       throw error; // Throw here because password reset must complete
     }
   }
@@ -629,7 +657,7 @@ export class EmailService {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; }
-            .header { background: #dc2626; color: #fff; padding: 30px 20px; text-align: center; }
+            .header { background: #F27405; color: #fff; padding: 30px 20px; text-align: center; }
             .content { padding: 30px 20px; background: #f9f9f9; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #e5e5e5; }
           </style>
@@ -680,12 +708,12 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Cancellation email sent to ${order.user.email}`);
+        logger.info(`✅ Cancellation email sent to ${order.user.email}`);
       } else {
-        console.log(`📧 [MOCK] Cancellation email would be sent to ${order.user.email}`);
+        logger.info(`📧 [MOCK] Cancellation email would be sent to ${order.user.email}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send cancellation email:', error.message);
+      logger.error('❌ Failed to send cancellation email:', error.message);
     }
   }
 
@@ -700,7 +728,10 @@ export class EmailService {
         include: {
           user: true,
           items: {
-            include: { product: true }
+            include: { 
+              product: true,
+              customDesign: true 
+            }
           },
           shippingAddress: true,
           payment: true,
@@ -711,12 +742,15 @@ export class EmailService {
         throw new Error('Order not found');
       }
 
-      // Check if order has any custom products
+      // Check if order has any custom products or custom designs
       const hasCustomProducts = order.items.some((item: any) => item.customText || item.customImageUrl);
+      const hasCustomDesigns = order.items.some((item: any) => item.customDesign);
 
       const itemsList = order.items
         .map((item: any) => {
           let customInfo = '';
+          
+          // Handle custom text/image on regular products
           if (item.customText || item.customImageUrl) {
             customInfo = `
               <tr>
@@ -728,9 +762,33 @@ export class EmailService {
               </tr>
             `;
           }
+          
+          // Handle custom 3D design items
+          if (item.customDesign) {
+            customInfo = `
+              <tr>
+                <td colspan="4" style="padding: 15px; background: #f3e8ff; border-bottom: 2px solid #8b5cf6;">
+                  <strong>🎨 Custom 3D Design - ACTION REQUIRED:</strong><br><br>
+                  <strong>Material:</strong> ${item.customDesign.material}<br>
+                  <strong>Color:</strong> ${item.customDesign.color}<br>
+                  <strong>Weight:</strong> ${item.customDesign.weight}g<br>
+                  <strong>STL File:</strong> <a href="${item.customDesign.fileUrl}" style="color: #8b5cf6; font-weight: bold;" target="_blank">Download STL File</a><br>
+                  ${item.customDesign.notes ? `<strong>Notes:</strong> ${item.customDesign.notes}<br>` : ''}
+                  <br>
+                  <strong style="color: #F27405;">⚠️ PRINT WITH SPECIFIED MATERIAL AND COLOR</strong>
+                </td>
+              </tr>
+            `;
+          }
+          
+          const itemName = item.product?.name || `Custom 3D Design (${item.customDesign?.material})`;
+          const badge = item.customDesign 
+            ? ' <span style="background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">3D DESIGN</span>'
+            : (item.customText || item.customImageUrl ? ' <span style="background: #fef3c7; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">CUSTOM</span>' : '');
+          
           return `
           <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.product.name}${item.customText || item.customImageUrl ? ' <span style="background: #fef3c7; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">CUSTOM</span>' : ''}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">${itemName}${badge}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${Number(item.price) * item.quantity}</td>
@@ -752,10 +810,10 @@ export class EmailService {
             .content { padding: 20px; background: #fff; }
             .alert-box { background: #fef3c7; border-left: 4px solid #F27405; padding: 15px; margin: 20px 0; }
             table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-            th { padding: 10px; text-align: left; background: #1a1a1a; color: #fff; }
+            th { padding: 10px; text-align: left; background: #F27405; color: #fff; }
             td { padding: 10px; border-bottom: 1px solid #ddd; }
             .section { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 8px; }
-            .section h3 { margin-top: 0; color: #1a1a1a; }
+            .section h3 { margin-top: 0; color: #260A03; }
             .total { font-size: 20px; font-weight: bold; text-align: right; padding: 15px; background: #F27405; color: #fff; margin: 15px 0; border-radius: 8px; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f3f4f6; }
           </style>
@@ -889,6 +947,8 @@ export class EmailService {
               <div style="background: #f0fdf4; border: 2px solid #22c55e; padding: 15px; border-radius: 8px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #166534;">📋 Next Steps:</h3>
                 <ol style="margin: 0; padding-left: 20px;">
+                  ${hasCustomDesigns ? '<li style="color: #F27405; font-weight: bold;">Download STL files for custom 3D designs</li>' : ''}
+                  ${hasCustomDesigns ? '<li style="color: #F27405; font-weight: bold;">3D print designs with specified material and color</li>' : ''}
                   <li>Verify product availability in inventory</li>
                   <li>Pack items securely with invoice</li>
                   <li>Update order status to "PROCESSING"</li>
@@ -924,19 +984,19 @@ export class EmailService {
           email: FROM_EMAIL,
           name: FROM_NAME,
         },
-        subject: `🚨 NEW ORDER #${order.id.substring(0, 8).toUpperCase()} ${hasCustomProducts ? '✨ CUSTOM' : ''} - ₹${order.total} - ${order.user.name || 'Customer'}`,
+        subject: `🚨 NEW ORDER #${order.id.substring(0, 8).toUpperCase()} ${hasCustomDesigns ? '🎨 3D DESIGN' : hasCustomProducts ? '✨ CUSTOM' : ''} - ₹${order.total} - ${order.user.name || 'Customer'}`,
         html,
       };
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Admin order notification sent to ${ORDERS_EMAIL} for order ${order.id}`);
+        logger.info(`✅ Admin order notification sent to ${ORDERS_EMAIL} for order ${order.id}`);
       } else {
-        console.log(`📧 [MOCK] Admin notification would be sent to ${ORDERS_EMAIL}`);
-        console.log(`   Subject: ${msg.subject}`);
+        logger.info(`📧 [MOCK] Admin notification would be sent to ${ORDERS_EMAIL}`);
+        logger.info(`   Subject: ${msg.subject}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send admin order notification:', error.message);
+      logger.error('❌ Failed to send admin order notification:', error.message);
       // Don't throw - email failure shouldn't break order flow
     }
   }
@@ -961,11 +1021,11 @@ export class EmailService {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; }
-            .header { background: #3B82F6; color: #fff; padding: 20px; text-align: center; }
+            .header { background: #F27405; color: #fff; padding: 20px; text-align: center; }
             .header h1 { margin: 0; font-size: 24px; }
             .content { padding: 20px; background: #fff; }
-            .info-row { background: #f9f9f9; padding: 12px 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #3B82F6; }
-            .info-label { font-weight: bold; color: #1a1a1a; margin-bottom: 5px; }
+            .info-row { background: #f9f9f9; padding: 12px 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #F27405; }
+            .info-label { font-weight: bold; color: #260A03; margin-bottom: 5px; }
             .info-value { color: #555; }
             .message-box { background: #fff; border: 2px solid #e5e7eb; padding: 15px; margin: 20px 0; border-radius: 8px; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f3f4f6; }
@@ -998,7 +1058,7 @@ export class EmailService {
               <div class="info-row">
                 <div class="info-label">📧 Email Address</div>
                 <div class="info-value">
-                  <a href="mailto:${contactData.email}" style="color: #3B82F6; text-decoration: none;">
+                  <a href="mailto:${contactData.email}" style="color: #F27405; text-decoration: none;">
                     ${contactData.email}
                   </a>
                 </div>
@@ -1008,7 +1068,7 @@ export class EmailService {
               <div class="info-row">
                 <div class="info-label">📞 Phone Number</div>
                 <div class="info-value">
-                  <a href="tel:${contactData.phone}" style="color: #3B82F6; text-decoration: none;">
+                  <a href="tel:${contactData.phone}" style="color: #F27405; text-decoration: none;">
                     ${contactData.phone}
                   </a>
                 </div>
@@ -1036,7 +1096,7 @@ export class EmailService {
 
               <div style="text-align: center; margin: 20px 0;">
                 <a href="mailto:${contactData.email}?subject=Re: ${encodeURIComponent(contactData.subject)}" 
-                   style="display: inline-block; background: #3B82F6; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                   style="display: inline-block; background: #F27405; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                   Reply to Customer
                 </a>
               </div>
@@ -1067,14 +1127,14 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Contact form notification sent to ${CONTACT_EMAIL} from ${contactData.email}`);
+        logger.info(`✅ Contact form notification sent to ${CONTACT_EMAIL} from ${contactData.email}`);
       } else {
-        console.log(`📧 [MOCK] Contact form notification would be sent to ${CONTACT_EMAIL}`);
-        console.log(`   From: ${contactData.name} <${contactData.email}>`);
-        console.log(`   Subject: ${msg.subject}`);
+        logger.info(`📧 [MOCK] Contact form notification would be sent to ${CONTACT_EMAIL}`);
+        logger.info(`   From: ${contactData.name} <${contactData.email}>`);
+        logger.info(`   Subject: ${msg.subject}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send contact form notification:', error.message);
+      logger.error('❌ Failed to send contact form notification:', error.message);
       // Don't throw - email failure shouldn't break contact form submission
     }
   }
@@ -1096,13 +1156,13 @@ export class EmailService {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; }
-            .header { background: #3B82F6; color: #fff; padding: 20px; text-align: center; }
+            .header { background: #F27405; color: #fff; padding: 20px; text-align: center; }
             .header h1 { margin: 0; font-size: 24px; }
             .content { padding: 20px; background: #fff; }
             .message-box { background: #f0fdf4; border: 2px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center; }
-            .info-box { background: #f9f9f9; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #3B82F6; }
+            .info-box { background: #f9f9f9; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #F27405; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f3f4f6; }
-            .button { display: inline-block; background: #3B82F6; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0; }
+            .button { display: inline-block; background: #F27405; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0; }
           </style>
         </head>
         <body>
@@ -1128,14 +1188,14 @@ export class EmailService {
 
               <div class="info-box">
                 <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>📧 Your inquiry about:</strong></p>
-                <p style="margin: 0; font-size: 15px; color: #3B82F6;">${contactData.subject}</p>
+                <p style="margin: 0; font-size: 15px; color: #F27405;">${contactData.subject}</p>
               </div>
 
               <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #1e40af; font-size: 16px;">📞 Need Immediate Assistance?</h3>
                 <p style="margin: 5px 0; font-size: 14px;">
-                  <strong>Phone:</strong> <a href="tel:+919505551727" style="color: #3B82F6; text-decoration: none;">+91 95055 51727</a><br>
-                  <strong>Email:</strong> <a href="mailto:founder@robohatch.in" style="color: #3B82F6; text-decoration: none;">founder@robohatch.in</a><br>
+                  <strong>Phone:</strong> <a href="tel:+919505551727" style="color: #F27405; text-decoration: none;">+91 95055 51727</a><br>
+                  <strong>Email:</strong> <a href="mailto:founder@robohatch.in" style="color: #F27405; text-decoration: none;">founder@robohatch.in</a><br>
                   <strong>Hours:</strong> Monday - Saturday, 9:00 AM - 6:00 PM IST
                 </p>
               </div>
@@ -1164,7 +1224,7 @@ export class EmailService {
 
             <div class="footer">
               <p><strong>RoboHatch - Professional 3D Printing Services</strong></p>
-              <p>🌐 <a href="https://www.robohatch.in" style="color: #3B82F6; text-decoration: none;">www.robohatch.in</a></p>
+              <p>🌐 <a href="https://www.robohatch.in" style="color: #F27405; text-decoration: none; font-weight: bold;">www.robohatch.in</a></p>
               <p style="margin-top: 10px; font-size: 11px; color: #999;">
                 This is an automated confirmation email. Please do not reply directly to this message.
               </p>
@@ -1187,13 +1247,13 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ Contact form confirmation sent to ${contactData.email}`);
+        logger.info(`✅ Contact form confirmation sent to ${contactData.email}`);
       } else {
-        console.log(`📧 [MOCK] Contact form confirmation would be sent to ${contactData.email}`);
-        console.log(`   Subject: ${msg.subject}`);
+        logger.info(`📧 [MOCK] Contact form confirmation would be sent to ${contactData.email}`);
+        logger.info(`   Subject: ${msg.subject}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send contact form confirmation:', error.message);
+      logger.error('❌ Failed to send contact form confirmation:', error.message);
       // Don't throw - email failure shouldn't break contact form submission
     }
   }
@@ -1342,15 +1402,15 @@ export class EmailService {
 
       if (SENDGRID_ENABLED) {
         await sgMail.send(msg);
-        console.log(`✅ 3D design notification sent to ${ORDERS_EMAIL} for ${designData.designName}`);
+        logger.info(`✅ 3D design notification sent to ${ORDERS_EMAIL} for ${designData.designName}`);
       } else {
-        console.log(`📧 [MOCK] 3D design notification would be sent to ${ORDERS_EMAIL}`);
-        console.log(`   Design: ${designData.designName}`);
-        console.log(`   Customer: ${designData.customerName} <${designData.customerEmail}>`);
-        console.log(`   Estimated Price: ₹${designData.estimatedPrice}`);
+        logger.info(`📧 [MOCK] 3D design notification would be sent to ${ORDERS_EMAIL}`);
+        logger.info(`   Design: ${designData.designName}`);
+        logger.info(`   Customer: ${designData.customerName} <${designData.customerEmail}>`);
+        logger.info(`   Estimated Price: ₹${designData.estimatedPrice}`);
       }
     } catch (error: any) {
-      console.error('❌ Failed to send 3D design notification:', error.message);
+      logger.error('❌ Failed to send 3D design notification:', error.message);
       // Don't throw - email failure shouldn't break design submission
     }
   }

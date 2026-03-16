@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
+import { logger } from '../utils/logger';
+
 /**
  * Wishlist Controller
  * Handles wishlist CRUD operations
@@ -104,7 +106,7 @@ export class WishlistController {
         },
       });
     } catch (error: any) {
-      console.error('Get wishlist error:', error);
+      logger.error('Get wishlist error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch wishlist',
@@ -203,7 +205,7 @@ export class WishlistController {
         },
       });
     } catch (error: any) {
-      console.error('Add to wishlist error:', error);
+      logger.error('Add to wishlist error:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -270,7 +272,7 @@ export class WishlistController {
         message: 'Removed from wishlist',
       });
     } catch (error: any) {
-      console.error('Remove from wishlist error:', error);
+      logger.error('Remove from wishlist error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to remove from wishlist',
@@ -314,7 +316,7 @@ export class WishlistController {
         message: 'Wishlist cleared',
       });
     } catch (error: any) {
-      console.error('Clear wishlist error:', error);
+      logger.error('Clear wishlist error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to clear wishlist',

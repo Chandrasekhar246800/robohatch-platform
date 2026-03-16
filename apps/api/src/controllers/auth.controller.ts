@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { authService } from '../services/auth.service';
 import { validateRegister, validateLogin } from '../validators/auth.validator';
 
+import { logger } from '../utils/logger';
+
 export class AuthController {
   /**
    * Register new user
@@ -17,17 +19,21 @@ export class AuthController {
 
       // 🔒 Set httpOnly cookie
       authService.setAuthCookie(res, result.token);
+      authService.setRefreshCookie(res, result.refreshToken);
+      authService.setCsrfCookie(res, result.csrfToken);
+      logger.info({ event: 'register_success', userId: result.user.id });
 
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
         data: {
           user: result.user,
+          csrfToken: result.csrfToken,
           // ❌ DO NOT send token in response body (cookie only)
         },
       });
     } catch (error: any) {
-      console.error('Register error:', error);
+      logger.error('Register error:', error);
 
       // Sanitize error message for production
       const message = error.message === 'Email already registered'
@@ -55,17 +61,21 @@ export class AuthController {
 
       // 🔒 Set httpOnly cookie
       authService.setAuthCookie(res, result.token);
+      authService.setRefreshCookie(res, result.refreshToken);
+      authService.setCsrfCookie(res, result.csrfToken);
+      logger.info({ event: 'login_success', userId: result.user.id, ip: req.ip });
 
       res.json({
         success: true,
         message: 'Login successful',
         data: {
           user: result.user,
+          csrfToken: result.csrfToken,
           // ❌ DO NOT send token in response body (cookie only)
         },
       });
     } catch (error: any) {
-      console.error('Login error:', error);
+      logger.warn({ event: 'login_failed', ip: req.ip, message: error?.message });
 
       // Generic error message for security
       res.status(401).json({
@@ -81,20 +91,90 @@ export class AuthController {
    */
   async logout(req: Request, res: Response) {
     try {
+      const refreshToken = req.cookies?.refresh_token;
+      if (refreshToken) {
+        await authService.revokeRefreshToken(refreshToken);
+      }
+
       // 🔒 Clear httpOnly cookie
       authService.clearAuthCookie(res);
+      logger.info({ event: 'logout_success', ip: req.ip });
 
       res.json({
         success: true,
         message: 'Logged out successfully',
       });
     } catch (error: any) {
-      console.error('Logout error:', error);
+      logger.error({ event: 'logout_error', message: error?.message });
       res.status(500).json({
         success: false,
         message: 'Logout failed',
       });
     }
+  }
+
+  /**
+   * Refresh access session using refresh token cookie
+   * POST /api/auth/refresh
+   */
+  async refresh(req: Request, res: Response) {
+    try {
+      const refreshToken = req.cookies?.refresh_token;
+
+      if (!refreshToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'Refresh token is required',
+        });
+      }
+
+      const result = await authService.refreshSession(refreshToken);
+      authService.setAuthCookie(res, result.token);
+      authService.setRefreshCookie(res, result.refreshToken);
+      authService.setCsrfCookie(res, result.csrfToken);
+      logger.info({ event: 'refresh_token_used', userId: result.user.id, ip: req.ip });
+
+      return res.json({
+        success: true,
+        message: 'Session refreshed',
+        data: {
+          user: result.user,
+          csrfToken: result.csrfToken,
+        },
+      });
+    } catch (error: any) {
+      const refreshToken = req.cookies?.refresh_token;
+      if (refreshToken) {
+        await authService.revokeRefreshToken(refreshToken);
+      }
+      authService.clearAuthCookie(res);
+      logger.warn({ event: 'refresh_failed', ip: req.ip, message: error?.message });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+      });
+    }
+  }
+
+  /**
+   * Rotate CSRF token for authenticated cookie sessions
+   * GET /api/auth/csrf
+   */
+  async getCsrfToken(req: Request, res: Response) {
+    const hasSession = Boolean(req.cookies?.auth_token || req.cookies?.refresh_token);
+
+    if (!hasSession) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    const csrfToken = authService.rotateCsrfToken(res);
+    return res.json({
+      success: true,
+      data: { csrfToken },
+    });
   }
 
   /**
@@ -119,7 +199,7 @@ export class AuthController {
         data: user, // ✅ Return user directly, not nested in { user: ... }
       });
     } catch (error: any) {
-      console.error('Get profile error:', error);
+      logger.error('Get profile error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch profile',
@@ -159,7 +239,7 @@ export class AuthController {
         data: user,
       });
     } catch (error: any) {
-      console.error('Update profile error:', error);
+      logger.error('Update profile error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update profile',
@@ -190,7 +270,7 @@ export class AuthController {
         message: 'If an account exists with this email, you will receive a password reset link.',
       });
     } catch (error: any) {
-      console.error('Forgot password error:', error);
+      logger.error('Forgot password error:', error);
       // Always return success for security (prevent email enumeration)
       res.json({
         success: true,
@@ -221,7 +301,7 @@ export class AuthController {
         valid: isValid,
       });
     } catch (error: any) {
-      console.error('Verify reset token error:', error);
+      logger.error('Verify reset token error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to verify token',
@@ -259,7 +339,7 @@ export class AuthController {
         message: 'Password reset successful. You can now log in with your new password.',
       });
     } catch (error: any) {
-      console.error('Reset password error:', error);
+      logger.error('Reset password error:', error);
       res.status(400).json({
         success: false,
         message: error.message || 'Invalid or expired reset token',

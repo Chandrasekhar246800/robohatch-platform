@@ -17,6 +17,14 @@ router.options('/profile', (req, res) => {
   res.status(204).end();
 });
 
+router.options('/refresh', (req, res) => {
+  res.status(204).end();
+});
+
+router.options('/csrf', (req, res) => {
+  res.status(204).end();
+});
+
 /**
  * @route   POST /api/auth/register
  * @desc    Register a new user
@@ -37,6 +45,20 @@ router.post('/login', (req, res) => authController.login(req, res));
  * @access  Public
  */
 router.post('/logout', (req, res) => authController.logout(req, res));
+
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Rotate refresh token and mint new access token
+ * @access  Public (requires valid refresh cookie)
+ */
+router.post('/refresh', (req, res) => authController.refresh(req, res));
+
+/**
+ * @route   GET /api/auth/csrf
+ * @desc    Rotate and fetch CSRF token for double-submit protection
+ * @access  Cookie-authenticated session
+ */
+router.get('/csrf', (req, res) => authController.getCsrfToken(req, res));
 
 /**
  * @route   GET /api/auth/profile

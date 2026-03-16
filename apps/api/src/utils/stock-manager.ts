@@ -1,3 +1,7 @@
+import { Prisma } from '@prisma/client';
+
+import { logger } from '../utils/logger';
+
 /**
  * 🔒 PRODUCTION-GRADE STOCK MANAGEMENT UTILITY
  * 
@@ -49,7 +53,6 @@
  * @version 1.0.0
  */
 
-import { Prisma } from '@prisma/client';
 
 /**
  * Result of a stock reservation attempt
@@ -190,7 +193,7 @@ export class StockManager {
         errorCode: 'INSUFFICIENT_STOCK',
       };
     } catch (error) {
-      console.error('❌ Stock reservation failed:', error);
+      logger.error('❌ Stock reservation failed:', error);
       return {
         success: false,
         productId,
@@ -218,7 +221,7 @@ export class StockManager {
    * await prisma.$transaction(async (tx) => {
    *   const result = await StockManager.restoreStock(tx, productId, 3);
    *   if (!result.success) {
-   *     console.warn(`Failed to restore stock: ${result.error}`);
+   *     logger.warn(`Failed to restore stock: ${result.error}`);
    *   }
    * });
    * ```
@@ -261,7 +264,7 @@ export class StockManager {
         error: 'Product no longer exists. Stock could not be restored.',
       };
     } catch (error) {
-      console.error('❌ Stock restoration failed:', error);
+      logger.error('❌ Stock restoration failed:', error);
       return {
         success: false,
         productId,
@@ -363,7 +366,7 @@ export class StockManager {
       // Continue even if one fails (best effort restoration)
       // Log warnings for failed restorations
       if (!result.success) {
-        console.warn(
+        logger.warn(
           `⚠️ Failed to restore stock for ${restoration.productId}: ${result.error}`
         );
       }

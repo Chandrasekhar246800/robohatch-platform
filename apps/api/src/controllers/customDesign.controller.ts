@@ -7,10 +7,15 @@ import { s3 } from '../config/s3';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
+import { z } from 'zod';
+import { validate3DFileSignatureFromS3 } from '../utils/fileSignature';
+import { getSignedS3UrlFromUrlOrKey } from '../utils/s3SignedUrl';
 
 // Note: CustomDesignStatus will be available after running the migration
+import { logger } from '../utils/logger';
+
 const CustomDesignStatus = {
   PENDING: 'PENDING',
   QUOTED: 'QUOTED',
@@ -19,6 +24,19 @@ const CustomDesignStatus = {
   COMPLETED: 'COMPLETED',
   REJECTED: 'REJECTED',
 } as const;
+
+const MAX_PAGINATION_LIMIT = 100;
+
+const customDesignInputSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2000).optional().nullable(),
+  material: z.enum(['pla', 'abs', 'petg', 'tpu']),
+  color: z.string().trim().min(1).max(50),
+  size: z.string().trim().max(50).optional().nullable(),
+  quantity: z.coerce.number().int().min(1).max(1000).default(1),
+  infillPercentage: z.coerce.number().min(5).max(100).optional(),
+  layerHeight: z.coerce.number().min(0.05).max(1).optional(),
+});
 
 /**
  * Download file from S3 to temporary location
@@ -50,7 +68,7 @@ const downloadFromS3 = async (s3Key: string): Promise<string> => {
 
     return tempPath;
   } catch (error: any) {
-    console.error('Failed to download from S3:', error);
+    logger.error('Failed to download from S3:', error);
     throw new Error(`S3 download failed: ${error.message}`);
   }
 };
@@ -109,6 +127,39 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const signatureResult = await validate3DFileSignatureFromS3(
+      file.key || file.location,
+      file.originalname
+    );
+
+    if (!signatureResult.valid) {
+      if (file.key) {
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET,
+            Key: file.key,
+          })
+        );
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: signatureResult.reason || 'Invalid 3D file signature',
+      });
+    }
+
+    const parsedInput = customDesignInputSchema.safeParse(req.body);
+    if (!parsedInput.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: parsedInput.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
+    }
+
     const {
       name,
       description,
@@ -118,21 +169,14 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       quantity,
       infillPercentage,
       layerHeight,
-    } = req.body;
-
-    if (!name || !material || !color) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, material, and color are required',
-      });
-    }
+    } = parsedInput.data;
 
 
     // Determine file extension and type
     const fileExtension = path.extname(file.originalname).toLowerCase();
     const is3DFile = ['.stl', '.3mf', '.obj', '.gcode'].includes(fileExtension);
-    const materialLower = material.toLowerCase();
-    const quantityInt = parseInt(quantity) || 1;
+    const materialLower = material;
+    const quantityInt = quantity;
 
     let estimatedPrice: number;
     let pricingData: {
@@ -156,18 +200,18 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
 
     try {
       if (is3DFile && (fileExtension === '.stl' || fileExtension === '.3mf')) {
-        console.log(`🔬 3D file detected (${fileExtension}) - starting PrusaSlicer analysis...`);
+        logger.info({ event: 'custom_design_analysis_started', fileExtension });
         
         // Step 1: Download file from S3 to temp location
         const s3Key = getS3KeyFromUrl(file.key || file.location);
-        console.log(`📥 Downloading file from S3: ${s3Key}`);
+        logger.debug({ event: 'custom_design_s3_download', s3Key });
         tempFilePath = await downloadFromS3(s3Key);
-        console.log(`✓ Downloaded to: ${tempFilePath}`);
+        logger.debug({ event: 'custom_design_download_complete', tempFilePath });
 
         const pricePerGram = getMaterialCostPerGram(materialLower);
 
         // Step 2: Run PrusaSlicer (ONLY method - no fallback)
-        console.log(`🔧 Running PrusaSlicer analysis...`);
+        logger.info({ event: 'custom_design_slicing_started' });
         const slicerResult = await runPrusaSlicer(tempFilePath) as any;
         
         const weightGrams = Math.round(slicerResult.totalWeight);
@@ -215,18 +259,18 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           final_price: estimatedPrice,
         };
         
-        console.log(`✅ PrusaSlicer analysis complete:`);
-        console.log(`   📊 Weight Breakdown:`);
-        console.log(`      • Model: ${modelWtExact.toFixed(4)}g exact → ${modelWt}g DB (actual part)`);
-        console.log(`      • Support: ${supportWtExact.toFixed(4)}g exact → ${supportWt}g DB`);
-        console.log(`      • Tower: ${towerWtExact.toFixed(4)}g exact → ${towerWt}g DB (wipe tower)`);
-        console.log(`      • Purged: ${purgeWtExact.toFixed(4)}g exact → ${purgeWt}g DB (waste)`);
-        console.log(`      • TOTAL: ${totalWtExact.toFixed(4)}g exact → ${totalWt}g DB (sum of all)`);
-        console.log(`   Colors/Extruders: ${slicerResult.extruderCount}`);
-        console.log(`   Infill: 15%`);
-        console.log(`   Print time: ${slicerResult.printTime || 'N/A'}`);
-        console.log(`   Raw cost: ₹${rawCost} (single unit)`);
-        console.log(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
+        logger.info({ event: 'custom_design_slicing_complete' });
+        logger.info(`   📊 Weight Breakdown:`);
+        logger.info(`      • Model: ${modelWtExact.toFixed(4)}g exact → ${modelWt}g DB (actual part)`);
+        logger.info(`      • Support: ${supportWtExact.toFixed(4)}g exact → ${supportWt}g DB`);
+        logger.info(`      • Tower: ${towerWtExact.toFixed(4)}g exact → ${towerWt}g DB (wipe tower)`);
+        logger.info(`      • Purged: ${purgeWtExact.toFixed(4)}g exact → ${purgeWt}g DB (waste)`);
+        logger.info(`      • TOTAL: ${totalWtExact.toFixed(4)}g exact → ${totalWt}g DB (sum of all)`);
+        logger.info(`   Colors/Extruders: ${slicerResult.extruderCount}`);
+        logger.info(`   Infill: 15%`);
+        logger.info(`   Print time: ${slicerResult.printTime || 'N/A'}`);
+        logger.info(`   Raw cost: ₹${rawCost} (single unit)`);
+        logger.info(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
         
       } else {
         // Only STL and 3MF files are supported
@@ -240,14 +284,14 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       if (tempFilePath) {
         try {
           await fs.promises.unlink(tempFilePath);
-          console.log(`🗑️  Cleaned up temp file: ${path.basename(tempFilePath)}`);
+          logger.debug({ event: 'custom_design_temp_cleanup', file: path.basename(tempFilePath) });
         } catch (cleanupError: any) {
-          console.error('Failed to cleanup temp file:', cleanupError.message);
+          logger.warn({ event: 'custom_design_temp_cleanup_failed', message: cleanupError?.message });
         }
       }
     }
 
-    console.log('💰 Final pricing:', { estimatedPrice, pricingData });
+    logger.info({ event: 'custom_design_pricing_computed', estimatedPrice });
 
     // Ensure price is a valid number
     const finalEstimatedPrice = estimatedPrice || 0;
@@ -289,13 +333,13 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       fileName: file.originalname,
       fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
       estimatedPrice: finalEstimatedPrice,
-      infillPercentage: parseInt(infillPercentage) || 20,
-      layerHeight: parseFloat(layerHeight) || 0.2,
+      infillPercentage: infillPercentage || 20,
+      layerHeight: layerHeight || 0.2,
     }).catch(error => {
-      console.error('Failed to send 3D design notification email:', error);
+      logger.error('Failed to send 3D design notification email:', error);
     });
 
-    console.log('📝 Preparing response payload...');
+    logger.debug({ event: 'custom_design_response_prepare' });
     
     // Convert Prisma Decimal fields to numbers for JSON serialization
     // Build response manually to ensure all Decimal fields are converted
@@ -308,7 +352,9 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       color: customDesign.color,
       size: customDesign.size,
       quantity: customDesign.quantity,
-      fileUrl: customDesign.fileUrl,
+      fileUrl: customDesign.fileUrl
+        ? await getSignedS3UrlFromUrlOrKey(customDesign.fileUrl, 3600)
+        : null,
       status: customDesign.status,
       createdAt: customDesign.createdAt,
       updatedAt: customDesign.updatedAt,
@@ -337,40 +383,19 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       print_time_seconds: pricingData?.print_time_seconds || null,
     };
 
-    console.log('✅ Sending success response...');
-    console.log('📤 Response payload keys:', Object.keys(responsePayload));
-    console.log('📤 CustomDesign keys:', Object.keys(customDesignResponse));
-    console.log('📤 CustomDesign sample fields:', {
-      id: customDesignResponse.id,
-      estimatedPrice: customDesignResponse.estimatedPrice,
-      totalWeightGrams: customDesignResponse.totalWeightGrams,
-      estimatedPriceType: typeof customDesignResponse.estimatedPrice,
-      totalWeightGramsType: typeof customDesignResponse.totalWeightGrams,
-    });
-    
     try {
-      const jsonString = JSON.stringify(responsePayload);
-      console.log('📤 Response size:', jsonString.length, 'bytes');
-      console.log('📤 Response preview (first 500 chars):', jsonString.substring(0, 500));
       res.status(201).json(responsePayload);
-      console.log('✅ Response sent successfully');
+      logger.info({ event: 'custom_design_created', id: customDesignResponse.id, userId });
     } catch (jsonError: any) {
-      console.error('❌ JSON serialization error:', jsonError.message);
-      console.error('❌ Problematic object:', responsePayload);
+      logger.error({ event: 'custom_design_response_serialize_error', message: jsonError?.message });
       throw jsonError;
     }
     
   } catch (error: any) {
-    console.error('Create custom design error:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    });
+    logger.error({ event: 'custom_design_create_error', message: error?.message });
     res.status(500).json({
       success: false,
       message: 'Failed to create custom design request',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -385,13 +410,20 @@ export const getUserCustomDesigns = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { limit = 20, offset = 0 } = req.query;
+    const parsedLimit = Number(req.query.limit ?? 20);
+    const parsedOffset = Number(req.query.offset ?? 0);
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.min(Math.max(Math.floor(parsedLimit), 1), MAX_PAGINATION_LIMIT)
+      : 20;
+    const offset = Number.isFinite(parsedOffset)
+      ? Math.max(Math.floor(parsedOffset), 0)
+      : 0;
 
     const customDesigns = await prisma.customDesign.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: Number(limit),
-      skip: Number(offset),
+      take: limit,
+      skip: offset,
     });
 
     const total = await prisma.customDesign.count({
@@ -399,8 +431,11 @@ export const getUserCustomDesigns = async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Decimal fields to numbers for JSON serialization
-    const customDesignsResponse = customDesigns.map(design => ({
+    const customDesignsResponse = await Promise.all(customDesigns.map(async (design) => ({
       ...design,
+      fileUrl: design.fileUrl
+        ? await getSignedS3UrlFromUrlOrKey(design.fileUrl, 3600)
+        : null,
       estimatedPrice: design.estimatedPrice ? Number(design.estimatedPrice) : null,
       filamentGrams: design.filamentGrams ? Number(design.filamentGrams) : null,
       modelWeightGrams: design.modelWeightGrams ? Number(design.modelWeightGrams) : null,
@@ -408,19 +443,19 @@ export const getUserCustomDesigns = async (req: AuthRequest, res: Response) => {
       towerWeightGrams: design.towerWeightGrams ? Number(design.towerWeightGrams) : null,
       purgeWeightGrams: design.purgeWeightGrams ? Number(design.purgeWeightGrams) : null,
       totalWeightGrams: design.totalWeightGrams ? Number(design.totalWeightGrams) : null,
-    }));
+    })));
 
     res.json({
       success: true,
       data: {
         customDesigns: customDesignsResponse,
         total,
-        limit: Number(limit),
-        offset: Number(offset),
+        limit,
+        offset,
       },
     });
   } catch (error) {
-    console.error('Get user custom designs error:', error);
+    logger.error({ event: 'get_user_custom_designs_error', error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch custom designs',
@@ -472,6 +507,9 @@ export const getCustomDesignById = async (req: AuthRequest, res: Response) => {
     // Convert Decimal fields to numbers for JSON serialization
     const customDesignResponse = {
       ...customDesign,
+      fileUrl: customDesign.fileUrl
+        ? await getSignedS3UrlFromUrlOrKey(customDesign.fileUrl, 3600)
+        : null,
       estimatedPrice: customDesign.estimatedPrice ? Number(customDesign.estimatedPrice) : null,
       filamentGrams: customDesign.filamentGrams ? Number(customDesign.filamentGrams) : null,
       modelWeightGrams: customDesign.modelWeightGrams ? Number(customDesign.modelWeightGrams) : null,
@@ -486,7 +524,7 @@ export const getCustomDesignById = async (req: AuthRequest, res: Response) => {
       data: { customDesign: customDesignResponse },
     });
   } catch (error) {
-    console.error('Get custom design by ID error:', error);
+    logger.error({ event: 'get_custom_design_by_id_error', error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch custom design',
@@ -550,7 +588,7 @@ export const updateCustomDesignStatus = async (req: AuthRequest, res: Response) 
       data: { customDesign: customDesignResponse },
     });
   } catch (error) {
-    console.error('Update custom design status error:', error);
+    logger.error({ event: 'update_custom_design_status_error', error });
     res.status(500).json({
       success: false,
       message: 'Failed to update custom design status',
@@ -569,7 +607,15 @@ export const getAllCustomDesigns = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { limit = 50, offset = 0, status } = req.query;
+    const parsedLimit = Number(req.query.limit ?? 50);
+    const parsedOffset = Number(req.query.offset ?? 0);
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.min(Math.max(Math.floor(parsedLimit), 1), MAX_PAGINATION_LIMIT)
+      : 50;
+    const offset = Number.isFinite(parsedOffset)
+      ? Math.max(Math.floor(parsedOffset), 0)
+      : 0;
+    const { status } = req.query;
 
     const where: any = {};
     if (status) {
@@ -588,15 +634,18 @@ export const getAllCustomDesigns = async (req: AuthRequest, res: Response) => {
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: Number(limit),
-      skip: Number(offset),
+      take: limit,
+      skip: offset,
     });
 
     const total = await prisma.customDesign.count({ where });
 
     // Convert Decimal fields to numbers for JSON serialization
-    const customDesignsResponse = customDesigns.map(design => ({
+    const customDesignsResponse = await Promise.all(customDesigns.map(async (design) => ({
       ...design,
+      fileUrl: design.fileUrl
+        ? await getSignedS3UrlFromUrlOrKey(design.fileUrl, 3600)
+        : null,
       estimatedPrice: design.estimatedPrice ? Number(design.estimatedPrice) : null,
       filamentGrams: design.filamentGrams ? Number(design.filamentGrams) : null,
       modelWeightGrams: design.modelWeightGrams ? Number(design.modelWeightGrams) : null,
@@ -604,19 +653,19 @@ export const getAllCustomDesigns = async (req: AuthRequest, res: Response) => {
       towerWeightGrams: design.towerWeightGrams ? Number(design.towerWeightGrams) : null,
       purgeWeightGrams: design.purgeWeightGrams ? Number(design.purgeWeightGrams) : null,
       totalWeightGrams: design.totalWeightGrams ? Number(design.totalWeightGrams) : null,
-    }));
+    })));
 
     res.json({
       success: true,
       data: {
         customDesigns: customDesignsResponse,
         total,
-        limit: Number(limit),
-        offset: Number(offset),
+        limit,
+        offset,
       },
     });
   } catch (error) {
-    console.error('Get all custom designs error:', error);
+    logger.error({ event: 'get_all_custom_designs_error', error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch custom designs',

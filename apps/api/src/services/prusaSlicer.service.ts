@@ -1,40 +1,51 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import fs from "fs";
 import path from "path";
+
+import { logger } from '../utils/logger';
 
 export async function runPrusaSlicer(filePath: string) {
   return new Promise((resolve, reject) => {
 
     try {
 
+      const allowedDir = path.resolve(process.env.UPLOAD_DIR || '/tmp/stl-uploads');
+      const resolvedFilePath = path.resolve(filePath);
+      if (!resolvedFilePath.startsWith(allowedDir + path.sep) && resolvedFilePath !== allowedDir) {
+        reject(new Error('Invalid file path'));
+        return;
+      }
+
       // Generate gcode path (works for both .stl and .3mf)
-      const ext = path.extname(filePath);
-      const gcodePath = filePath.replace(ext, ".gcode");
+      const ext = path.extname(resolvedFilePath);
+      const gcodePath = path.join(path.dirname(resolvedFilePath), `${path.basename(resolvedFilePath, ext)}.gcode`);
 
       const configPath = path.join(
         process.cwd(),
         "src/slicer/default_config.ini"
       );
 
-      // Run PrusaSlicer to generate gcode and extract volume data
-      const command = `prusa-slicer --load "${configPath}" "${filePath}" --export-gcode --output "${gcodePath}"`;
+      // Run PrusaSlicer with execFile to avoid shell interpolation/injection
+      logger.info(`   Running command: prusa-slicer --load ${configPath} ${resolvedFilePath}`);
 
-      console.log(`   Running command: prusa-slicer --load ${configPath} ${filePath}`);
+      execFile(
+        "prusa-slicer",
+        ["--load", configPath, resolvedFilePath, "--export-gcode", "--output", gcodePath],
+        { timeout: 120000 },
+        (error) => {
 
-      exec(command, (error) => {
+          if (error) {
+            logger.error(`   ❌ PrusaSlicer error: ${error.message}`);
+            reject(new Error(`PrusaSlicer failed: ${error.message}`));
+            return;
+          }
 
-        if (error) {
-          console.error(`   ❌ PrusaSlicer error: ${error.message}`);
-          reject(new Error(`PrusaSlicer failed: ${error.message}`));
-          return;
-        }
+          if (!fs.existsSync(gcodePath)) {
+            reject(new Error('PrusaSlicer did not generate gcode file'));
+            return;
+          }
 
-        if (!fs.existsSync(gcodePath)) {
-          reject(new Error('PrusaSlicer did not generate gcode file'));
-          return;
-        }
-
-        const gcode = fs.readFileSync(gcodePath, "utf8");
+          const gcode = fs.readFileSync(gcodePath, "utf8");
 
         // Extract time
         const timeMatch = gcode.match(/; estimated printing time \(normal mode\) = (.+)/);
@@ -79,38 +90,39 @@ export async function runPrusaSlicer(filePath: string) {
         // Total weight (everything that goes through the nozzle)
         const totalWeight = totalVolume * PLA_DENSITY;
         
-        console.log(`   📊 Volume Breakdown (exact decimal values):`);
-        console.log(`      • Total: ${totalVolume.toFixed(4)} cm³ → ${totalWeight.toFixed(4)}g`);
-        console.log(`      • Model: ${modelVolume.toFixed(4)} cm³ → ${modelWeight.toFixed(4)}g (actual part)`);
-        if (supportWeight > 0) console.log(`      • Support: ${supportVolume.toFixed(4)} cm³ → ${supportWeight.toFixed(4)}g`);
-        if (towerWeight > 0) console.log(`      • Tower: ${towerVolume.toFixed(4)} cm³ → ${towerWeight.toFixed(4)}g (wipe tower)`);
-        if (purgeWeight > 0) console.log(`      • Purged: ${purgeVolume.toFixed(4)} cm³ → ${purgeWeight.toFixed(4)}g (waste)`);
-        if (volumes.length > 1) console.log(`      • Extruders: ${volumes.length} colors/materials`);
+        logger.info(`   📊 Volume Breakdown (exact decimal values):`);
+        logger.info(`      • Total: ${totalVolume.toFixed(4)} cm³ → ${totalWeight.toFixed(4)}g`);
+        logger.info(`      • Model: ${modelVolume.toFixed(4)} cm³ → ${modelWeight.toFixed(4)}g (actual part)`);
+        if (supportWeight > 0) logger.info(`      • Support: ${supportVolume.toFixed(4)} cm³ → ${supportWeight.toFixed(4)}g`);
+        if (towerWeight > 0) logger.info(`      • Tower: ${towerVolume.toFixed(4)} cm³ → ${towerWeight.toFixed(4)}g (wipe tower)`);
+        if (purgeWeight > 0) logger.info(`      • Purged: ${purgeVolume.toFixed(4)} cm³ → ${purgeWeight.toFixed(4)}g (waste)`);
+        if (volumes.length > 1) logger.info(`      • Extruders: ${volumes.length} colors/materials`);
         
         // Verification: model + support + tower + purge should equal total
         const calculatedTotal = modelWeight + supportWeight + towerWeight + purgeWeight;
         if (Math.abs(calculatedTotal - totalWeight) > 0.5) {
-          console.warn(`      ⚠️  Weight mismatch: calculated ${calculatedTotal.toFixed(4)}g vs total ${totalWeight.toFixed(4)}g`);
+          logger.warn(`      ⚠️  Weight mismatch: calculated ${calculatedTotal.toFixed(4)}g vs total ${totalWeight.toFixed(4)}g`);
         }
 
-        // Clean up gcode file
-        try {
-          fs.unlinkSync(gcodePath);
-        } catch (cleanupError) {
-          console.error('Failed to cleanup gcode file:', cleanupError);
+          // Clean up gcode file
+          try {
+            fs.unlinkSync(gcodePath);
+          } catch (cleanupError) {
+            logger.error('Failed to cleanup gcode file:', cleanupError);
+          }
+
+          resolve({
+            modelWeight: modelWeight,
+            supportWeight: supportWeight,
+            towerWeight: towerWeight,
+            purgeWeight: purgeWeight,
+            totalWeight: totalWeight,
+            extruderCount: volumes.length,
+            printTime: timeMatch ? timeMatch[1] : null
+          });
+
         }
-
-        resolve({
-          modelWeight: modelWeight,
-          supportWeight: supportWeight,
-          towerWeight: towerWeight,
-          purgeWeight: purgeWeight,
-          totalWeight: totalWeight,
-          extruderCount: volumes.length,
-          printTime: timeMatch ? timeMatch[1] : null
-        });
-
-      });
+      );
 
     } catch (err) {
       reject(err);

@@ -1,5 +1,7 @@
 import * as Sentry from '@sentry/node';
 
+import { logger } from '../utils/logger';
+
 /**
  * Initialize Sentry for error tracking and performance monitoring
  * ✅ PRODUCTION HARDENING: Comprehensive error tracking
@@ -9,10 +11,10 @@ export function initSentry(app: any) {
   // Only initialize if DSN is provided
   if (!process.env.SENTRY_DSN) {
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️  WARNING: SENTRY_DSN not configured in production');
-      console.warn('   Error tracking is recommended for production systems');
+      logger.warn('⚠️  WARNING: SENTRY_DSN not configured in production');
+      logger.warn('   Error tracking is recommended for production systems');
     } else {
-      console.log('ℹ️  Sentry not configured (development mode)');
+      logger.info('ℹ️  Sentry not configured (development mode)');
     }
     return;
   }
@@ -55,9 +57,9 @@ export function initSentry(app: any) {
     ],
   });
 
-  console.log('✅ Sentry initialized successfully');
-  console.log(`   Environment: ${process.env.NODE_ENV}`);
-  console.log(`   Traces Sample Rate: ${process.env.NODE_ENV === 'production' ? '10%' : '100%'}`);
+  logger.info('✅ Sentry initialized successfully');
+  logger.info(`   Environment: ${process.env.NODE_ENV}`);
+  logger.info(`   Traces Sample Rate: ${process.env.NODE_ENV === 'production' ? '10%' : '100%'}`);
 }
 
 /**

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
+import { logger } from '../utils/logger';
+
 const CategoryType = {
   DEFAULT: 'DEFAULT',
   CUSTOM: 'CUSTOM',
@@ -98,7 +100,7 @@ const categories = [
 export class SeedController {
   async seedCategories(req: Request, res: Response) {
     try {
-      console.log('Starting category seeding...');
+      logger.info('Starting category seeding...');
 
       // Check if categories already exist
       const existingCount = await prisma.category.count();
@@ -118,10 +120,10 @@ export class SeedController {
           data: category,
         });
         createdCategories.push(created);
-        console.log(`✓ Created: ${category.name} (${category.type})`);
+        logger.info(`✓ Created: ${category.name} (${category.type})`);
       }
 
-      console.log('✅ Category seeding complete!');
+      logger.info('✅ Category seeding complete!');
 
       return res.status(201).json({
         success: true,
@@ -134,7 +136,7 @@ export class SeedController {
         },
       });
     } catch (error: any) {
-      console.error('Seed categories error:', error);
+      logger.error('Seed categories error:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to seed categories',

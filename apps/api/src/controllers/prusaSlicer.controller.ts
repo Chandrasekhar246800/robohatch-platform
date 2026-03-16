@@ -1,13 +1,15 @@
 import { Request, Response } from "express";
 import { runPrusaSlicer } from "../services/prusaSlicer.service";
 
+import { logger } from '../utils/logger';
+
 export async function sliceModel(req: Request, res: Response) {
 
   try {
 
     const { filePath } = req.body;
 
-    if (!filePath) {
+    if (!filePath || typeof filePath !== 'string') {
       return res.status(400).json({
         error: "filePath is required"
       });
@@ -22,7 +24,7 @@ export async function sliceModel(req: Request, res: Response) {
 
   } catch (error) {
 
-    console.error(error);
+    logger.error(error);
 
     res.status(500).json({
       error: "Slicing failed"

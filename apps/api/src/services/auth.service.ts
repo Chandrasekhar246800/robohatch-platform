@@ -5,19 +5,53 @@ import { prisma } from '../config/prisma';
 import { Response } from 'express';
 import { emailService } from './email.service';
 
-// 🔒 SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
+// =��� SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
+import { logger } from '../utils/logger';
+
 if (!process.env.JWT_SECRET) {
-  console.error('🚨 CRITICAL: JWT_SECRET environment variable is not set!');
-  console.error('Server cannot start without JWT_SECRET');
+  logger.error('🚨 CRITICAL: JWT_SECRET environment variable is not set!');
+  logger.error('Server cannot start without JWT_SECRET');
   throw new Error('JWT_SECRET is required for authentication');
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
 
-console.log('✅ JWT_SECRET loaded successfully');
-console.log(`🔐 Bcrypt rounds: ${BCRYPT_ROUNDS}`);
+const hashToken = (token: string) =>
+  crypto.createHash('sha256').update(token).digest('hex');
+
+const durationToMs = (value: string): number => {
+  const normalized = value.trim().toLowerCase();
+  const match = normalized.match(/^(\d+)([smhd])$/);
+
+  if (!match) {
+    return 7 * 24 * 60 * 60 * 1000;
+  }
+
+  const amount = parseInt(match[1], 10);
+  const unit = match[2];
+
+  switch (unit) {
+    case 's':
+      return amount * 1000;
+    case 'm':
+      return amount * 60 * 1000;
+    case 'h':
+      return amount * 60 * 60 * 1000;
+    case 'd':
+      return amount * 24 * 60 * 60 * 1000;
+    default:
+      return 7 * 24 * 60 * 60 * 1000;
+  }
+};
+
+const REFRESH_TTL_MS = durationToMs(JWT_REFRESH_EXPIRES_IN);
+
+logger.info('✅ JWT_SECRET loaded successfully');
+logger.info(`🔐 Bcrypt rounds: ${BCRYPT_ROUNDS}`);
 
 export interface RegisterInput {
   email: string;
@@ -38,6 +72,8 @@ export interface AuthResponse {
     role: string;
   };
   token: string;
+  refreshToken: string;
+  csrfToken: string;
 }
 
 export class AuthService {
@@ -69,10 +105,12 @@ export class AuthService {
       },
     });
 
-    // Generate JWT token
+    // Generate JWT tokens
     const token = this.generateToken(user.id, user.email, user.role);
+    const refreshToken = await this.issueRefreshToken(user.id, user.email, user.role);
+    const csrfToken = this.generateCSRFToken();
 
-    console.log('✅ User registered:', user.email);
+    logger.info('✅ User registered:', user.id);
 
     return {
       user: {
@@ -82,6 +120,8 @@ export class AuthService {
         role: user.role,
       },
       token,
+      refreshToken,
+      csrfToken,
     };
   }
 
@@ -105,10 +145,12 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
-    // Generate JWT token
+    // Generate JWT tokens
     const token = this.generateToken(user.id, user.email, user.role);
+    const refreshToken = await this.issueRefreshToken(user.id, user.email, user.role);
+    const csrfToken = this.generateCSRFToken();
 
-    console.log('✅ User logged in:', user.email);
+    logger.info('✅ User logged in:', user.id);
 
     return {
       user: {
@@ -118,7 +160,13 @@ export class AuthService {
         role: user.role,
       },
       token,
+      refreshToken,
+      csrfToken,
     };
+  }
+
+  private generateCSRFToken(): string {
+    return crypto.randomBytes(32).toString('hex');
   }
 
   /**
@@ -139,9 +187,44 @@ export class AuthService {
 
       return token;
     } catch (error) {
-      console.error('❌ Failed to generate JWT token:', error);
+      logger.error('❌ Failed to generate JWT token:', error);
       throw new Error('Authentication failed: Could not generate token');
     }
+  }
+
+  private generateRefreshToken(userId: string, email: string, role: string): string {
+    try {
+      const token = jwt.sign(
+        { userId, email, role, tokenType: 'refresh' },
+        JWT_REFRESH_SECRET,
+        { expiresIn: JWT_REFRESH_EXPIRES_IN } as jwt.SignOptions
+      );
+
+      if (!token) {
+        throw new Error('Refresh token generation returned empty value');
+      }
+
+      return token;
+    } catch (error) {
+      logger.error('❌ Failed to generate refresh token:', error);
+      throw new Error('Authentication failed: Could not generate refresh token');
+    }
+  }
+
+  private async issueRefreshToken(userId: string, email: string, role: string): Promise<string> {
+    const refreshToken = this.generateRefreshToken(userId, email, role);
+    const tokenHash = hashToken(refreshToken);
+    const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
+
+    await prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    return refreshToken;
   }
 
   /**
@@ -150,7 +233,7 @@ export class AuthService {
    */
   setAuthCookie(res: Response, token: string): void {
     const isProduction = process.env.NODE_ENV === 'production';
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    const maxAge = 15 * 60 * 1000; // 15 minutes
 
     res.cookie('auth_token', token, {
       httpOnly: true, // ✅ Prevents JavaScript access (XSS protection)
@@ -161,7 +244,41 @@ export class AuthService {
       domain: isProduction ? undefined : 'localhost', // ✅ Share cookie across localhost ports in dev
     });
 
-    console.log(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${isProduction ? 'auto' : 'localhost'})`);
+    logger.info(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${isProduction ? 'auto' : 'localhost'})`);
+  }
+
+  setRefreshCookie(res: Response, refreshToken: string): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge,
+      path: '/api/auth/refresh',
+      domain: isProduction ? undefined : 'localhost',
+    });
+  }
+
+  setCsrfCookie(res: Response, csrfToken: string): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const maxAge = 7 * 24 * 60 * 60 * 1000;
+
+    res.cookie('csrf_token', csrfToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge,
+      path: '/',
+      domain: isProduction ? undefined : 'localhost',
+    });
+  }
+
+  rotateCsrfToken(res: Response): string {
+    const csrfToken = this.generateCSRFToken();
+    this.setCsrfCookie(res, csrfToken);
+    return csrfToken;
   }
 
   /**
@@ -177,7 +294,23 @@ export class AuthService {
       domain: isProduction ? undefined : 'localhost', // ✅ Must match the domain used when setting
     });
 
-    console.log('✅ Auth cookie cleared');
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/api/auth/refresh',
+      domain: isProduction ? undefined : 'localhost',
+    });
+
+    res.clearCookie('csrf_token', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      domain: isProduction ? undefined : 'localhost',
+    });
+
+    logger.info('✅ Auth cookie cleared');
   }
 
   async verifyToken(token: string): Promise<any> {
@@ -187,6 +320,94 @@ export class AuthService {
     } catch (error) {
       throw new Error('Invalid or expired token');
     }
+  }
+
+  async verifyRefreshToken(token: string): Promise<any> {
+    try {
+      const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as any;
+      if (decoded?.tokenType !== 'refresh') {
+        throw new Error('Invalid refresh token type');
+      }
+      return decoded;
+    } catch (error) {
+      throw new Error('Invalid or expired refresh token');
+    }
+  }
+
+  async refreshSession(refreshToken: string): Promise<AuthResponse> {
+    const decoded = await this.verifyRefreshToken(refreshToken);
+    const tokenHash = hashToken(refreshToken);
+
+    const currentStored = await prisma.refreshToken.findFirst({
+      where: {
+        tokenHash,
+        userId: decoded.userId,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!currentStored) {
+      throw new Error('Invalid or revoked refresh token');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const token = this.generateToken(user.id, user.email, user.role);
+    const rotatedRefreshToken = this.generateRefreshToken(user.id, user.email, user.role);
+    const rotatedRefreshHash = hashToken(rotatedRefreshToken);
+    const csrfToken = this.generateCSRFToken();
+
+    await prisma.$transaction([
+      prisma.refreshToken.update({
+        where: { id: currentStored.id },
+        data: {
+          revokedAt: new Date(),
+          lastUsedAt: new Date(),
+        },
+      }),
+      prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: rotatedRefreshHash,
+          expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+        },
+      }),
+    ]);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      token,
+      refreshToken: rotatedRefreshToken,
+      csrfToken,
+    };
+  }
+
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    const tokenHash = hashToken(refreshToken);
+
+    await prisma.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
   }
 
   async getUserById(userId: string) {
@@ -224,11 +445,11 @@ export class AuthService {
         },
       });
 
-      console.log('✅ User profile updated:', user.email);
+      logger.info('✅ User profile updated:', user.id);
 
       return user;
     } catch (error) {
-      console.error('❌ Update profile error:', error);
+      logger.error('❌ Update profile error:', error);
       throw new Error('Failed to update profile');
     }
   }
@@ -267,7 +488,7 @@ export class AuthService {
 
     if (!user) {
       // Don't reveal if email exists - prevents email enumeration attack
-      console.log(`⚠️  Password reset requested for non-existent email: ${normalizedEmail}`);
+      logger.info('⚠️  Password reset requested for non-existent account');
       return;
     }
 
@@ -297,7 +518,7 @@ export class AuthService {
     // Send email with unhashed token (only seen by user)
     await emailService.sendPasswordReset(normalizedEmail, resetToken);
 
-    console.log(`✅ Password reset token generated for: ${normalizedEmail}`);
+    logger.info('✅ Password reset token generated');
   }
 
   /**
@@ -345,9 +566,13 @@ export class AuthService {
         where: { id: resetToken.id },
         data: { used: true },
       }),
+      prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
     ]);
 
-    console.log(`✅ Password reset successful for: ${user.email}`);
+    logger.info(`✅ Password reset successful for: ${user.id}`);
   }
 }
 

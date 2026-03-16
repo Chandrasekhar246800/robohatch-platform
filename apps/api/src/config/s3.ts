@@ -2,6 +2,8 @@ import { S3Client } from "@aws-sdk/client-s3";
 import environment from "./environment";
 
 // Initialize S3 Client with credentials from centralized environment config
+import { logger } from '../utils/logger';
+
 export const s3 = new S3Client({
   region: environment.AWS_REGION,
   credentials: {
@@ -11,7 +13,7 @@ export const s3 = new S3Client({
 });
 
 // Log S3 configuration (without exposing secrets)
-console.log('✓ S3 Client initialized');
-console.log(`  Region: ${environment.AWS_REGION}`);
-console.log(`  Bucket: ${environment.AWS_S3_BUCKET}`);
-console.log('  S3 uploads ready - credentials will be verified on first upload');
+logger.info('✓ S3 Client initialized');
+logger.info(`  Region: ${environment.AWS_REGION}`);
+logger.info(`  Bucket: ${environment.AWS_S3_BUCKET}`);
+logger.info('  S3 uploads ready - credentials will be verified on first upload');

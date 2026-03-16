@@ -1,3 +1,8 @@
+import axios from 'axios';
+import environment from '../config/environment';
+
+import { logger } from '../utils/logger';
+
 /**
  * WhatsApp Notification Service
  * 
@@ -18,8 +23,7 @@
  *    - WHATSAPP_CONTACTS_GROUP=group_chat_id (for contact forms)
  */
 
-import axios from 'axios';
-import environment from '../config/environment';
+
 
 interface WhatsAppConfig {
   provider: string;
@@ -45,13 +49,13 @@ class WhatsAppService {
     const contactsGroup = process.env.WHATSAPP_CONTACTS_GROUP;
 
     if (!provider || !apiKey || !apiUrl || !ordersGroup || !contactsGroup) {
-      console.log('⚠️  WhatsApp notifications DISABLED - Missing configuration');
-      console.log('   Set these environment variables to enable WhatsApp notifications:');
-      console.log('   - WHATSAPP_PROVIDER (interakt|wati|aisensy|twilio)');
-      console.log('   - WHATSAPP_API_KEY');
-      console.log('   - WHATSAPP_API_URL');
-      console.log('   - WHATSAPP_ORDERS_GROUP');
-      console.log('   - WHATSAPP_CONTACTS_GROUP');
+      logger.info('⚠️  WhatsApp notifications DISABLED - Missing configuration');
+      logger.info('   Set these environment variables to enable WhatsApp notifications:');
+      logger.info('   - WHATSAPP_PROVIDER (interakt|wati|aisensy|twilio)');
+      logger.info('   - WHATSAPP_API_KEY');
+      logger.info('   - WHATSAPP_API_URL');
+      logger.info('   - WHATSAPP_ORDERS_GROUP');
+      logger.info('   - WHATSAPP_CONTACTS_GROUP');
       this.enabled = false;
       return;
     }
@@ -65,8 +69,8 @@ class WhatsAppService {
     };
 
     this.enabled = true;
-    console.log('✅ WhatsApp notifications ENABLED');
-    console.log(`   Provider: ${provider}`);
+    logger.info('✅ WhatsApp notifications ENABLED');
+    logger.info(`   Provider: ${provider}`);
   }
 
   /**
@@ -83,7 +87,7 @@ class WhatsAppService {
     shippingAddress: string;
   }) {
     if (!this.enabled || !this.config) {
-      console.log('📱 WhatsApp disabled - Order notification skipped');
+      logger.info('📱 WhatsApp disabled - Order notification skipped');
       return;
     }
 
@@ -94,9 +98,9 @@ class WhatsAppService {
       // Send message based on provider
       await this.sendMessage(this.config.ordersGroup, message);
 
-      console.log(`✅ Order notification sent to WhatsApp: ${orderData.orderId}`);
+      logger.info(`✅ Order notification sent to WhatsApp: ${orderData.orderId}`);
     } catch (error: any) {
-      console.error('❌ Failed to send WhatsApp order notification:', error.message);
+      logger.error('❌ Failed to send WhatsApp order notification:', error.message);
       // Don't throw - notification failure shouldn't break order creation
     }
   }
@@ -113,7 +117,7 @@ class WhatsAppService {
     timestamp: Date;
   }) {
     if (!this.enabled || !this.config) {
-      console.log('📱 WhatsApp disabled - Contact form notification skipped');
+      logger.info('📱 WhatsApp disabled - Contact form notification skipped');
       return;
     }
 
@@ -124,9 +128,9 @@ class WhatsAppService {
       // Send message based on provider
       await this.sendMessage(this.config.contactsGroup, message);
 
-      console.log('✅ Contact form notification sent to WhatsApp');
+      logger.info('✅ Contact form notification sent to WhatsApp');
     } catch (error: any) {
-      console.error('❌ Failed to send WhatsApp contact notification:', error.message);
+      logger.error('❌ Failed to send WhatsApp contact notification:', error.message);
       // Don't throw - notification failure shouldn't break form submission
     }
   }

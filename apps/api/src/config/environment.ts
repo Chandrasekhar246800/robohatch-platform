@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 
 // Load environment variables
+import { logger } from '../utils/logger';
+
 dotenv.config();
 
 interface EnvironmentConfig {
@@ -14,6 +16,8 @@ interface EnvironmentConfig {
   // JWT
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
+  JWT_REFRESH_SECRET: string;
+  JWT_REFRESH_EXPIRES_IN: string;
   
   // AWS
   AWS_ACCESS_KEY_ID: string;
@@ -41,7 +45,7 @@ interface EnvironmentConfig {
 const getEnvironmentVariable = (key: string, defaultValue?: string): string => {
   const value = process.env[key];
   if (!value && !defaultValue) {
-    console.warn(`⚠️  Warning: Environment variable ${key} is not set`);
+    logger.warn(`⚠️  Warning: Environment variable ${key} is not set`);
     return '';
   }
   return value || defaultValue || '';
@@ -77,7 +81,9 @@ const environment: EnvironmentConfig = {
   
   // JWT
   JWT_SECRET: getEnvironmentVariable('JWT_SECRET'),
-  JWT_EXPIRES_IN: getEnvironmentVariable('JWT_EXPIRES_IN', '7d'),
+  JWT_EXPIRES_IN: getEnvironmentVariable('JWT_EXPIRES_IN', '15m'),
+  JWT_REFRESH_SECRET: getEnvironmentVariable('JWT_REFRESH_SECRET', getEnvironmentVariable('JWT_SECRET')),
+  JWT_REFRESH_EXPIRES_IN: getEnvironmentVariable('JWT_REFRESH_EXPIRES_IN', '7d'),
   
   // AWS
   AWS_ACCESS_KEY_ID: getEnvironmentVariable('AWS_ACCESS_KEY_ID'),
@@ -128,21 +134,21 @@ const validateEnvironment = () => {
   );
   
   if (missing.length > 0) {
-    console.error('❌ Critical environment variables are missing:');
-    missing.forEach(key => console.error(`   - ${key}`));
-    console.error('\n📝 Please copy .env.example to .env and fill in the values');
+    logger.error('❌ Critical environment variables are missing:');
+    missing.forEach(key => logger.error(`   - ${key}`));
+    logger.error('\n📝 Please copy .env.example to .env and fill in the values');
     process.exit(1);
   }
   
   // Warn about default values in production
   if (environment.isProduction) {
     if (environment.JWT_SECRET.includes('change-in-production')) {
-      console.error('❌ JWT_SECRET must be changed in production!');
+      logger.error('❌ JWT_SECRET must be changed in production!');
       process.exit(1);
     }
     
     if (environment.ALLOWED_ORIGINS.includes('localhost')) {
-      console.warn('⚠️  Warning: ALLOWED_ORIGINS includes localhost in production');
+      logger.warn('⚠️  Warning: ALLOWED_ORIGINS includes localhost in production');
     }
   }
 };

@@ -4,6 +4,8 @@ import { s3 } from "../config/s3";
 import environment from "../config/environment";
 import { Request, Response, NextFunction } from "express";
 
+import { logger } from '../utils/logger';
+
 /**
  * Multer configuration for uploading 3D files to AWS S3
  * - Accepts 3D files: .stl, .3mf, .obj, .gcode
@@ -18,7 +20,7 @@ export const upload3d = multer({
     bucket: environment.AWS_S3_BUCKET,
     contentType: multerS3.AUTO_CONTENT_TYPE,
     metadata: (_, file, cb) => {
-      console.log(`📤 Starting S3 upload for: ${file.originalname}`);
+      logger.info(`📤 Starting S3 upload for: ${file.originalname}`);
       cb(null, {
         fieldName: file.fieldname,
         originalName: file.originalname,
@@ -31,7 +33,7 @@ export const upload3d = multer({
       const timestamp = Date.now();
       const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '-');
       const fileName = `3d-designs/${timestamp}-${sanitizedName}`;
-      console.log(`🔑 S3 key: ${fileName}`);
+      logger.info(`🔑 S3 key: ${fileName}`);
       cb(null, fileName);
     },
   }),
@@ -40,23 +42,41 @@ export const upload3d = multer({
     files: 1, // Only 1 3D file per upload
   },
   fileFilter: (_, file, cb) => {
+    if (file.fieldname !== 'file') {
+      cb(new Error('Invalid upload field name'));
+      return;
+    }
+
     // Accept 3D files only
     const allowedMimes = [
-      'application/octet-stream', // .stl, .3mf, .obj, .gcode
       'model/stl',
       'model/obj',
       'application/sla', // STL
+      'application/vnd.ms-package.3dmanufacturing-3dmodel+xml', // 3MF
       'text/plain', // Some .gcode files
+      'application/octet-stream', // fallback for many 3D exporters
     ];
     
     const allowedExtensions = ['.stl', '.3mf', '.obj', '.gcode'];
-    const fileExtension = '.' + file.originalname.split('.').pop()?.toLowerCase();
+    const fileNameParts = file.originalname.toLowerCase().split('.');
+    const fileExtension = '.' + (fileNameParts.pop() || '');
+    const secondLastExtension = fileNameParts.length > 1 ? `.${fileNameParts[fileNameParts.length - 1]}` : '';
+    const dangerousExtensions = ['.php', '.js', '.ts', '.py', '.rb', '.sh', '.exe', '.bat', '.cmd'];
+
+    if (dangerousExtensions.includes(secondLastExtension)) {
+      logger.info(`❌ Suspicious double extension rejected: ${file.originalname}`);
+      cb(new Error('Suspicious filename rejected'));
+      return;
+    }
+
+    const extensionAllowed = allowedExtensions.includes(fileExtension);
+    const mimeAllowed = allowedMimes.includes(file.mimetype);
     
-    if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
-      console.log(`✅ File type validated: ${file.originalname} (${file.mimetype})`);
+    if (extensionAllowed && mimeAllowed) {
+      logger.info(`✅ File type validated: ${file.originalname} (${file.mimetype})`);
       cb(null, true);
     } else {
-      console.log(`❌ Invalid file type rejected: ${file.originalname} (${file.mimetype})`);
+      logger.info(`❌ Invalid file type rejected: ${file.originalname} (${file.mimetype})`);
       cb(new Error('Only 3D files (.stl, .3mf, .obj, .gcode) are allowed'));
     }
   },
@@ -67,8 +87,8 @@ export const upload3d = multer({
  */
 export const handleUploadError = (err: any, req: Request, res: Response, next: NextFunction) => {
   if (err) {
-    console.error('❌ Upload middleware error:', err);
-    console.error('Error details:', {
+    logger.error('❌ Upload middleware error:', err);
+    logger.error('Error details:', {
       name: err.name,
       message: err.message,
       code: err.code,
@@ -92,7 +112,7 @@ export const handleUploadError = (err: any, req: Request, res: Response, next: N
 
     // S3/AWS errors
     if (err.name === 'SignatureDoesNotMatch' || err.message?.includes('signature')) {
-      console.error('🔐 AWS S3 Authentication Error - Check credentials and region');
+      logger.error('🔐 AWS S3 Authentication Error - Check credentials and region');
       return res.status(500).json({
         success: false,
         message: 'Storage service authentication error. Please contact support.',

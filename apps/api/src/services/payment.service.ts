@@ -6,16 +6,18 @@ import { emailService } from './email.service';
 import whatsappService from './whatsapp.service';
 import { StockManager } from '../utils/stock-manager';
 
-// 🔒 SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
+// =��� SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
+import { logger } from '../utils/logger';
+
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  console.error('🚨 CRITICAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set!');
+  logger.error('🚨 CRITICAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set!');
   throw new Error('Missing Razorpay credentials');
 }
 
 // 🔒 SECURITY: Webhook secret required
 if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
-  console.error('🚨 CRITICAL: RAZORPAY_WEBHOOK_SECRET must be set!');
-  console.error('This is required for webhook signature verification');
+  logger.error('🚨 CRITICAL: RAZORPAY_WEBHOOK_SECRET must be set!');
+  logger.error('This is required for webhook signature verification');
   throw new Error('Missing Razorpay webhook secret');
 }
 
@@ -23,8 +25,8 @@ const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-console.log('✅ Razorpay credentials loaded successfully');
-console.log('✅ Webhook secret configured');
+logger.info('✅ Razorpay credentials loaded successfully');
+logger.info('✅ Webhook secret configured');
 
 export class PaymentService {
   private razorpay: Razorpay;
@@ -35,7 +37,7 @@ export class PaymentService {
       key_secret: RAZORPAY_KEY_SECRET,
     });
 
-    console.log('✅ Razorpay initialized successfully');
+    logger.info('✅ Razorpay initialized successfully');
   }
 
   /**
@@ -111,7 +113,7 @@ export class PaymentService {
 
         // ❌ FAILURE: Stock reservation failed - transaction will rollback
         if (!reservationResult.success) {
-          console.error(
+          logger.error(
             `❌ STOCK RESERVATION FAILED (Order not created):`,
             {
               product: cartItem.product.name,
@@ -129,7 +131,7 @@ export class PaymentService {
         }
 
         // ✅ SUCCESS: Stock reserved atomically
-        console.log(
+        logger.info(
           `✅ Stock reserved: ${cartItem.product.name} -${cartItem.quantity}`
         );
       }
@@ -189,7 +191,7 @@ export class PaymentService {
       return newOrder;
     });
 
-    console.log(`✅ Order created with shipping address: ${order.id}`);
+    logger.info(`✅ Order created with shipping address: ${order.id}`);
 
     return order;
   }
@@ -228,7 +230,7 @@ export class PaymentService {
       
       // Delete PENDING or CREATED payments to allow retry
       if (['PENDING', 'CREATED', 'FAILED'].includes(order.payment.status)) {
-        console.log(`🔄 Deleting ${order.payment.status} payment to allow retry:`, order.payment.id);
+        logger.info(`🔄 Deleting ${order.payment.status} payment to allow retry:`, order.payment.id);
         await prisma.payment.delete({
           where: { id: order.payment.id },
         });
@@ -238,7 +240,7 @@ export class PaymentService {
     // Create Razorpay order with idempotency
     const amountInPaise = Math.round(Number(order.total) * 100);
     
-    console.log('💳 Creating Razorpay order:', {
+    logger.info('💳 Creating Razorpay order:', {
       orderId,
       amount: `₹${order.total}`,
       amountInPaise: `${amountInPaise} paise`,
@@ -267,7 +269,7 @@ export class PaymentService {
       },
     });
 
-    console.log(`✅ Razorpay order created: ${razorpayOrder.id}`);
+    logger.info(`✅ Razorpay order created: ${razorpayOrder.id}`);
 
     return {
       id: razorpayOrder.id,
@@ -304,7 +306,7 @@ export class PaymentService {
 
     // Verify order belongs to user
     if (payment.order.userId !== userId) {
-      console.error('🚨 SECURITY ALERT: Unauthorized payment verification attempt', {
+      logger.error('🚨 SECURITY ALERT: Unauthorized payment verification attempt', {
         userId,
         orderId: payment.orderId,
         ip: 'N/A', // Add IP from request in controller
@@ -314,7 +316,7 @@ export class PaymentService {
 
     // 🔒 IDEMPOTENCY: Return existing payment if already processed
     if (payment.status === 'CAPTURED') {
-      console.log(`✓ Payment already captured (idempotent): ${payment.id}`);
+      logger.info(`✓ Payment already captured (idempotent): ${payment.id}`);
       return {
         success: true,
         orderId: payment.orderId,
@@ -344,7 +346,7 @@ export class PaymentService {
 
     if (!isValidSignature) {
       // 🔒 AUDIT LOG: Security-critical event
-      console.error('🚨 SECURITY ALERT: Invalid payment signature detected', {
+      logger.error('🚨 SECURITY ALERT: Invalid payment signature detected', {
         userId,
         orderId: payment.orderId,
         razorpay_order_id,
@@ -391,7 +393,7 @@ export class PaymentService {
       }
     });
 
-    console.log(`✅ Payment verified and captured: ${payment.id}`);
+    logger.info(`✅ Payment verified and captured: ${payment.id}`);
 
     // 📧 Send email notifications (non-blocking)
     Promise.all([
@@ -399,12 +401,12 @@ export class PaymentService {
       emailService.sendPaymentSuccess(payment.orderId, razorpay_payment_id),
       emailService.sendAdminOrderNotification(payment.orderId),
     ]).catch(error => {
-      console.error('⚠️  Email notification failed (non-critical):', error.message);
+      logger.error('⚠️  Email notification failed (non-critical):', error.message);
     });
 
     // 📱 Send WhatsApp notification (non-blocking)
     this.sendOrderWhatsAppNotification(payment.orderId).catch(error => {
-      console.error('⚠️  WhatsApp notification failed (non-critical):', error.message);
+      logger.error('⚠️  WhatsApp notification failed (non-critical):', error.message);
     });
 
     return {
@@ -496,7 +498,7 @@ export class PaymentService {
         }
       });
 
-      console.log(`✅ Payment refunded: ${payment.id}, Refund ID: ${refund.id}`);
+      logger.info(`✅ Payment refunded: ${payment.id}, Refund ID: ${refund.id}`);
 
       // 📧 Send refund confirmation email (non-blocking)
       emailService.sendRefundConfirmation(
@@ -504,7 +506,7 @@ export class PaymentService {
         Number(payment.amount),
         refund.id
       ).catch(error => {
-        console.error('⚠️  Refund email notification failed (non-critical):', error.message);
+        logger.error('⚠️  Refund email notification failed (non-critical):', error.message);
       });
 
       return {
@@ -514,7 +516,7 @@ export class PaymentService {
         status: 'REFUNDED',
       };
     } catch (error: any) {
-      console.error('❌ Razorpay refund failed:', error);
+      logger.error('❌ Razorpay refund failed:', error);
       throw new Error('Refund processing failed: ' + error.message);
     }
   }
@@ -565,18 +567,18 @@ export class PaymentService {
         );
 
         if (!restorationResult.success) {
-          console.warn(
+          logger.warn(
             `⚠️ Failed to restore stock for product ${item.productId}: ${restorationResult.error}`
           );
         } else {
-          console.log(
+          logger.info(
             `✅ Stock restored: ${item.product.name} +${item.quantity} (Failed payment: ${payment.id})`
           );
         }
       }
     });
 
-    console.log(`✅ Payment marked as failed and stock restored: ${payment.id}`);
+    logger.info(`✅ Payment marked as failed and stock restored: ${payment.id}`);
 
     return { success: true, message: 'Payment marked as failed' };
   }
@@ -647,7 +649,7 @@ export class PaymentService {
       });
 
       if (!order || !order.shippingAddress) {
-        console.error('Order or shipping address not found for WhatsApp notification');
+        logger.error('Order or shipping address not found for WhatsApp notification');
         return;
       }
 
@@ -686,7 +688,7 @@ export class PaymentService {
         shippingAddress,
       });
     } catch (error: any) {
-      console.error('Failed to send WhatsApp order notification:', error.message);
+      logger.error('Failed to send WhatsApp order notification:', error.message);
       // Don't throw - let the payment succeed even if notification fails
     }
   }

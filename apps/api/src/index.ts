@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express'
+import { logger } from './utils/logger';
 import cors from 'cors'
 import dotenv from 'dotenv'
 
@@ -26,5 +27,5 @@ app.get('/api/health', (req: Request, res: Response) => {
 })
 
 app.listen(port, () => {
-  console.log(`🚀 API Server running on http://localhost:${port}`)
+  logger.info(`🚀 API Server running on http://localhost:${port}`)
 })

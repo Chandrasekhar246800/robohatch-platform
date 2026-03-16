@@ -41,10 +41,10 @@ class Logger {
 
     // Different formats for dev vs production
     if (this.isDevelopment) {
-      console.log(`[${level}] ${message}`, context || '');
+      process.stdout.write(`[${level}] ${message} ${JSON.stringify(context || {})}\n`);
     } else {
       // JSON format for production monitoring (can be ingested by CloudWatch, Datadog, etc.)
-      console.log(JSON.stringify(logEntry));
+      process.stdout.write(`${JSON.stringify(logEntry)}\n`);
     }
   }
 
