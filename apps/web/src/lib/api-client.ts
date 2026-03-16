@@ -1119,6 +1119,26 @@ class ApiClient {
     }
   }
 
+  async updateProduct(id: string, formData: FormData) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/products/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || 'Failed to update product' };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Update product error:', error);
+      return { success: false, message: 'Network error' };
+    }
+  }
+
   async deleteProduct(id: string) {
     try {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/products/${id}`, {

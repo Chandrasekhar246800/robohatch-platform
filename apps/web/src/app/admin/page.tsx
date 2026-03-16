@@ -472,6 +472,13 @@ export default function AdminPage() {
                               >
                                 <Trash2 size={16} />
                               </button>
+                              <button
+                                className="p-2 hover:bg-blue-50 text-blue-600 rounded"
+                                onClick={() => router.push(`/admin/products/edit/${product.id}`)}
+                                title="Edit Product"
+                              >
+                                <Edit size={16} />
+                              </button>
                             </div>
                           </td>
                         </tr>
