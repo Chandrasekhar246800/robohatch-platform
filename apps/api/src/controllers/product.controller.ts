@@ -371,6 +371,7 @@ export class ProductController {
     try {
       const { id } = req.params;
       const { name, description, price, salePrice, stock, categoryIds } = req.body;
+      const hasSalePriceField = Object.prototype.hasOwnProperty.call(req.body, 'salePrice');
       const files = req.files as Express.MulterS3.File[];
 
       // Check if product exists
@@ -431,11 +432,11 @@ export class ProductController {
         }
         updateData.price = parsedPrice;
       }
-      if (salePrice !== undefined) {
-        if (salePrice === null || salePrice === '') {
+      if (hasSalePriceField) {
+        if (salePrice === null || salePrice === '' || (typeof salePrice === 'string' && salePrice.trim() === '')) {
           updateData.salePrice = null;
         } else {
-          const parsedSalePrice = parseFloat(salePrice);
+          const parsedSalePrice = parseFloat(String(salePrice).trim());
           if (isNaN(parsedSalePrice) || parsedSalePrice < 0) {
             return res.status(400).json({
               success: false,
@@ -544,12 +545,19 @@ export class ProductController {
         });
       }
 
-      // Prevent deletion if product is in any orders (historical data should be preserved)
+      // Preserve order history by soft-disabling products that have already been ordered.
       if (product.orderItems && product.orderItems.length > 0) {
-        return res.status(400).json({
+        const updatedProduct = await prisma.product.update({
+          where: { id },
+          data: { isActive: false },
+        });
+
+        return res.status(200).json({
           success: false,
-          message: 'Cannot delete product that has been ordered. Consider marking it as inactive instead.',
+          deactivated: true,
+          message: 'Product has order history and was marked as inactive instead of being deleted.',
           ordersCount: product.orderItems.length,
+          data: updatedProduct,
         });
       }
 

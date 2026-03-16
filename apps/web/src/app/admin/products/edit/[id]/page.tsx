@@ -87,7 +87,7 @@ export default function EditProductPage() {
         name: product.name || '',
         description: product.description || '',
         price: String(product.price ?? ''),
-        salePrice: product.salePrice ? String(product.salePrice) : '',
+        salePrice: product.salePrice !== null && product.salePrice !== undefined ? String(product.salePrice) : '',
         stock: String(product.stock ?? ''),
       });
 
@@ -172,6 +172,21 @@ export default function EditProductPage() {
       return;
     }
 
+    if (formData.salePrice.trim() !== '') {
+      const parsedSalePrice = Number(formData.salePrice);
+      const parsedPrice = Number(formData.price);
+
+      if (Number.isNaN(parsedSalePrice) || parsedSalePrice < 0) {
+        setError('Sale price must be a non-negative number');
+        return;
+      }
+
+      if (parsedSalePrice >= parsedPrice) {
+        setError('Sale price must be less than regular price');
+        return;
+      }
+    }
+
     if (selectedCategories.length === 0) {
       setError('Please select at least one category');
       return;
@@ -184,7 +199,7 @@ export default function EditProductPage() {
       payload.append('name', formData.name);
       payload.append('description', formData.description);
       payload.append('price', formData.price);
-      payload.append('salePrice', formData.salePrice);
+      payload.append('salePrice', formData.salePrice.trim());
       payload.append('stock', formData.stock);
       payload.append('categoryIds', JSON.stringify(selectedCategories));
 

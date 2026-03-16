@@ -117,6 +117,9 @@ export default function AdminPage() {
         // Remove product from local state
         setProducts(products.filter(p => p.id !== productId));
         alert('Product deleted successfully!');
+      } else if (response.deactivated) {
+        alert(response.message || 'Product was marked inactive because it has existing orders.');
+        await loadProducts();
       } else {
         alert(`Failed to delete product: ${response.message}`);
       }
