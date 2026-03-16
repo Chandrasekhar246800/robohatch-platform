@@ -4,7 +4,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import * as stlParser from 'stl-parser';
 
-// Material densities in g/cm-¦
+// Material densities in g/cm-ï¿½
 import { logger } from '../utils/logger';
 
 const MATERIAL_DENSITIES: Record<string, number> = {

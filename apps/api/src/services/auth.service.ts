@@ -5,7 +5,7 @@ import { prisma } from '../config/prisma';
 import { Response } from 'express';
 import { emailService } from './email.service';
 
-// =ƒöÆ SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
+// =ï¿½ï¿½ï¿½ SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
 import { logger } from '../utils/logger';
 
 if (!process.env.JWT_SECRET) {

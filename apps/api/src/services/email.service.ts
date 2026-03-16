@@ -1,8 +1,8 @@
 import sgMail from '@sendgrid/mail';
 import { prisma } from '../config/prisma';
 
-// =ƒöÆ SECURITY: Validate SendGrid credentials at startup
-// G£à PRODUCTION REQUIREMENT: Fail fast if email not configured in production
+// =ï¿½ï¿½ï¿½ SECURITY: Validate SendGrid credentials at startup
+// Gï¿½ï¿½ PRODUCTION REQUIREMENT: Fail fast if email not configured in production
 import { logger } from '../utils/logger';
 
 if (!process.env.SENDGRID_API_KEY) {

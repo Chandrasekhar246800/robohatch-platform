@@ -6,7 +6,7 @@ import { emailService } from './email.service';
 import whatsappService from './whatsapp.service';
 import { StockManager } from '../utils/stock-manager';
 
-// =ƒöÆ SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
+// =ï¿½ï¿½ï¿½ SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
 import { logger } from '../utils/logger';
 
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
