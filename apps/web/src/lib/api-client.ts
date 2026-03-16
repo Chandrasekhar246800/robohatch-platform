@@ -75,6 +75,7 @@ export interface ApiError {
 
 class ApiClient {
   private baseUrl: string;
+  private readonly csrfStorageKey = 'csrf_token';
 
   constructor() {
     this.baseUrl = API_URL;
@@ -99,14 +100,93 @@ class ApiClient {
   }
 
   private getHeaders(withAuth = false): HeadersInit {
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+
+    const csrfToken = this.getCsrfToken();
+    if (csrfToken) {
+      headers['x-csrf-token'] = csrfToken;
+    }
+
+    if (withAuth && typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
 
     // 🔒 SECURITY: No Authorization header - using httpOnly cookies
     // Tokens are automatically sent via cookies with credentials: 'include'
 
     return headers;
+  }
+
+  private getMultipartHeaders(withAuth = false): HeadersInit {
+    const headers: Record<string, string> = {};
+
+    const csrfToken = this.getCsrfToken();
+    if (csrfToken) {
+      headers['x-csrf-token'] = csrfToken;
+    }
+
+    if (withAuth && typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    return headers;
+  }
+
+  private setCsrfToken(token: string): void {
+    if (typeof window === 'undefined' || !token) {
+      return;
+    }
+    localStorage.setItem(this.csrfStorageKey, token);
+  }
+
+  private clearCsrfToken(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    localStorage.removeItem(this.csrfStorageKey);
+  }
+
+  private getCsrfTokenFromCookie(): string | null {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  private getCsrfToken(): string | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const storedToken = localStorage.getItem(this.csrfStorageKey);
+    if (storedToken) {
+      return storedToken;
+    }
+
+    const cookieToken = this.getCsrfTokenFromCookie();
+    if (cookieToken) {
+      this.setCsrfToken(cookieToken);
+      return cookieToken;
+    }
+
+    return null;
+  }
+
+  private syncCsrfToken(payload: any): void {
+    const csrfToken = payload?.data?.csrfToken || payload?.csrfToken;
+    if (csrfToken) {
+      this.setCsrfToken(csrfToken);
+    }
   }
 
   // Fetch with timeout and better error handling
@@ -223,6 +303,8 @@ class ApiClient {
       throw new Error(errorMsg);
     }
 
+    this.syncCsrfToken(data);
+
     // Success response with JSON data
     return data;
   }
@@ -240,6 +322,7 @@ class ApiClient {
       // 🔒 SECURITY: Token is in httpOnly cookie, not in response
       // Update auth store with user data only (no token)
       if (result.success && result.data?.user) {
+        this.syncCsrfToken(result);
         useAuthStore.getState().setAuth(result.data.user, '');
       }
 
@@ -275,6 +358,7 @@ class ApiClient {
       // 🔒 SECURITY: No token in response, it's in httpOnly cookie
       if (result.success && result.data?.user) {
         console.log('✅ Login successful, user data received');
+        this.syncCsrfToken(result);
         useAuthStore.getState().setAuth(result.data.user, '');
         return result;
       }
@@ -342,10 +426,13 @@ class ApiClient {
         headers: this.getHeaders(),
       });
       
+      this.clearCsrfToken();
+
       // Clear local auth state
       useAuthStore.getState().logout();
     } catch (error) {
       console.error('Logout error:', error);
+      this.clearCsrfToken();
       // Still clear local state even if backend call fails
       useAuthStore.getState().logout();
     }
@@ -363,6 +450,8 @@ class ApiClient {
   handleAuthenticationFailure(errorMessage?: string): void {
     console.warn('Authentication failure:', errorMessage || 'Session expired');
     
+    this.clearCsrfToken();
+
     // Clear local auth state
     useAuthStore.getState().logout();
     
@@ -504,6 +593,7 @@ class ApiClient {
 
       const response = await fetch(`${this.baseUrl}/api/custom-photos/upload`, {
         method: 'POST',
+        headers: this.getMultipartHeaders(),
         // Don't set headers - browser will set Content-Type with boundary
         // Authentication handled via cookies with credentials: 'include'
         credentials: 'include',
@@ -1023,9 +1113,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/admin/categories`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({ name }),
       });
 
@@ -1104,6 +1192,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/admin/products`, {
         method: 'POST',
         credentials: 'include',
+        headers: this.getMultipartHeaders(),
         body: formData,
       });
 
@@ -1124,6 +1213,7 @@ class ApiClient {
       const response = await fetch(`${this.baseUrl}/api/admin/products/${id}`, {
         method: 'PUT',
         credentials: 'include',
+        headers: this.getMultipartHeaders(),
         body: formData,
       });
 
@@ -1216,14 +1306,9 @@ class ApiClient {
       formData.append('infillPercentage', data.infillPercentage.toString());
       formData.append('layerHeight', data.layerHeight.toString());
 
-      const token = process.browser ? localStorage.getItem('token') : null;
-
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/custom-designs`, {
         method: 'POST',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          // Don't set Content-Type - browser will set it with boundary for multipart/form-data
-        },
+        headers: this.getMultipartHeaders(true),
         credentials: 'include',
         body: formData,
       });
