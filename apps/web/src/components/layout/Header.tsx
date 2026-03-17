@@ -18,7 +18,7 @@ interface SearchResult {
   id: string;
   name: string;
   price: number;
-  images: string[];
+  images: Array<string | { url?: string }>;
   category?: { name: string };
 }
 
@@ -253,7 +253,11 @@ export const Header: React.FC = () => {
                             <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
                               {product.images && product.images.length > 0 ? (
                                 <Image
-                                  src={product.images[0]}
+                                  src={
+                                    typeof product.images[0] === 'string'
+                                      ? product.images[0]
+                                      : product.images[0]?.url || '/placeholder-product.jpg'
+                                  }
                                   alt={product.name}
                                   fill
                                   className="object-cover"

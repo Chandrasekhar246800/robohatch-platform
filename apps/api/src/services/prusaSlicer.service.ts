@@ -59,10 +59,16 @@ export async function runPrusaSlicer(filePath: string) {
         // Try to extract total filament used volumes (handles single and multi-extruder)
         const volumeMatch = gcode.match(/; filament used \[cm3\] = ([\d\.,\s]+)/);
         const volumeStr = volumeMatch ? volumeMatch[1].trim() : '';
+
+        // Try to extract total filament used in grams directly from slicer output.
+        const gramsMatch = gcode.match(/; filament used \[g\] = ([\d\.,\s]+)/i);
+        const gramsStr = gramsMatch ? gramsMatch[1].trim() : '';
         
-        // Parse volumes (can be comma-separated for multi-extruder: "50.5, 30.2")
+        // Parse values (can be comma-separated for multi-extruder: "50.5, 30.2")
         const volumes = volumeStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+        const grams = gramsStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
         const totalVolume = volumes.reduce((sum, v) => sum + v, 0);
+        const totalGramsFromSlicer = grams.reduce((sum, v) => sum + v, 0);
         
         // Extract wipe tower volume if present (multi-color prints)
         const towerVolumeMatch = gcode.match(/; wipe tower used \[cm3\] = ([\d\.]+)/);
@@ -82,20 +88,24 @@ export async function runPrusaSlicer(filePath: string) {
         const supportWeight = supportVolume * PLA_DENSITY;
         const purgeWeight = purgeVolume * PLA_DENSITY;
         
-        // Model weight = total - tower - support - purge
-        // This gives us the actual part weight excluding all waste
-        const modelVolume = totalVolume - towerVolume - supportVolume - purgeVolume;
-        const modelWeight = modelVolume * PLA_DENSITY;
-        
         // Total weight (everything that goes through the nozzle)
-        const totalWeight = totalVolume * PLA_DENSITY;
+        // Prefer slicer-reported grams when available because it is more accurate for
+        // multi-color/multi-material jobs than density conversion from cm3.
+        const totalWeight = totalGramsFromSlicer > 0
+          ? totalGramsFromSlicer
+          : (totalVolume * PLA_DENSITY);
+
+        // Model weight = total - support - tower - purge
+        // Clamp at zero to avoid negatives from missing/partial metadata lines.
+        const modelWeight = Math.max(0, totalWeight - supportWeight - towerWeight - purgeWeight);
         
         logger.info(`   📊 Volume Breakdown (exact decimal values):`);
         logger.info(`      • Total: ${totalVolume.toFixed(4)} cm³ → ${totalWeight.toFixed(4)}g`);
-        logger.info(`      • Model: ${modelVolume.toFixed(4)} cm³ → ${modelWeight.toFixed(4)}g (actual part)`);
+        logger.info(`      • Model: ${modelWeight.toFixed(4)}g (actual part)`);
         if (supportWeight > 0) logger.info(`      • Support: ${supportVolume.toFixed(4)} cm³ → ${supportWeight.toFixed(4)}g`);
         if (towerWeight > 0) logger.info(`      • Tower: ${towerVolume.toFixed(4)} cm³ → ${towerWeight.toFixed(4)}g (wipe tower)`);
         if (purgeWeight > 0) logger.info(`      • Purged: ${purgeVolume.toFixed(4)} cm³ → ${purgeWeight.toFixed(4)}g (waste)`);
+        if (totalGramsFromSlicer > 0) logger.info(`      • Total grams from slicer metadata: ${totalGramsFromSlicer.toFixed(4)}g`);
         if (volumes.length > 1) logger.info(`      • Extruders: ${volumes.length} colors/materials`);
         
         // Verification: model + support + tower + purge should equal total

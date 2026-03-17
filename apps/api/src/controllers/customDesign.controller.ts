@@ -221,9 +221,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
           (Number(slicerResult.supportWeight) || 0) +
           (Number(slicerResult.towerWeight) || 0) +
           (Number(slicerResult.purgeWeight) || 0);
-        const effectiveWeight = componentTotalWeight > 0
-          ? componentTotalWeight
-          : (Number(slicerResult.totalWeight) || 0);
+        const reportedTotalWeight = Number(slicerResult.totalWeight) || 0;
+        const effectiveWeight = Math.max(componentTotalWeight, reportedTotalWeight);
         const weightGrams = Math.round(effectiveWeight * 100) / 100;
         const rawCost = Math.round(weightGrams * pricePerGram);
         estimatedPrice = rawCost * quantityInt;
