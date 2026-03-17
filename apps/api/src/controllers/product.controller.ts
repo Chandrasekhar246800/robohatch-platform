@@ -259,7 +259,7 @@ export class ProductController {
 
       const searchTerm = q.trim();
 
-      // Search products by name or description
+      // Search products by name, description, or category metadata
       // MySQL search is case-insensitive by default for contains
       const products = await prisma.product.findMany({
         where: {
@@ -275,6 +275,28 @@ export class ProductController {
                 {
                   description: {
                     contains: searchTerm,
+                  },
+                },
+                {
+                  categories: {
+                    some: {
+                      category: {
+                        name: {
+                          contains: searchTerm,
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  categories: {
+                    some: {
+                      category: {
+                        slug: {
+                          contains: searchTerm,
+                        },
+                      },
+                    },
                   },
                 },
               ],
