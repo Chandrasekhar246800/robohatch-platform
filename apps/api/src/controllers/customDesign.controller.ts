@@ -229,7 +229,11 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         }
         
         const reportedTotalWeight = Number(slicerResult.totalWeight) || 0;
-        const effectiveWeight = Math.max(componentTotalWeight, reportedTotalWeight);
+        // For single-color: use componentTotalWeight (model + support only)
+        // For multi-color: use max to account for any variations
+        const effectiveWeight = isMultiColor 
+          ? Math.max(componentTotalWeight, reportedTotalWeight)
+          : componentTotalWeight;
         const weightGrams = Math.round(effectiveWeight * 100) / 100;
         const rawCost = Math.round(weightGrams * pricePerGram);
         estimatedPrice = rawCost * quantityInt;
