@@ -39,6 +39,7 @@ const printers = [
 ];
 
 const colors = [
+  { id: 'multi-color', name: 'Multi-Color', hex: 'linear-gradient(45deg, #EF4444, #3B82F6, #10B981, #F59E0B)' },
   { id: 'white', name: 'White', hex: '#FFFFFF' },
   { id: 'black', name: 'Black', hex: '#000000' },
   { id: 'red', name: 'Red', hex: '#EF4444' },
@@ -192,6 +193,7 @@ export default function Upload3DFilePage() {
         description: formData.description,
         material: formData.material,
         color: formData.color,
+        isMultiColor: formData.color === 'multi-color',
         quantity: formData.quantity,
         printerType: formData.printerType,
         infillPercentage: formData.infillPercentage,
@@ -491,7 +493,10 @@ export default function Upload3DFilePage() {
                             className={`w-12 h-12 rounded-lg border-2 ${
                               formData.color === color.id ? 'border-primary' : 'border-gray-300'
                             }`}
-                            style={{ backgroundColor: color.hex }}
+                            style={{ 
+                              background: color.hex.startsWith('linear-gradient') ? color.hex : undefined,
+                              backgroundColor: color.hex.startsWith('linear-gradient') ? undefined : color.hex
+                            }}
                           />
                           <p className="text-xs text-center mt-1">{color.name}</p>
                         </div>

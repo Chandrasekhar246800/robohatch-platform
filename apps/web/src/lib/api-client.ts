@@ -1287,6 +1287,7 @@ class ApiClient {
     description?: string;
     material: string;
     color: string;
+    isMultiColor?: boolean;
     quantity: number;
     printerType: string;
     infillPercentage: number;
@@ -1303,6 +1304,9 @@ class ApiClient {
       }
       formData.append('material', data.material);
       formData.append('color', data.color);
+      if (data.isMultiColor !== undefined) {
+        formData.append('isMultiColor', data.isMultiColor.toString());
+      }
       formData.append('quantity', data.quantity.toString());
       formData.append('printerType', data.printerType);
       formData.append('infillPercentage', data.infillPercentage.toString());

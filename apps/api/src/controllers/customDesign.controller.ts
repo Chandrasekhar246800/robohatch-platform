@@ -34,6 +34,7 @@ const customDesignInputSchema = z.object({
   color: z.string().trim().min(1).max(50),
   size: z.string().trim().max(50).optional().nullable(),
   quantity: z.coerce.number().int().min(1).max(1000).default(1),
+  isMultiColor: z.coerce.boolean().default(false),
   infillPercentage: z.coerce.number().min(5).max(100).optional(),
   layerHeight: z.coerce.number().min(0.05).max(1).optional(),
 });
@@ -167,6 +168,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       color,
       size,
       quantity,
+      isMultiColor,
       infillPercentage,
       layerHeight,
     } = parsedInput.data;
@@ -214,13 +216,18 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         logger.info({ event: 'custom_design_slicing_started' });
         const slicerResult = await runPrusaSlicer(tempFilePath) as any;
         
-        // Prefer explicit component sum (model + support + tower + purge) when available.
-        // This avoids undercounting in multi-color jobs where base total may exclude some waste streams.
-        const componentTotalWeight =
+        // Model + Support are always included
+        // Tower + Purge are ONLY added for multi-color prints (where user selected multi-color option)
+        let componentTotalWeight =
           (Number(slicerResult.modelWeight) || 0) +
-          (Number(slicerResult.supportWeight) || 0) +
-          (Number(slicerResult.towerWeight) || 0) +
-          (Number(slicerResult.purgeWeight) || 0);
+          (Number(slicerResult.supportWeight) || 0);
+        
+        if (isMultiColor) {
+          componentTotalWeight +=
+            (Number(slicerResult.towerWeight) || 0) +
+            (Number(slicerResult.purgeWeight) || 0);
+        }
+        
         const reportedTotalWeight = Number(slicerResult.totalWeight) || 0;
         const effectiveWeight = Math.max(componentTotalWeight, reportedTotalWeight);
         const weightGrams = Math.round(effectiveWeight * 100) / 100;
@@ -243,8 +250,8 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         // Store exact values for logging/debugging
         const modelWtExact = slicerResult.modelWeight;
         const supportWtExact = slicerResult.supportWeight;
-        const towerWtExact = slicerResult.towerWeight;
-        const purgeWtExact = slicerResult.purgeWeight;
+        const towerWtExact = isMultiColor ? slicerResult.towerWeight : 0;
+        const purgeWtExact = isMultiColor ? slicerResult.purgeWeight : 0;
         const totalWtExact = effectiveWeight;
         
         // Rounded values for database storage (2 decimal places)
@@ -269,15 +276,21 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         };
         
         logger.info({ event: 'custom_design_slicing_complete' });
-        logger.info(`   📊 Weight Breakdown:`);
+        logger.info(`   📊 Weight Breakdown (isMultiColor: ${isMultiColor}):`);
         logger.info(`      • Model: ${modelWtExact.toFixed(4)}g exact → ${modelWt}g DB (actual part)`);
         logger.info(`      • Support: ${supportWtExact.toFixed(4)}g exact → ${supportWt}g DB`);
-        logger.info(`      • Tower: ${towerWtExact.toFixed(4)}g exact → ${towerWt}g DB (wipe tower)`);
-        logger.info(`      • Purged: ${purgeWtExact.toFixed(4)}g exact → ${purgeWt}g DB (waste)`);
-        logger.info(`      • TOTAL: ${totalWtExact.toFixed(4)}g exact → ${totalWt}g DB (sum of all)`);
+        if (isMultiColor) {
+          logger.info(`      • Tower: ${towerWtExact <= 0 ? 0 : towerWtExact.toFixed(4)}g exact → ${towerWt}g DB (wipe tower - INCLUDED)`);
+          logger.info(`      • Purged: ${purgeWtExact <= 0 ? 0 : purgeWtExact.toFixed(4)}g exact → ${purgeWt}g DB (waste - INCLUDED)`);
+        } else {
+          logger.info(`      • Tower: 0g (EXCLUDED - single color)`);
+          logger.info(`      • Purged: 0g (EXCLUDED - single color)`);
+        }
+        logger.info(`      • TOTAL: ${totalWtExact.toFixed(4)}g exact → ${totalWt}g DB (sum of relevant components)`);
         logger.info(`   Colors/Extruders: ${slicerResult.extruderCount}`);
         logger.info(`   Infill: 15%`);
         logger.info(`   Print time: ${slicerResult.printTime || 'N/A'}`);
+        logger.info(`   Multi-Color Selected: ${isMultiColor ? 'YES - Tower & Purge INCLUDED' : 'NO - Tower & Purge EXCLUDED'}`);
         logger.info(`   Raw cost: ₹${rawCost} (single unit)`);
         logger.info(`   Final price: ₹${estimatedPrice} (${quantityInt}x units)`);
         
