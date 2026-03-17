@@ -1293,6 +1293,8 @@ class ApiClient {
     layerHeight: number;
   }) {
     try {
+      const uploadTimeoutMs = 120000;
+
       const formData = new FormData();
       formData.append('file', data.file);
       formData.append('name', data.name);
@@ -1306,18 +1308,25 @@ class ApiClient {
       formData.append('infillPercentage', data.infillPercentage.toString());
       formData.append('layerHeight', data.layerHeight.toString());
 
-      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/custom-designs`, {
-        method: 'POST',
-        headers: this.getMultipartHeaders(true),
-        credentials: 'include',
-        body: formData,
-      });
+      const response = await this.fetchWithTimeout(
+        `${this.baseUrl}/api/custom-designs`,
+        {
+          method: 'POST',
+          headers: this.getMultipartHeaders(true),
+          credentials: 'include',
+          body: formData,
+        },
+        uploadTimeoutMs
+      );
 
       const result = await this.handleResponse(response, true);
       return result;
     } catch (error: any) {
       console.error('Upload 3D design error:', error);
       if (error instanceof NetworkError) {
+        if (error.message?.includes('timeout')) {
+          throw new Error('3D analysis is taking longer than expected. Please wait and try again.');
+        }
         throw new Error('Network error. Please check your connection and try again.');
       }
       throw error;
