@@ -27,7 +27,6 @@ export const Header: React.FC = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -75,7 +74,6 @@ export const Header: React.FC = () => {
       if (event.key === 'Escape') {
         setIsProfileOpen(false);
         setShowDropdown(false);
-        setIsSearchOpen(false);
       }
     };
 
@@ -153,7 +151,6 @@ export const Header: React.FC = () => {
       setSearchQuery('');
       setSearchResults([]);
       setShowDropdown(false);
-      setIsSearchOpen(false);
       searchInputRef.current?.blur();
     }
   };
@@ -164,7 +161,6 @@ export const Header: React.FC = () => {
     setSearchQuery('');
     setSearchResults([]);
     setShowDropdown(false);
-    setIsSearchOpen(false);
   };
 
   // View all results
@@ -174,7 +170,6 @@ export const Header: React.FC = () => {
       setSearchQuery('');
       setSearchResults([]);
       setShowDropdown(false);
-      setIsSearchOpen(false);
     }
   };
 
@@ -303,15 +298,6 @@ export const Header: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
-            {/* Search Icon (Desktop Only) */}
-            <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="hidden md:block p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
-              aria-label="Search"
-            >
-              <Search size={22} />
-            </button>
-
             {/* Wishlist (Desktop Only, Only show if authenticated) */}
             {mounted && isAuthenticated && (
               <Link
@@ -462,35 +448,6 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
-        <AnimatePresence>
-          {isSearchOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden pb-4 overflow-hidden"
-            >
-              <form onSubmit={handleSearch}>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search for products, brands and more"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    className="w-full px-4 py-2.5 pl-12 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
-                    autoFocus
-                    autoComplete="off"
-                  />
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  {isSearching && (
-                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary animate-spin" size={18} />
-                  )}
-                </div>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Mobile Menu */}
