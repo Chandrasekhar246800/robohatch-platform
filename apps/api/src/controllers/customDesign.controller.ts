@@ -214,7 +214,17 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         logger.info({ event: 'custom_design_slicing_started' });
         const slicerResult = await runPrusaSlicer(tempFilePath) as any;
         
-        const weightGrams = Math.round(slicerResult.totalWeight);
+        // Prefer explicit component sum (model + support + tower + purge) when available.
+        // This avoids undercounting in multi-color jobs where base total may exclude some waste streams.
+        const componentTotalWeight =
+          (Number(slicerResult.modelWeight) || 0) +
+          (Number(slicerResult.supportWeight) || 0) +
+          (Number(slicerResult.towerWeight) || 0) +
+          (Number(slicerResult.purgeWeight) || 0);
+        const effectiveWeight = componentTotalWeight > 0
+          ? componentTotalWeight
+          : (Number(slicerResult.totalWeight) || 0);
+        const weightGrams = Math.round(effectiveWeight * 100) / 100;
         const rawCost = Math.round(weightGrams * pricePerGram);
         estimatedPrice = rawCost * quantityInt;
 
@@ -236,7 +246,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         const supportWtExact = slicerResult.supportWeight;
         const towerWtExact = slicerResult.towerWeight;
         const purgeWtExact = slicerResult.purgeWeight;
-        const totalWtExact = slicerResult.totalWeight;
+        const totalWtExact = effectiveWeight;
         
         // Rounded values for database storage (2 decimal places)
         const modelWt = Math.round(modelWtExact * 100) / 100;
@@ -247,7 +257,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
         
         pricingData = {
           accurate: true,
-          filament_grams: weightGrams,
+          filament_grams: totalWt,
           model_weight_grams: modelWt,
           support_weight_grams: supportWt,
           tower_weight_grams: towerWt,
