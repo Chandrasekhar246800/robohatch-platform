@@ -5,6 +5,10 @@
     "dockerfilePath": "Dockerfile",
     "watchPatterns": [
       "apps/api/**",
+      "packages/**",
+      "package.json",
+      "package-lock.json",
+      "turbo.json",
       "Dockerfile",
       "railway.json"
     ]
