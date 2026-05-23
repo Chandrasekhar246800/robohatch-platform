@@ -152,7 +152,7 @@ export default function OrderDetailsPage() {
       setError('');
       
       // Use httpOnly cookies for authentication
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}`, {
+      const response = await fetch(`/api/orders/${orderId}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',

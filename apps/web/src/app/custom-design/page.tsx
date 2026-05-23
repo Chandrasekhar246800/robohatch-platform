@@ -122,7 +122,7 @@ export default function CustomDesignPage() {
 
     setIsSubmitting(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = '';
       
       // Prepare the request data
       const requestData = {

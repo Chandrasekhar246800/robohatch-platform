@@ -28,7 +28,7 @@ function ResetPasswordContent() {
       }
 
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const apiUrl = '';
         const response = await fetch(`${apiUrl}/api/auth/verify-reset-token/${token}`);
         const data = await response.json();
 
@@ -66,7 +66,7 @@ function ResetPasswordContent() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = '';
       const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
         method: 'POST',
         headers: {

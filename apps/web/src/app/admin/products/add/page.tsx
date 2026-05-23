@@ -57,7 +57,7 @@ export default function AddProductPage() {
 
   const loadCategories = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = '';
       console.log('Loading categories from:', `${apiUrl}/api/categories`);
       
       const response = await fetch(`${apiUrl}/api/categories`);
@@ -182,7 +182,7 @@ export default function AddProductPage() {
       });
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/products`,
+        `/api/admin/products`,
         {
           method: 'POST',
           credentials: 'include',

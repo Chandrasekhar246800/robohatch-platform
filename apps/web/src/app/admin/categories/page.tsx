@@ -48,7 +48,7 @@ export default function CategoriesManagementPage() {
   const loadCategories = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`
+        `/api/categories`
       );
       const data = await response.json();
       if (data.success) {
@@ -73,7 +73,7 @@ export default function CategoriesManagementPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/categories`,
+        `/api/admin/categories`,
         {
           method: 'POST',
           headers: {
@@ -111,7 +111,7 @@ export default function CategoriesManagementPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/categories/${categoryId}`,
+        `/api/admin/categories/${categoryId}`,
         {
           method: 'DELETE',
           credentials: 'include',
@@ -155,7 +155,7 @@ export default function CategoriesManagementPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/categories/${categoryId}`,
+        `/api/admin/categories/${categoryId}`,
         {
           method: 'PATCH',
           headers: {

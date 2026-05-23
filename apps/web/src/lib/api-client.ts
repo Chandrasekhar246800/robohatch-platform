@@ -27,7 +27,13 @@ export class NetworkError extends Error {
 // Ensure API_URL is an absolute URL
 const getApiUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  
+
+  // In production, prefer same-origin requests so cookies remain first-party
+  // and the app can be proxied through /api without cross-site session issues.
+  if (typeof window !== 'undefined' && (!envUrl || envUrl === '/api')) {
+    return '';
+  }
+
   // If no URL is set, use localhost for development
   if (!envUrl) {
     console.warn('⚠️  NEXT_PUBLIC_API_URL not set, using localhost:5000');
@@ -92,9 +98,9 @@ class ApiClient {
     this.baseUrl = API_URL;
     if (typeof window !== 'undefined') {
       console.log('[API Client] Base URL:', this.baseUrl);
-      
+
       // Validate URL is absolute
-      if (!this.baseUrl.startsWith('http://') && !this.baseUrl.startsWith('https://')) {
+      if (this.baseUrl && !this.baseUrl.startsWith('http://') && !this.baseUrl.startsWith('https://')) {
         console.error('❌ CRITICAL ERROR: API URL must be absolute (start with http:// or https://)');
         console.error('   Current value:', this.baseUrl);
         console.error('   Set NEXT_PUBLIC_API_URL in Vercel to: https://your-api.railway.app');
@@ -147,7 +153,7 @@ class ApiClient {
 
   private getRequestPath(url: string): string {
     try {
-      return new URL(url).pathname;
+      return new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost').pathname;
     } catch {
       return url;
     }
