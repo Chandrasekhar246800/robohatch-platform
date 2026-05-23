@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@robohatch/ui'],
   async rewrites() {
-    const backendUrl = process.env.API_BACKEND_URL;
+    const backendUrl = process.env.API_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
 
     if (!backendUrl) {
       return [];
