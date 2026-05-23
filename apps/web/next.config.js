@@ -2,6 +2,20 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@robohatch/ui'],
+  async rewrites() {
+    const backendUrl = process.env.API_BACKEND_URL;
+
+    if (!backendUrl) {
+      return [];
+    }
+
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
+  },
   // Note: 'output: standalone' removed - conflicts with Vercel deployment
   // Re-enable for Docker deployments only
   images: {
