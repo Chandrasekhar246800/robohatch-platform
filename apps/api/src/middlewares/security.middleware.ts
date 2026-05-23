@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import environment from '../config/environment';
+import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
 
@@ -16,7 +16,7 @@ export const securityHeaders = helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https:', '*.amazonaws.com'],
-      connectSrc: ["'self'", environment.FRONTEND_URL],
+      connectSrc: ["'self'", env.frontendUrl],
       fontSrc: ["'self'", 'data:'],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -32,8 +32,8 @@ export const securityHeaders = helmet({
  * Limits requests to prevent abuse
  */
 export const generalRateLimiter = rateLimit({
-  windowMs: environment.RATE_LIMIT_WINDOW_MS,
-  max: environment.RATE_LIMIT_MAX_REQUESTS,
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -44,7 +44,7 @@ export const generalRateLimiter = rateLimit({
   // Skip rate limiting for OPTIONS requests (CORS preflight)
   skip: (req: Request) => {
     if (req.method === 'OPTIONS') return true;
-    return environment.isDevelopment && req.ip === '::1'; // Skip for localhost in dev
+    return env.isDevelopment && req.ip === '::1'; // Skip for localhost in dev
   },
   handler: (req: Request, res: Response) => {
     res.status(429).json({
@@ -158,7 +158,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
       logger.error(`❌ ${logMessage}`);
     } else if (res.statusCode >= 400) {
       logger.warn(`⚠️  ${logMessage}`);
-    } else if (environment.isDevelopment) {
+    } else if (env.isDevelopment) {
       logger.info(`✓ ${logMessage}`);
     }
   });
@@ -174,7 +174,7 @@ export const productionSecurityHeaders = (
   res: Response,
   next: NextFunction
 ) => {
-  if (environment.isProduction) {
+  if (env.isProduction) {
     // Strict Transport Security
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     

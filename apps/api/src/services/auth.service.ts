@@ -4,21 +4,14 @@ import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { Response } from 'express';
 import { emailService } from './email.service';
-
-// =��� SECURITY: NO FALLBACK - Crash if JWT_SECRET missing
+import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
-if (!process.env.JWT_SECRET) {
-  logger.error('🚨 CRITICAL: JWT_SECRET environment variable is not set!');
-  logger.error('Server cannot start without JWT_SECRET');
-  throw new Error('JWT_SECRET is required for authentication');
-}
-
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
-const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
+const JWT_SECRET = env.jwtSecret;
+const JWT_EXPIRES_IN = env.jwtExpiresIn;
+const JWT_REFRESH_SECRET = env.jwtRefreshSecret;
+const JWT_REFRESH_EXPIRES_IN = env.jwtRefreshExpiresIn;
+const BCRYPT_ROUNDS = env.bcryptRounds;
 
 const hashToken = (token: string) =>
   crypto.createHash('sha256').update(token).digest('hex');
@@ -50,8 +43,15 @@ const durationToMs = (value: string): number => {
 
 const REFRESH_TTL_MS = durationToMs(JWT_REFRESH_EXPIRES_IN);
 
-logger.info('✅ JWT_SECRET loaded successfully');
+logger.info('✅ Authentication service configured');
 logger.info(`🔐 Bcrypt rounds: ${BCRYPT_ROUNDS}`);
+
+class RefreshTokenReuseError extends Error {
+  constructor(message = 'Invalid or revoked refresh token') {
+    super(message);
+    this.name = 'RefreshTokenReuseError';
+  }
+}
 
 export interface RegisterInput {
   email: string;
@@ -227,12 +227,32 @@ export class AuthService {
     return refreshToken;
   }
 
+  private async createRotatedRefreshToken(
+    tx: typeof prisma,
+    userId: string,
+    email: string,
+    role: string
+  ): Promise<string> {
+    const rotatedRefreshToken = this.generateRefreshToken(userId, email, role);
+    const rotatedRefreshHash = hashToken(rotatedRefreshToken);
+
+    await tx.refreshToken.create({
+      data: {
+        userId,
+        tokenHash: rotatedRefreshHash,
+        expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+      },
+    });
+
+    return rotatedRefreshToken;
+  }
+
   /**
    * Set authentication cookie in response
    * 🔒 SECURITY: httpOnly + secure + sameSite protection
    */
   setAuthCookie(res: Response, token: string): void {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = env.isProduction;
     const maxAge = 15 * 60 * 1000; // 15 minutes
 
     res.cookie('auth_token', token, {
@@ -248,7 +268,7 @@ export class AuthService {
   }
 
   setRefreshCookie(res: Response, refreshToken: string): void {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = env.isProduction;
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     res.cookie('refresh_token', refreshToken, {
@@ -262,9 +282,11 @@ export class AuthService {
   }
 
   setCsrfCookie(res: Response, csrfToken: string): void {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = env.isProduction;
     const maxAge = 7 * 24 * 60 * 60 * 1000;
 
+    // The CSRF cookie stays httpOnly so browser JavaScript cannot read it.
+    // The frontend receives the same token in the JSON response and keeps it in memory only.
     res.cookie('csrf_token', csrfToken, {
       httpOnly: true,
       secure: isProduction,
@@ -285,7 +307,7 @@ export class AuthService {
    * Clear authentication cookie (logout)
    */
   clearAuthCookie(res: Response): void {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = env.isProduction;
     res.clearCookie('auth_token', {
       httpOnly: true,
       secure: isProduction,
@@ -338,62 +360,70 @@ export class AuthService {
     const decoded = await this.verifyRefreshToken(refreshToken);
     const tokenHash = hashToken(refreshToken);
 
-    const currentStored = await prisma.refreshToken.findFirst({
-      where: {
-        tokenHash,
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Atomic consume: exactly one concurrent request can flip revokedAt from null to now.
+        // Any loser sees count = 0 and must fail, which closes the replay window.
+        const consumed = await tx.refreshToken.updateMany({
+          where: {
+            tokenHash,
+            userId: decoded.userId,
+            revokedAt: null,
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+          data: {
+            revokedAt: new Date(),
+            lastUsedAt: new Date(),
+          },
+        });
+
+        if (consumed.count !== 1) {
+          throw new RefreshTokenReuseError();
+        }
+
+        const user = await tx.user.findUnique({
+          where: { id: decoded.userId },
+        });
+
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        const token = this.generateToken(user.id, user.email, user.role);
+        const rotatedRefreshToken = await this.createRotatedRefreshToken(tx as typeof prisma, user.id, user.email, user.role);
+        const csrfToken = this.generateCSRFToken();
+
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+          token,
+          refreshToken: rotatedRefreshToken,
+          csrfToken,
+        };
+      });
+
+      logger.info({
+        event: 'refresh_token_rotated',
         userId: decoded.userId,
-        revokedAt: null,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-    });
+      });
 
-    if (!currentStored) {
-      throw new Error('Invalid or revoked refresh token');
+      return result;
+    } catch (error: any) {
+      if (error instanceof RefreshTokenReuseError) {
+        logger.warn({
+          event: 'refresh_token_reuse_detected',
+          userId: decoded.userId,
+        });
+      }
+
+      throw error;
     }
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    const token = this.generateToken(user.id, user.email, user.role);
-    const rotatedRefreshToken = this.generateRefreshToken(user.id, user.email, user.role);
-    const rotatedRefreshHash = hashToken(rotatedRefreshToken);
-    const csrfToken = this.generateCSRFToken();
-
-    await prisma.$transaction([
-      prisma.refreshToken.update({
-        where: { id: currentStored.id },
-        data: {
-          revokedAt: new Date(),
-          lastUsedAt: new Date(),
-        },
-      }),
-      prisma.refreshToken.create({
-        data: {
-          userId: user.id,
-          tokenHash: rotatedRefreshHash,
-          expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-        },
-      }),
-    ]);
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-      token,
-      refreshToken: rotatedRefreshToken,
-      csrfToken,
-    };
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {

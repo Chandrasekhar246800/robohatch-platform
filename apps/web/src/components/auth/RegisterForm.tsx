@@ -8,11 +8,9 @@ import { Mail, Lock, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { AnimatedInput } from '@/components/ui/AnimatedInput';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { apiClient } from '@/lib/api-client';
-import { useAuthStore } from '@/store/auth.store';
 
 export const RegisterForm: React.FC = () => {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -66,8 +64,6 @@ export const RegisterForm: React.FC = () => {
       });
 
       if (response.success && response.data) {
-        // Store user data in Zustand store
-        setAuth(response.data.user, response.data.token);
         // Success! Redirect to homepage
         router.push('/');
       } else {

@@ -1,16 +1,15 @@
 // Trigger Railway Dockerfile rebuild - March 8, 2026
-import "dotenv/config";
 import app from "./app";
-import environment from "./config/environment";
+import { env } from "./config/env";
 
 import { logger } from './utils/logger';
 
-const PORT = environment.PORT;
+const PORT = env.port;
 
 const server = app.listen(PORT, () => {
   logger.info('\n🚀 RoboHatch API Server Started');
   logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  logger.info(`📍 Environment:  ${environment.NODE_ENV.toUpperCase()}`);
+  logger.info(`📍 Environment:  ${env.nodeEnv.toUpperCase()}`);
   logger.info(`🌐 Server URL:   http://localhost:${PORT}`);
   logger.info(`📊 Health Check: http://localhost:${PORT}/health`);
   logger.info(`🔐 Auth APIs:    http://localhost:${PORT}/api/auth`);
@@ -20,17 +19,17 @@ const server = app.listen(PORT, () => {
   
   // CORS Configuration
   logger.info(`\n🌍 CORS Configuration:`);
-  logger.info(`   Frontend URL: ${environment.FRONTEND_URL}`);
+  logger.info(`   Frontend URL: ${env.frontendUrl}`);
   logger.info(`   Allowed Origins:`);
-  environment.ALLOWED_ORIGINS.forEach(origin => {
+  env.allowedOrigins.forEach(origin => {
     logger.info(`     - ${origin}`);
   });
   
-  if (environment.isDevelopment) {
+  if (env.isDevelopment) {
     logger.info('\n⚠️  Development mode - Rate limiting relaxed');
   } else {
     logger.info(`\n🔒 Production mode - Security features enabled`);
-    logger.info(`🛡️  Rate limits: ${environment.RATE_LIMIT_MAX_REQUESTS} requests per ${environment.RATE_LIMIT_WINDOW_MS/60000} minutes`);
+    logger.info(`🛡️  Rate limits: 100 requests per 15 minutes`);
   }
   
   logger.info('\n✅ Server is ready to accept connections\n');
@@ -102,7 +101,7 @@ process.on('unhandledRejection', async (reason, promise) => {
   logger.error('❌ Reason:', reason);
   
   // Report to Sentry if available
-  if (process.env.SENTRY_DSN) {
+  if (env.sentryDsn) {
     try {
       const Sentry = await import('@sentry/node');
       Sentry.captureException(reason, {
@@ -113,7 +112,7 @@ process.on('unhandledRejection', async (reason, promise) => {
     }
   }
   
-  if (environment.isProduction) {
+  if (env.isProduction) {
     // In production, log but don't crash immediately
     logger.error('⚠️  Server continuing in production mode');
   } else {
@@ -128,7 +127,7 @@ process.on('uncaughtException', async (error) => {
   logger.error('❌ Stack:', error.stack);
   
   // Report to Sentry if available
-  if (process.env.SENTRY_DSN) {
+  if (env.sentryDsn) {
     try {
       const Sentry = await import('@sentry/node');
       Sentry.captureException(error, {

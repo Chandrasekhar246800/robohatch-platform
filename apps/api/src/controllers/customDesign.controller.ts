@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import { DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { z } from 'zod';
+import { env } from '../config/env';
 import { validate3DFileSignatureFromS3 } from '../utils/fileSignature';
 import { getSignedS3UrlFromUrlOrKey } from '../utils/s3SignedUrl';
 
@@ -43,7 +44,7 @@ const customDesignInputSchema = z.object({
  * Download file from S3 to temporary location
  */
 const downloadFromS3 = async (s3Key: string): Promise<string> => {
-  const tempDir = process.env.UPLOAD_DIR || '/tmp/stl-uploads';
+  const tempDir = env.uploadDir;
   await fs.promises.mkdir(tempDir, { recursive: true });
 
   const uniqueId = crypto.randomUUID();
@@ -52,7 +53,7 @@ const downloadFromS3 = async (s3Key: string): Promise<string> => {
 
   try {
     const command = new GetObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET,
+      Bucket: env.awsS3Bucket,
       Key: s3Key,
     });
 
@@ -137,7 +138,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       if (file.key) {
         await s3.send(
           new DeleteObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET,
+            Bucket: env.awsS3Bucket,
             Key: file.key,
           })
         );

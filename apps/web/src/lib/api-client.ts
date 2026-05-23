@@ -1,10 +1,18 @@
 import { useAuthStore } from '@/store/auth.store';
+import {
+  clearCsrfTokenMemory,
+  getCsrfTokenMemory,
+  setCsrfTokenMemory,
+} from '@/lib/csrf-token';
 
 // Custom error class for authentication failures
 export class AuthenticationError extends Error {
-  constructor(message: string) {
+  refreshAttempted: boolean;
+
+  constructor(message: string, refreshAttempted = false) {
     super(message);
     this.name = 'AuthenticationError';
+    this.refreshAttempted = refreshAttempted;
   }
 }
 
@@ -64,7 +72,7 @@ export interface AuthResponse {
       name: string | null;
       role: string;
     };
-    token: string;
+    csrfToken?: string;
   };
 }
 
@@ -75,7 +83,10 @@ export interface ApiError {
 
 class ApiClient {
   private baseUrl: string;
-  private readonly csrfStorageKey = 'csrf_token';
+  private refreshPromise: Promise<AuthResponse> | null = null;
+  private refreshSequence = 0;
+  private csrfBootstrapPromise: Promise<string | null> | null = null;
+  private csrfBootstrapSequence = 0;
 
   constructor() {
     this.baseUrl = API_URL;
@@ -109,15 +120,8 @@ class ApiClient {
       headers['x-csrf-token'] = csrfToken;
     }
 
-    if (withAuth && typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-    }
-
-    // 🔒 SECURITY: No Authorization header - using httpOnly cookies
-    // Tokens are automatically sent via cookies with credentials: 'include'
+    // 🔒 SECURITY: Auth cookies are HttpOnly, so JavaScript never sees them.
+    // CSRF is the only token we attach manually, and it stays in memory only.
 
     return headers;
   }
@@ -130,73 +134,199 @@ class ApiClient {
       headers['x-csrf-token'] = csrfToken;
     }
 
-    if (withAuth && typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-    }
-
     return headers;
   }
 
-  private setCsrfToken(token: string): void {
-    if (typeof window === 'undefined' || !token) {
-      return;
-    }
-    localStorage.setItem(this.csrfStorageKey, token);
-  }
-
-  private clearCsrfToken(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.removeItem(this.csrfStorageKey);
-  }
-
-  private getCsrfTokenFromCookie(): string | null {
-    if (typeof document === 'undefined') {
-      return null;
-    }
-
-    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : null;
-  }
-
   private getCsrfToken(): string | null {
-    if (typeof window === 'undefined') {
+    return getCsrfTokenMemory();
+  }
+
+  private isBrowser(): boolean {
+    return typeof window !== 'undefined';
+  }
+
+  private getRequestPath(url: string): string {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  }
+
+  private isStateChangingMethod(method?: string): boolean {
+    return ['POST', 'PUT', 'PATCH', 'DELETE'].includes((method || 'GET').toUpperCase());
+  }
+
+  private shouldSkipCsrfForRequest(url: string): boolean {
+    const path = this.getRequestPath(url);
+    const excludedPaths = [
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/refresh',
+      '/api/auth/logout',
+      '/api/auth/csrf',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password',
+      '/api/auth/verify-reset-token',
+      '/api/webhook',
+    ];
+
+    return excludedPaths.some((endpoint) => path === endpoint || path.startsWith(`${endpoint}/`));
+  }
+
+  private shouldAutoRefresh(url: string): boolean {
+    const path = this.getRequestPath(url);
+    const excludedPaths = [
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/refresh',
+      '/api/auth/logout',
+      '/api/auth/csrf',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password',
+      '/api/auth/verify-reset-token',
+    ];
+
+    return !excludedPaths.some((endpoint) => path === endpoint || path.startsWith(`${endpoint}/`));
+  }
+
+  private invalidateRefreshState(): void {
+    this.refreshSequence += 1;
+    this.refreshPromise = null;
+  }
+
+  private clearClientSessionState(): void {
+    this.invalidateRefreshState();
+    this.invalidateCsrfState();
+    useAuthStore.getState().logout();
+  }
+
+  private invalidateCsrfState(): void {
+    this.csrfBootstrapSequence += 1;
+    this.csrfBootstrapPromise = null;
+    clearCsrfTokenMemory();
+  }
+
+  async ensureCsrfToken(forceRefresh = false): Promise<string | null> {
+    if (!this.isBrowser()) {
       return null;
     }
 
-    const storedToken = localStorage.getItem(this.csrfStorageKey);
-    if (storedToken) {
-      return storedToken;
+    const currentToken = getCsrfTokenMemory();
+    if (currentToken && !forceRefresh) {
+      return currentToken;
     }
 
-    const cookieToken = this.getCsrfTokenFromCookie();
-    if (cookieToken) {
-      this.setCsrfToken(cookieToken);
-      return cookieToken;
+    // Single-flight protection: if a bootstrap request is already running,
+    // all callers await the same promise instead of creating duplicate traffic.
+    if (this.csrfBootstrapPromise) {
+      return this.csrfBootstrapPromise;
     }
 
-    return null;
+    if (forceRefresh) {
+      // The caller has already determined the current token is stale.
+      // Clear the memory copy so subsequent reads do not reuse bad state.
+      clearCsrfTokenMemory();
+    }
+
+    const csrfSequence = this.csrfBootstrapSequence;
+    const bootstrapPromise = (async (): Promise<string | null> => {
+      try {
+        const response = await fetch(`${this.baseUrl}/api/auth/csrf`, {
+          method: 'GET',
+          credentials: 'include',
+          mode: 'cors',
+          headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const result = await response.json();
+        const csrfToken = result?.data?.csrfToken || result?.csrfToken || null;
+
+        if (csrfSequence !== this.csrfBootstrapSequence) {
+          return null;
+        }
+
+        if (typeof csrfToken === 'string' && csrfToken.length > 0) {
+          setCsrfTokenMemory(csrfToken);
+          return csrfToken;
+        }
+
+        return null;
+      } catch (error) {
+        console.warn('CSRF bootstrap failed:', error);
+        return null;
+      }
+    })();
+
+    this.csrfBootstrapPromise = bootstrapPromise;
+
+    try {
+      return await bootstrapPromise;
+    } finally {
+      if (this.csrfBootstrapPromise === bootstrapPromise) {
+        this.csrfBootstrapPromise = null;
+      }
+    }
+  }
+
+  private async shouldRetryForInvalidCsrf(response: Response): Promise<boolean> {
+    if (response.status !== 403) {
+      return false;
+    }
+
+    try {
+      const clone = response.clone();
+      const text = await clone.text();
+
+      if (!text || text.trim() === '') {
+        return false;
+      }
+
+      const data = JSON.parse(text);
+      const message = String(data?.message || data?.error || '').toLowerCase();
+      return message.includes('csrf');
+    } catch {
+      return false;
+    }
   }
 
   private syncCsrfToken(payload: any): void {
     const csrfToken = payload?.data?.csrfToken || payload?.csrfToken;
     if (csrfToken) {
-      this.setCsrfToken(csrfToken);
+      setCsrfTokenMemory(csrfToken);
     }
+  }
+
+  private clearCsrfToken(): void {
+    clearCsrfTokenMemory();
   }
 
   // Fetch with timeout and better error handling
   private async fetchWithTimeout(
     url: string,
     options: RequestInit = {},
-    timeoutMs = 15000
+    timeoutMs = 15000,
+    config: { retryOn401?: boolean; retryAttempted?: boolean; retryOn403?: boolean; retryAttempted403?: boolean } = {}
   ): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const retryOn401 = config.retryOn401 !== false;
+    const retryAttempted = config.retryAttempted === true;
+    const retryOn403 = config.retryOn403 !== false;
+    const retryAttempted403 = config.retryAttempted403 === true;
+    const method = (options.method || 'GET').toUpperCase();
+
+    if (
+      this.isBrowser() &&
+      this.isStateChangingMethod(method) &&
+      !this.shouldSkipCsrfForRequest(url)
+    ) {
+      await this.ensureCsrfToken();
+    }
 
     try {
       console.log(`[API] Requesting: ${url}`);
@@ -208,6 +338,58 @@ class ApiClient {
       });
       clearTimeout(timeout);
       console.log(`[API] Response: ${response.status} ${response.statusText}`);
+
+      if (response.status === 401 && retryAttempted) {
+        // The request has already consumed its one refresh attempt.
+        // Surface a terminal auth failure so callers do not start a second refresh cycle.
+        throw new AuthenticationError('Session expired', true);
+      }
+
+      if (
+        response.status === 401 &&
+        retryOn401 &&
+        !retryAttempted &&
+        this.isBrowser() &&
+        this.shouldAutoRefresh(url)
+      ) {
+        const refreshed = await this.refreshSession();
+
+        if (refreshed.success && refreshed.data?.user) {
+          return this.fetchWithTimeout(url, options, timeoutMs, {
+            retryOn401,
+            retryAttempted: true,
+          });
+        }
+
+        this.clearClientSessionState();
+        throw new AuthenticationError(refreshed.message || 'Session expired', true);
+      }
+
+      if (
+        response.status === 403 &&
+        retryOn403 &&
+        !retryAttempted403 &&
+        this.isBrowser() &&
+        this.isStateChangingMethod(method) &&
+        !this.shouldSkipCsrfForRequest(url) &&
+        (await this.shouldRetryForInvalidCsrf(response))
+      ) {
+        const refreshedCsrf = await this.ensureCsrfToken(true);
+
+        if (!refreshedCsrf) {
+          // Bootstrap failed or produced no token; return the original failure
+          // so callers can surface the CSRF error without generating more traffic.
+          return response;
+        }
+
+        return this.fetchWithTimeout(url, options, timeoutMs, {
+          retryOn401,
+          retryAttempted,
+          retryOn403,
+          retryAttempted403: true,
+        });
+      }
+
       return response;
     } catch (error: any) {
       clearTimeout(timeout);
@@ -225,6 +407,74 @@ class ApiClient {
       
       // Other errors
       throw new NetworkError(error.message || 'Network error occurred');
+    }
+  }
+
+  async refreshSession(): Promise<AuthResponse> {
+    if (!this.isBrowser()) {
+      return {
+        success: false,
+        message: 'Session refresh is unavailable during server rendering.',
+      };
+    }
+
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    const refreshSequence = this.refreshSequence;
+    const refreshPromise = (async (): Promise<AuthResponse> => {
+      try {
+        const response = await this.fetchWithTimeout(
+          `${this.baseUrl}/api/auth/refresh`,
+          {
+            method: 'POST',
+            headers: this.getHeaders(),
+          },
+          15000,
+          { retryOn401: false }
+        );
+
+        const result = await this.handleResponse(response, true);
+
+        if (refreshSequence !== this.refreshSequence) {
+          return {
+            success: false,
+            message: 'Session changed while refresh was in flight',
+          };
+        }
+
+        if (result.success && result.data?.user) {
+          this.syncCsrfToken(result);
+          useAuthStore.getState().setAuth(result.data.user);
+          return result;
+        }
+
+        this.clearClientSessionState();
+        return {
+          success: false,
+          message: result.message || 'Session refresh failed',
+        };
+      } catch (error: any) {
+        if (refreshSequence === this.refreshSequence) {
+          this.clearClientSessionState();
+        }
+
+        return {
+          success: false,
+          message: error.message || 'Session refresh failed',
+        };
+      }
+    })();
+
+    this.refreshPromise = refreshPromise;
+
+    try {
+      return await refreshPromise;
+    } finally {
+      if (this.refreshPromise === refreshPromise) {
+        this.refreshPromise = null;
+      }
     }
   }
 
@@ -315,15 +565,15 @@ class ApiClient {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
-      });
+      }, 15000, { retryOn401: false });
 
       const result = await this.handleResponse(response, true);
 
-      // 🔒 SECURITY: Token is in httpOnly cookie, not in response
-      // Update auth store with user data only (no token)
+      // 🔒 SECURITY: Auth tokens remain in httpOnly cookies.
+      // The CSRF token is mirrored into memory from the JSON payload only.
       if (result.success && result.data?.user) {
         this.syncCsrfToken(result);
-        useAuthStore.getState().setAuth(result.data.user, '');
+        useAuthStore.getState().setAuth(result.data.user);
       }
 
       return result;
@@ -343,23 +593,23 @@ class ApiClient {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
-      });
+      }, 15000, { retryOn401: false });
 
       console.log('[API] Login response received, status:', response.status);
       const result = await this.handleResponse(response, true);
       console.log('[API] Login result:', { 
         success: result.success, 
         hasData: !!result.data,
-        hasToken: !!result.data?.token,
+        hasCsrfToken: !!result.data?.csrfToken,
         message: result.message 
       });
 
-      // Backend returns: { success: true, message: '...', data: { user } }
-      // 🔒 SECURITY: No token in response, it's in httpOnly cookie
+      // Backend returns: { success: true, message: '...', data: { user, csrfToken } }
+      // Auth remains cookie-only; the CSRF token is the only browser-managed secret.
       if (result.success && result.data?.user) {
         console.log('✅ Login successful, user data received');
         this.syncCsrfToken(result);
-        useAuthStore.getState().setAuth(result.data.user, '');
+        useAuthStore.getState().setAuth(result.data.user);
         return result;
       }
 
@@ -383,12 +633,12 @@ class ApiClient {
     }
   }
 
-  async getProfile() {
+  async getProfile(): Promise<AuthResponse> {
     try {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/profile`, {
         method: 'GET',
         headers: this.getHeaders(), // No withAuth needed - cookies sent automatically
-      });
+      }, 15000, { retryOn401: true });
 
       return await this.handleResponse(response);
     } catch (error: any) {
@@ -406,7 +656,7 @@ class ApiClient {
         method: 'PUT',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
-      });
+      }, 15000, { retryOn401: true });
 
       return await this.handleResponse(response);
     } catch (error: any) {
@@ -420,19 +670,17 @@ class ApiClient {
 
   async logout(): Promise<void> {
     try {
+      this.invalidateRefreshState();
       // Call backend to clear httpOnly cookie
       await this.fetchWithTimeout(`${this.baseUrl}/api/auth/logout`, {
         method: 'POST',
         headers: this.getHeaders(),
-      });
-      
-      this.clearCsrfToken();
+      }, 15000, { retryOn401: false });
 
       // Clear local auth state
       useAuthStore.getState().logout();
     } catch (error) {
       console.error('Logout error:', error);
-      this.clearCsrfToken();
       // Still clear local state even if backend call fails
       useAuthStore.getState().logout();
     }
@@ -450,10 +698,7 @@ class ApiClient {
   handleAuthenticationFailure(errorMessage?: string): void {
     console.warn('Authentication failure:', errorMessage || 'Session expired');
     
-    this.clearCsrfToken();
-
-    // Clear local auth state
-    useAuthStore.getState().logout();
+    this.clearClientSessionState();
     
     // Redirect to login page
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
@@ -464,11 +709,10 @@ class ApiClient {
   // Cart API methods
   async getCart() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/cart`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/cart`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -484,12 +728,11 @@ class ApiClient {
 
   async addToCart(productId: string, quantity: number = 1, customText?: string, customImageUrl?: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/cart/items`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/cart/items`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ productId, quantity, customText, customImageUrl }),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -505,12 +748,11 @@ class ApiClient {
 
   async addCustomDesignToCart(customDesignId: string, quantity: number = 1) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/cart/custom-designs`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/cart/custom-designs`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include',
         body: JSON.stringify({ customDesignId, quantity }),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -526,12 +768,11 @@ class ApiClient {
 
   async updateCartItem(itemId: string, quantity: number) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/cart/items/${itemId}`, {
         method: 'PUT',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ quantity }),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -547,11 +788,10 @@ class ApiClient {
 
   async removeFromCart(itemId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/cart/items/${itemId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/cart/items/${itemId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -567,11 +807,10 @@ class ApiClient {
 
   async clearCart() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/cart`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/cart`, {
         method: 'DELETE',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -591,14 +830,13 @@ class ApiClient {
       const formData = new FormData();
       formData.append('photo', file);
 
-      const response = await fetch(`${this.baseUrl}/api/custom-photos/upload`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/custom-photos/upload`, {
         method: 'POST',
         headers: this.getMultipartHeaders(),
         // Don't set headers - browser will set Content-Type with boundary
         // Authentication handled via cookies with credentials: 'include'
-        credentials: 'include',
         body: formData,
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -705,11 +943,10 @@ class ApiClient {
   // Address API methods
   async getAddresses() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include',
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -724,11 +961,10 @@ class ApiClient {
 
   async getAddressById(addressId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses/${addressId}`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include',
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -753,12 +989,11 @@ class ApiClient {
     isDefault?: boolean;
   }) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include',
         body: JSON.stringify(addressData),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -783,12 +1018,11 @@ class ApiClient {
     country?: string;
   }) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses/${addressId}`, {
         method: 'PUT',
         headers: this.getHeaders(),
-        credentials: 'include',
         body: JSON.stringify(addressData),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -804,11 +1038,10 @@ class ApiClient {
 
   async deleteAddress(addressId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses/${addressId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
-        credentials: 'include',
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -824,11 +1057,10 @@ class ApiClient {
 
   async setDefaultAddress(addressId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses/${addressId}/default`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses/${addressId}/default`, {
         method: 'PUT',
         headers: this.getHeaders(),
-        credentials: 'include',
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -844,11 +1076,10 @@ class ApiClient {
 
   async getDefaultAddress() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/addresses/default`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/addresses/default`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include',
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -864,11 +1095,10 @@ class ApiClient {
   // Order API methods
   async createOrder() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/orders`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
       return await response.json();
     } catch (error) {
       console.error('Create order error:', error);
@@ -878,11 +1108,10 @@ class ApiClient {
 
   async getOrders(limit = 10, offset = 0) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders?limit=${limit}&offset=${offset}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/orders?limit=${limit}&offset=${offset}`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
       return await response.json();
     } catch (error) {
       console.error('Get orders error:', error);
@@ -892,11 +1121,10 @@ class ApiClient {
 
   async getOrder(orderId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders/${orderId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/orders/${orderId}`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
       return await response.json();
     } catch (error) {
       console.error('Get order error:', error);
@@ -906,12 +1134,11 @@ class ApiClient {
 
   async updateOrderStatus(orderId: string, status: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/status`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ status }),
-      });
+      }, 15000, { retryOn401: true });
       return await response.json();
     } catch (error) {
       console.error('Update order status error:', error);
@@ -921,11 +1148,10 @@ class ApiClient {
 
   async getOrderStats() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders/stats`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/orders/stats`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
       return await response.json();
     } catch (error) {
       console.error('Get order stats error:', error);
@@ -940,12 +1166,11 @@ class ApiClient {
    */
   async createPaymentOrder(shippingAddress?: any) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/orders`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/payment/orders`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ shippingAddress }),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -964,11 +1189,10 @@ class ApiClient {
    */
   async createRazorpayOrder(orderId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/create-order/${orderId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/payment/create-order/${orderId}`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -991,12 +1215,11 @@ class ApiClient {
     razorpay_signature: string;
   }) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/verify`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/payment/verify`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify(paymentData),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1015,12 +1238,11 @@ class ApiClient {
    */
   async handlePaymentFailure(orderId: string, reason?: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/failure`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/payment/failure`, {
         method: 'POST',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify({ orderId, reason }),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1039,11 +1261,10 @@ class ApiClient {
    */
   async getPaymentStatus(orderId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/status/${orderId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/payment/status/${orderId}`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1069,11 +1290,10 @@ class ApiClient {
    */
   async getOrderWithPayment(orderId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/orders/${orderId}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/payment/orders/${orderId}`, {
         method: 'GET',
         headers: this.getHeaders(),
-        credentials: 'include', // Send cookies for authentication
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1110,12 +1330,11 @@ class ApiClient {
 
   async createCategory(name: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/categories`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/categories`, {
         method: 'POST',
-        credentials: 'include',
         headers: this.getHeaders(),
         body: JSON.stringify({ name }),
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1189,12 +1408,11 @@ class ApiClient {
 
   async createProduct(formData: FormData) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/products`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/products`, {
         method: 'POST',
-        credentials: 'include',
         headers: this.getMultipartHeaders(),
         body: formData,
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1210,12 +1428,11 @@ class ApiClient {
 
   async updateProduct(id: string, formData: FormData) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/products/${id}`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/products/${id}`, {
         method: 'PUT',
-        credentials: 'include',
         headers: this.getMultipartHeaders(),
         body: formData,
-      });
+      }, 15000, { retryOn401: true });
 
       if (!response.ok) {
         const errorData = await response.json();

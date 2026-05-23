@@ -1,5 +1,5 @@
 import axios from 'axios';
-import environment from '../config/environment';
+import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
 
@@ -42,11 +42,11 @@ class WhatsAppService {
   }
 
   private initializeConfig() {
-    const provider = process.env.WHATSAPP_PROVIDER;
-    const apiKey = process.env.WHATSAPP_API_KEY;
-    const apiUrl = process.env.WHATSAPP_API_URL;
-    const ordersGroup = process.env.WHATSAPP_ORDERS_GROUP;
-    const contactsGroup = process.env.WHATSAPP_CONTACTS_GROUP;
+    const provider = env.whatsappProvider;
+    const apiKey = env.whatsappApiKey;
+    const apiUrl = env.whatsappApiUrl;
+    const ordersGroup = env.whatsappOrdersGroup;
+    const contactsGroup = env.whatsappContactsGroup;
 
     if (!provider || !apiKey || !apiUrl || !ordersGroup || !contactsGroup) {
       logger.info('⚠️  WhatsApp notifications DISABLED - Missing configuration');

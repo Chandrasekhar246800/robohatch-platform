@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Check if user is authenticated via cookie flag
-  const isLoggedIn = request.cookies.get('isLoggedIn')?.value === 'true';
-  const authToken = request.cookies.get('auth_token'); // Check actual auth cookie
-
-  // Consider user authenticated if either cookie exists
-  const isAuthenticated = isLoggedIn || !!authToken;
+  // Auth is determined by the secure HttpOnly session cookies set by the backend.
+  const isAuthenticated = !!request.cookies.get('auth_token') || !!request.cookies.get('refresh_token');
 
   // Check if the route is protected
   const isAccountRoute = request.nextUrl.pathname.startsWith('/account');

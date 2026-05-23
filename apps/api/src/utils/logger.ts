@@ -1,7 +1,8 @@
 import pino from 'pino';
+import { env } from '../config/env';
 
 const pinoLogger = pino({
-  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  level: env.logLevel,
   base: undefined,
   redact: {
     paths: [

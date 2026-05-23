@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import environment from "./config/environment";
+import { env } from "./config/env";
 import { initSentry } from "./config/sentry";
 import Sentry from "@sentry/node";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware";
@@ -40,7 +40,7 @@ app.set("trust proxy", 1);
 initSentry(app);
 
 // Sentry request handler must be the first middleware (only if configured)
-if (process.env.SENTRY_DSN) {
+if (env.sentryDsn) {
   app.use(Sentry.Handlers.requestHandler());
   app.use(Sentry.Handlers.tracingHandler());
 }
@@ -71,14 +71,14 @@ app.use(cookieParser());
 app.use(cors({
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) {
-      if (environment.isProduction) {
+      if (env.isProduction) {
         return callback(new Error('Not allowed by CORS'));
       }
       return callback(null, true);
     }
     
     // Check if origin is allowed
-    const isAllowed = environment.ALLOWED_ORIGINS.some(allowedOrigin => {
+    const isAllowed = env.allowedOrigins.some((allowedOrigin: string) => {
       // Support wildcard matching (e.g., https://*.vercel.app)
       if (allowedOrigin.includes('*')) {
         const pattern = allowedOrigin.replace(/\./g, '\\.').replace(/\*/g, '.*');
@@ -91,7 +91,7 @@ app.use(cors({
       callback(null, true);
     } else {
       logger.warn(`⚠️  CORS blocked request from origin: ${origin}`);
-      logger.warn(`   Allowed origins: ${environment.ALLOWED_ORIGINS.join(', ')}`);
+      logger.warn(`   Allowed origins: ${env.allowedOrigins.join(', ')}`);
       // Still allow the request but browser will block it
       callback(null, false);
     }
@@ -120,7 +120,7 @@ app.use(csrfProtection);
 app.get("/health", async (_, res) => {
   const health: any = {
     status: "OK",
-    environment: environment.NODE_ENV,
+    environment: env.nodeEnv,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     checks: {},
@@ -138,7 +138,7 @@ app.get("/health", async (_, res) => {
 
   try {
     // 2. Razorpay credentials check
-    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    if (env.razorpayKeyId && env.razorpayKeySecret) {
       health.checks.razorpay = { status: 'configured', message: 'Payment gateway credentials present' };
     } else {
       health.checks.razorpay = { status: 'missing', message: 'Payment gateway not configured' };
@@ -150,7 +150,7 @@ app.get("/health", async (_, res) => {
 
   try {
     // 3. S3 connectivity check
-    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    if (env.awsAccessKeyId && env.awsSecretAccessKey) {
       health.checks.s3 = { status: 'configured', message: 'S3 storage credentials present' };
     } else {
       health.checks.s3 = { status: 'missing', message: 'S3 storage not configured' };
@@ -161,11 +161,11 @@ app.get("/health", async (_, res) => {
 
   try {
     // 4. Email service check
-    if (process.env.SENDGRID_API_KEY) {
+    if (env.sendgridApiKey) {
       health.checks.email = { status: 'configured', message: 'Email service configured' };
     } else {
       health.checks.email = { status: 'missing', message: 'Email service not configured' };
-      if (process.env.NODE_ENV === 'production') {
+      if (env.isProduction) {
         health.status = 'DEGRADED';
       }
     }
@@ -210,7 +210,7 @@ app.use("/api/admin/categories", categoryRoutes);
 app.use(rateLimitErrorHandler);
 
 // ✅ PRODUCTION HARDENING: Sentry error handler (only if configured, before other error handlers)
-if (process.env.SENTRY_DSN) {
+if (env.sentryDsn) {
   app.use(Sentry.Handlers.errorHandler());
 }
 
@@ -232,7 +232,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   logger.error(`   Origin: ${req.headers.origin || 'none'}`);
   
   // Capture error in Sentry (if not already captured)
-  if (process.env.SENTRY_DSN && !res.headersSent) {
+  if (env.sentryDsn && !res.headersSent) {
     Sentry.captureException(err, {
       extra: {
         path: req.path,
@@ -252,7 +252,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   }
   
   // Don't leak error details in production
-  const message = environment.isProduction 
+  const message = env.isProduction 
     ? 'Internal server error' 
     : err.message || 'Unknown error';
   
@@ -265,7 +265,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     res.status(statusCode).json({
       success: false,
       message,
-      ...(environment.isDevelopment && { stack: err.stack }),
+      ...(env.isDevelopment && { stack: err.stack }),
     });
   }
 });

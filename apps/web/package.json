@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -rf .next"
+    "clean": "rm -rf .next",
+    "test:auth-concurrency": "npx tsx --test tests/auth-concurrency.test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.17.0",

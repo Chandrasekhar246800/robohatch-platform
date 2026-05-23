@@ -1,7 +1,7 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3 } from '../config/s3';
-import environment from '../config/environment';
+import { env } from '../config/env';
 
 const getS3KeyFromUrlOrKey = (value: string): string => {
   if (!value) return '';
@@ -24,7 +24,7 @@ export const getSignedS3UrlFromUrlOrKey = async (
   if (!key) return value;
 
   const command = new GetObjectCommand({
-    Bucket: environment.AWS_S3_BUCKET,
+    Bucket: env.awsS3Bucket,
     Key: key,
   });
 

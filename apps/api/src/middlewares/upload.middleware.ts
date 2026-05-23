@@ -1,7 +1,7 @@
 import multer from "multer";
 import multerS3 from "multer-s3";
 import { s3 } from "../config/s3";
-import environment from "../config/environment";
+import { env } from "../config/env";
 
 /**
  * Multer configuration for uploading images to AWS S3
@@ -14,7 +14,7 @@ import environment from "../config/environment";
 export const upload = multer({
   storage: multerS3({
     s3,
-    bucket: environment.AWS_S3_BUCKET,
+    bucket: env.awsS3Bucket,
     contentType: multerS3.AUTO_CONTENT_TYPE,
     metadata: (_, file, cb) => {
       cb(null, {

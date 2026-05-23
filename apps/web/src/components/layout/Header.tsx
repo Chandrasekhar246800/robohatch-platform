@@ -9,7 +9,7 @@ import { Button } from '@/components/ui';
 import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useUIStore } from '@/store/ui.store';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuth } from '@/context/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '@/lib/api-client';
 import { formatPrice } from '@/lib/utils';
@@ -40,7 +40,7 @@ export const Header: React.FC = () => {
   const itemCount = useCartStore((state) => state.getItemCount());
   const wishlistCount = useWishlistStore((state) => state.count);
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useUIStore();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -299,7 +299,7 @@ export const Header: React.FC = () => {
           {/* Right: Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
             {/* Wishlist (Desktop Only, Only show if authenticated) */}
-            {mounted && isAuthenticated && (
+            {mounted && !isLoading && isAuthenticated && (
               <Link
                 href="/wishlist"
                 className="hidden sm:flex relative p-2 text-gray-600 hover:text-primary transition-colors rounded-lg hover:bg-gray-100 items-center space-x-1"
@@ -339,7 +339,7 @@ export const Header: React.FC = () => {
             </Link>
 
             {/* Auth Section */}
-            {mounted && isAuthenticated ? (
+            {mounted && !isLoading && isAuthenticated ? (
               // Logged In: Profile Icon (Mobile) / Profile Dropdown (Desktop)
               <div className="relative" ref={profileRef}>
                 <button
@@ -476,7 +476,12 @@ export const Header: React.FC = () => {
               })}
               
               {/* Mobile Auth Section */}
-              {isAuthenticated ? (
+              {isLoading ? (
+                <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500">
+                  <Loader2 size={16} className="animate-spin" />
+                  Checking session
+                </div>
+              ) : isAuthenticated ? (
                 <div className="flex flex-col space-y-1 pt-2 border-t border-gray-200 sm:hidden">
                   <div className="px-4 py-2">
                     <p className="text-sm font-medium text-gray-900">Hello,</p>

@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/node';
+import { env } from './env';
 
 import { logger } from '../utils/logger';
 
@@ -9,8 +10,8 @@ import { logger } from '../utils/logger';
  */
 export function initSentry(app: any) {
   // Only initialize if DSN is provided
-  if (!process.env.SENTRY_DSN) {
-    if (process.env.NODE_ENV === 'production') {
+  if (!env.sentryDsn) {
+    if (env.isProduction) {
       logger.warn('⚠️  WARNING: SENTRY_DSN not configured in production');
       logger.warn('   Error tracking is recommended for production systems');
     } else {
@@ -20,11 +21,11 @@ export function initSentry(app: any) {
   }
 
   Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
+    dsn: env.sentryDsn,
+    environment: env.nodeEnv,
     
     // Performance Monitoring
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0, // 10% in prod, 100% in dev
+    tracesSampleRate: env.isProduction ? 0.1 : 1.0, // 10% in prod, 100% in dev
     
     integrations: [
       // Express integration
@@ -58,8 +59,8 @@ export function initSentry(app: any) {
   });
 
   logger.info('✅ Sentry initialized successfully');
-  logger.info(`   Environment: ${process.env.NODE_ENV}`);
-  logger.info(`   Traces Sample Rate: ${process.env.NODE_ENV === 'production' ? '10%' : '100%'}`);
+  logger.info(`   Environment: ${env.nodeEnv}`);
+  logger.info(`   Traces Sample Rate: ${env.isProduction ? '10%' : '100%'}`);
 }
 
 /**

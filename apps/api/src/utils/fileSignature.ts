@@ -1,7 +1,7 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { fileTypeFromBuffer } from 'file-type';
 import { s3 } from '../config/s3';
-import environment from '../config/environment';
+import { env } from '../config/env';
 import { Readable } from 'stream';
 
 export interface SignatureValidationResult {
@@ -31,7 +31,7 @@ const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
 const readFirstBytesFromS3 = async (value: string, bytes = 4096): Promise<Buffer> => {
   const key = getS3KeyFromUrlOrKey(value);
   const command = new GetObjectCommand({
-    Bucket: environment.AWS_S3_BUCKET,
+    Bucket: env.awsS3Bucket,
     Key: key,
     Range: `bytes=0-${bytes - 1}`,
   });

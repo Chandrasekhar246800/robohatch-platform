@@ -18,8 +18,8 @@ export function useUserProfile() {
     try {
       const response = await apiClient.getProfile();
 
-      if (response.success && response.data) {
-        updateUser(response.data);
+      if (response.success && response.data?.user) {
+        updateUser(response.data.user);
       } else {
         setError(response.message || 'Failed to fetch profile');
       }

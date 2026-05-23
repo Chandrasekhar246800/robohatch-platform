@@ -193,10 +193,14 @@ export class AuthController {
       }
 
       const user = await authService.getUserById(userId);
+      const csrfToken = authService.rotateCsrfToken(res);
 
       res.json({
         success: true,
-        data: user, // ✅ Return user directly, not nested in { user: ... }
+        data: {
+          user,
+          csrfToken,
+        },
       });
     } catch (error: any) {
       logger.error('Get profile error:', error);

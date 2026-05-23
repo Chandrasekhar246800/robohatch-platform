@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../config/prisma';
+import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
 
@@ -33,15 +34,7 @@ export class WebhookController {
   async handleRazorpayWebhook(req: Request, res: Response) {
     try {
       // 🔒 SECURITY: Verify webhook signature
-      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-      
-      if (!webhookSecret) {
-        logger.error('⚠️ RAZORPAY_WEBHOOK_SECRET not configured');
-        return res.status(500).json({
-          success: false,
-          message: 'Webhook not configured',
-        });
-      }
+      const webhookSecret = env.razorpayWebhookSecret;
 
       const signature = req.headers['x-razorpay-signature'] as string;
       const eventId = (req.headers['x-razorpay-event-id'] as string) || '';

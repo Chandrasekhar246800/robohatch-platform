@@ -1,7 +1,7 @@
 import multer from "multer";
 import multerS3 from "multer-s3";
 import { s3 } from "../config/s3";
-import environment from "../config/environment";
+import { env } from "../config/env";
 import { Request, Response, NextFunction } from "express";
 
 import { logger } from '../utils/logger';
@@ -17,7 +17,7 @@ import { logger } from '../utils/logger';
 export const uploadCustomPhoto = multer({
   storage: multerS3({
     s3,
-    bucket: environment.AWS_S3_BUCKET,
+    bucket: env.awsS3Bucket,
     contentType: multerS3.AUTO_CONTENT_TYPE,
     metadata: (_, file, cb) => {
       logger.info(`📤 Starting S3 upload for custom photo: ${file.originalname}`);

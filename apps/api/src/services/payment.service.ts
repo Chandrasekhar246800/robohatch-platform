@@ -5,25 +5,11 @@ import { validateShippingAddress, validatePaymentVerification } from '../validat
 import { emailService } from './email.service';
 import whatsappService from './whatsapp.service';
 import { StockManager } from '../utils/stock-manager';
-
-// =��� SECURITY: NO FALLBACK - Crash if Razorpay credentials missing
+import { env } from '../config/env';
 import { logger } from '../utils/logger';
-
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  logger.error('🚨 CRITICAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set!');
-  throw new Error('Missing Razorpay credentials');
-}
-
-// 🔒 SECURITY: Webhook secret required
-if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
-  logger.error('🚨 CRITICAL: RAZORPAY_WEBHOOK_SECRET must be set!');
-  logger.error('This is required for webhook signature verification');
-  throw new Error('Missing Razorpay webhook secret');
-}
-
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
+const RAZORPAY_KEY_ID = env.razorpayKeyId;
+const RAZORPAY_KEY_SECRET = env.razorpayKeySecret;
+const RAZORPAY_WEBHOOK_SECRET = env.razorpayWebhookSecret;
 
 logger.info('✅ Razorpay credentials loaded successfully');
 logger.info('✅ Webhook secret configured');

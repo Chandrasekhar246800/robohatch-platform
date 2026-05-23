@@ -152,7 +152,7 @@ export default function AccountPage() {
       
       if (response.success && response.data) {
         // Update auth store with new user data
-        setAuth(response.data, '');
+        setAuth(response.data);
         setUpdateSuccess('Profile updated successfully!');
         setIsEditing(false);
         

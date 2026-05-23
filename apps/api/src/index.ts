@@ -1,12 +1,10 @@
 import express, { Request, Response } from 'express'
 import { logger } from './utils/logger';
 import cors from 'cors'
-import dotenv from 'dotenv'
-
-dotenv.config()
+import { env } from './config/env';
 
 const app = express()
-const port = process.env.PORT || 3001
+const port = env.port
 
 app.use(cors())
 app.use(express.json())

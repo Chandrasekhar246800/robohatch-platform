@@ -1,36 +1,18 @@
 import sgMail from '@sendgrid/mail';
 import { prisma } from '../config/prisma';
-
-// =��� SECURITY: Validate SendGrid credentials at startup
-// G�� PRODUCTION REQUIREMENT: Fail fast if email not configured in production
+import { env } from '../config/env';
 import { logger } from '../utils/logger';
+const SENDGRID_ENABLED = true;
+const FROM_EMAIL = env.sendgridFromEmail;
+const FROM_NAME = env.sendgridFromName;
+const ORDERS_EMAIL = env.ordersEmail;
+const CONTACT_EMAIL = env.contactEmail;
 
-if (!process.env.SENDGRID_API_KEY) {
-  if (process.env.NODE_ENV === 'production') {
-    logger.error('🚨 CRITICAL: SENDGRID_API_KEY not set in production!');
-    logger.error('   Email notifications are REQUIRED for production.');
-    logger.error('   Set SENDGRID_API_KEY environment variable to fix this.');
-    throw new Error('SENDGRID_API_KEY is required in production');
-  } else {
-    logger.warn('⚠️  WARNING: SENDGRID_API_KEY not set - Email notifications disabled in development');
-  }
-}
-
-const SENDGRID_ENABLED = !!process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@robohatch.in';
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'RoboHatch';
-const ORDERS_EMAIL = process.env.ORDERS_EMAIL || 'robohatchorders@gmail.com';
-const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'robohatchofficial@gmail.com';
-
-if (SENDGRID_ENABLED) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-  logger.info('✅ SendGrid email service initialized');
-  logger.info(`   From: ${FROM_NAME} <${FROM_EMAIL}>`);
-  logger.info(`   Orders notifications: ${ORDERS_EMAIL}`);
-  logger.info(`   Contact/Support: ${CONTACT_EMAIL}`);
-} else {
-  logger.warn('⚠️  Email notifications DISABLED - emails will be logged only (DEV MODE)');
-}
+sgMail.setApiKey(env.sendgridApiKey);
+logger.info('✅ SendGrid email service initialized');
+logger.info(`   From: ${FROM_NAME} <${FROM_EMAIL}>`);
+logger.info(`   Orders notifications: ${ORDERS_EMAIL}`);
+logger.info(`   Contact/Support: ${CONTACT_EMAIL}`);
 
 export class EmailService {
   /**

@@ -1,10 +1,5 @@
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET required');
-}
+import { env } from './env';
 
-// Configuration files and constants
-export const config = {
-  port: process.env.PORT || 3001,
-  nodeEnv: process.env.NODE_ENV || 'development',
-  jwtSecret: process.env.JWT_SECRET,
-};
+export const config = env;
+
+export default config;

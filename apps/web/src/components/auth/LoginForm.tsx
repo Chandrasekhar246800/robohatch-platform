@@ -8,15 +8,10 @@ import { Mail, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { AnimatedInput } from '@/components/ui/AnimatedInput';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { apiClient } from '@/lib/api-client';
-import { useAuthStore } from '@/store/auth.store';
 
 export const LoginForm: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setAuth, setHasHydrated } = useAuthStore((state) => ({ 
-    setAuth: state.setAuth, 
-    setHasHydrated: state.setHasHydrated 
-  }));
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -54,24 +49,7 @@ export const LoginForm: React.FC = () => {
       });
 
       if (response.success && response.data) {
-        // Store user data in Zustand store (token is in httpOnly cookie, not response)
-        setAuth(response.data.user, '');
-        
-        // Immediately mark as hydrated since we just set state manually (not from localStorage)
-        setHasHydrated(true);
-        
-        // Set isLoggedIn cookie so middleware can see it (expires in 7 days)
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 7);
-        document.cookie = `isLoggedIn=true; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
-        
         console.log('[Login] User role:', response.data.user.role);
-        
-        // Longer delay to ensure:
-        // 1. Cookie is set by browser
-        // 2. Zustand persists state to localStorage
-        // 3. Next page can read the persisted state
-        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Redirect based on user role
         if (response.data.user.role === 'ADMIN') {

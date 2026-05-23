@@ -1,3 +1,5 @@
+import { env } from './env';
+
 /**
  * Centralized Logger
  * ✅ Production-grade logging with levels
@@ -26,7 +28,7 @@ class Logger {
   private isDevelopment: boolean;
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV === 'development';
+    this.isDevelopment = env.isDevelopment;
   }
 
   private log(level: LogLevel, message: string, context?: LogContext) {

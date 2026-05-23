@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
 
@@ -16,7 +17,7 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   const requestId = req.requestId || 'N/A';
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = env.isDevelopment;
 
   // 🔒 AUDIT LOG: All errors logged with request ID
   logger.error('❌ Error:', {

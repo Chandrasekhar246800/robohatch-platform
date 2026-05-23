@@ -14,7 +14,8 @@
     "lint": "eslint src/",
     "clean": "rm -rf dist",
     "seed": "tsx prisma/seed.ts",
-    "update-categories": "tsx prisma/update-categories.ts"
+    "update-categories": "tsx prisma/update-categories.ts",
+    "test:auth-concurrency": "npx tsx --test tests/auth-concurrency.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.984.0",

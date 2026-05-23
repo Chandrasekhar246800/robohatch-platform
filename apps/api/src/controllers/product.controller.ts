@@ -3,7 +3,7 @@ import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { s3 } from '../config/s3';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import environment from '../config/environment';
+import { env } from '../config/env';
 import { validateImageSignatureFromS3 } from '../utils/fileSignature';
 import { getSignedS3UrlFromUrlOrKey } from '../utils/s3SignedUrl';
 
@@ -35,7 +35,7 @@ export class ProductController {
         if (file.key) {
           await s3.send(
             new DeleteObjectCommand({
-              Bucket: environment.AWS_S3_BUCKET,
+              Bucket: env.awsS3Bucket,
               Key: file.key,
             })
           );
@@ -592,7 +592,7 @@ export class ProductController {
             const key = url.pathname.substring(1); // Remove leading slash
             
             const deleteCommand = new DeleteObjectCommand({
-              Bucket: environment.AWS_S3_BUCKET,
+              Bucket: env.awsS3Bucket,
               Key: key,
             });
             

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuth } from '@/context/auth-context';
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ interface AdminGuardProps {
  */
 export const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     // If user is authenticated as admin, redirect to admin panel
@@ -22,6 +22,16 @@ export const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
       router.push('/admin');
     }
   }, [isAuthenticated, user, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Don't render content if admin user
   if (isAuthenticated && user?.role === 'ADMIN') {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { useCartStore } from './cart.store';
+import { clearCsrfTokenMemory } from '@/lib/csrf-token';
 
 interface User {
   id: string;
@@ -13,60 +13,46 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  authStatus: 'checking' | 'authenticated' | 'unauthenticated';
   _hasHydrated: boolean;
   _lastLoginTime: number;
-  setAuth: (user: User, token: string) => void;
+  setAuth: (user: User) => void;
   logout: () => void;
   updateUser: (user: User) => void;
   setHasHydrated: (state: boolean) => void;
+  setAuthStatus: (status: AuthState['authStatus']) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      _hasHydrated: false,
-      _lastLoginTime: 0,
-      setAuth: (user, token) => {
-        const now = Date.now();
-        set({ user, isAuthenticated: true, _lastLoginTime: now });
-        console.log('[AuthStore] Login completed at:', now);
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  isAuthenticated: false,
+  authStatus: 'checking',
+  _hasHydrated: false,
+  _lastLoginTime: 0,
+  setAuth: (user) => {
+    const now = Date.now();
+    set({ user, isAuthenticated: true, authStatus: 'authenticated', _lastLoginTime: now, _hasHydrated: true });
+    console.log('[AuthStore] Session confirmed at:', now);
 
-        // Merge local cart with backend after login (non-blocking for faster login)
-        if (typeof window !== 'undefined') {
-          setTimeout(() => {
-            useCartStore.getState().mergeLocalCartWithBackend()
-              .catch(error => {
-                console.error('Failed to merge cart on login:', error);
-                // Even if merge fails, force sync with backend
-                useCartStore.getState().syncWithBackend(true);
-              });
-          }, 0);
-        }
-      },
-      logout: () => {
-        set({ user: null, isAuthenticated: false });
-        // Clear the auth cookie
-        if (typeof window !== 'undefined') {
-          document.cookie = 'isLoggedIn=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        }
-        // Clear cart on logout (both backend flag set to false and clear local)
-        useCartStore.getState().clearCart(false);
-      },
-      updateUser: (user) => set({ user }),
-      setHasHydrated: (state) => set({ _hasHydrated: state }),
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        // Exclude runtime flags: _hasHydrated and _lastLoginTime
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
+    // Merge local cart with backend after login (non-blocking for faster login)
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        useCartStore.getState().mergeLocalCartWithBackend()
+          .catch(error => {
+            console.error('Failed to merge cart on login:', error);
+            // Even if merge fails, force sync with backend
+            useCartStore.getState().syncWithBackend(true);
+          });
+      }, 0);
     }
-  )
-);
+  },
+  logout: () => {
+    set({ user: null, isAuthenticated: false, authStatus: 'unauthenticated', _hasHydrated: true });
+    clearCsrfTokenMemory();
+    // Clear cart on logout (both backend flag set to false and clear local)
+    useCartStore.getState().clearCart(false);
+  },
+  updateUser: (user) => set({ user }),
+  setHasHydrated: (state) => set({ _hasHydrated: state }),
+  setAuthStatus: (status) => set({ authStatus: status }),
+}));

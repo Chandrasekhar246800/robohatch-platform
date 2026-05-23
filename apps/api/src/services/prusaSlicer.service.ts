@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
 import fs from "fs";
 import path from "path";
+import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
 
@@ -9,7 +10,7 @@ export async function runPrusaSlicer(filePath: string) {
 
     try {
 
-      const allowedDir = path.resolve(process.env.UPLOAD_DIR || '/tmp/stl-uploads');
+      const allowedDir = path.resolve(env.uploadDir);
       const resolvedFilePath = path.resolve(filePath);
       if (!resolvedFilePath.startsWith(allowedDir + path.sep) && resolvedFilePath !== allowedDir) {
         reject(new Error('Invalid file path'));
