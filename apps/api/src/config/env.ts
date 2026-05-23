@@ -51,6 +51,7 @@ const formatIssue = (path: string[], message: string) => {
 };
 
 const redactDatabaseUrl = (value: string) => value.replace(/:\/\/([^:]+):([^@]+)@/, '://***:***@');
+const normalizeOrigin = (origin: string) => origin.trim().replace(/\/$/, '');
 
 const parsedEnv = envSchema.safeParse(process.env);
 
@@ -85,8 +86,8 @@ const env = {
   razorpayKeySecret: parsedEnv.data.RAZORPAY_KEY_SECRET,
   razorpayWebhookSecret: parsedEnv.data.RAZORPAY_WEBHOOK_SECRET,
   corsOrigin: parsedEnv.data.CORS_ORIGIN,
-  allowedOrigins: parsedEnv.data.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean),
-  frontendUrl: parsedEnv.data.FRONTEND_URL,
+  allowedOrigins: parsedEnv.data.CORS_ORIGIN.split(',').map(normalizeOrigin).filter(Boolean),
+  frontendUrl: normalizeOrigin(parsedEnv.data.FRONTEND_URL),
   cookieDomain: parsedEnv.data.COOKIE_DOMAIN,
   sentryDsn: parsedEnv.data.SENTRY_DSN,
   logLevel: parsedEnv.data.LOG_LEVEL ?? (parsedEnv.data.NODE_ENV === 'production' ? 'info' : 'debug'),

@@ -18,9 +18,9 @@ export class AuthController {
       const result = await authService.register(validatedData);
 
       // 🔒 Set httpOnly cookie
-      authService.setAuthCookie(res, result.token);
-      authService.setRefreshCookie(res, result.refreshToken);
-      authService.setCsrfCookie(res, result.csrfToken);
+      authService.setAuthCookie(res, result.token, req);
+      authService.setRefreshCookie(res, result.refreshToken, req);
+      authService.setCsrfCookie(res, result.csrfToken, req);
       logger.info({ event: 'register_success', userId: result.user.id });
 
       res.status(201).json({
@@ -60,9 +60,9 @@ export class AuthController {
       const result = await authService.login(validatedData);
 
       // 🔒 Set httpOnly cookie
-      authService.setAuthCookie(res, result.token);
-      authService.setRefreshCookie(res, result.refreshToken);
-      authService.setCsrfCookie(res, result.csrfToken);
+      authService.setAuthCookie(res, result.token, req);
+      authService.setRefreshCookie(res, result.refreshToken, req);
+      authService.setCsrfCookie(res, result.csrfToken, req);
       logger.info({ event: 'login_success', userId: result.user.id, ip: req.ip });
 
       res.json({
@@ -97,7 +97,7 @@ export class AuthController {
       }
 
       // 🔒 Clear httpOnly cookie
-      authService.clearAuthCookie(res);
+      authService.clearAuthCookie(res, req);
       logger.info({ event: 'logout_success', ip: req.ip });
 
       res.json({
@@ -129,9 +129,9 @@ export class AuthController {
       }
 
       const result = await authService.refreshSession(refreshToken);
-      authService.setAuthCookie(res, result.token);
-      authService.setRefreshCookie(res, result.refreshToken);
-      authService.setCsrfCookie(res, result.csrfToken);
+      authService.setAuthCookie(res, result.token, req);
+      authService.setRefreshCookie(res, result.refreshToken, req);
+      authService.setCsrfCookie(res, result.csrfToken, req);
       logger.info({ event: 'refresh_token_used', userId: result.user.id, ip: req.ip });
 
       return res.json({
@@ -147,7 +147,7 @@ export class AuthController {
       if (refreshToken) {
         await authService.revokeRefreshToken(refreshToken);
       }
-      authService.clearAuthCookie(res);
+      authService.clearAuthCookie(res, req);
       logger.warn({ event: 'refresh_failed', ip: req.ip, message: error?.message });
       return res.status(401).json({
         success: false,
@@ -170,7 +170,7 @@ export class AuthController {
       });
     }
 
-    const csrfToken = authService.rotateCsrfToken(res);
+    const csrfToken = authService.rotateCsrfToken(res, req);
     return res.json({
       success: true,
       data: { csrfToken },
@@ -193,7 +193,7 @@ export class AuthController {
       }
 
       const user = await authService.getUserById(userId);
-      const csrfToken = authService.rotateCsrfToken(res);
+      const csrfToken = authService.rotateCsrfToken(res, req);
 
       res.json({
         success: true,

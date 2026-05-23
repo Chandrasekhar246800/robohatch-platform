@@ -6,6 +6,7 @@ import { Response } from 'express';
 import { emailService } from './email.service';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import type { Request } from 'express';
 
 const JWT_SECRET = env.jwtSecret;
 const JWT_EXPIRES_IN = env.jwtExpiresIn;
@@ -16,9 +17,37 @@ const BCRYPT_ROUNDS = env.bcryptRounds;
 const hashToken = (token: string) =>
   crypto.createHash('sha256').update(token).digest('hex');
 
-const getCookieDomain = (): string | undefined => {
+const normalizeCookieDomain = (hostname: string): string | undefined => {
+  const normalizedHostname = hostname.toLowerCase().replace(/\.$/, '');
+
+  if (!normalizedHostname || normalizedHostname === 'localhost' || normalizedHostname.endsWith('.localhost')) {
+    return undefined;
+  }
+
+  return normalizedHostname.startsWith('www.')
+    ? `.${normalizedHostname.slice(4)}`
+    : `.${normalizedHostname}`;
+};
+
+const getCookieDomain = (req?: Request): string | undefined => {
   if (!env.isProduction) {
     return 'localhost';
+  }
+
+  if (req) {
+    const origin = req.headers.origin || req.headers.referer;
+    if (typeof origin === 'string' && origin.length > 0) {
+      try {
+        return normalizeCookieDomain(new URL(origin).hostname);
+      } catch {
+        // Fall through to forwarded host and configured domain.
+      }
+    }
+
+    const forwardedHost = req.headers['x-forwarded-host'];
+    if (typeof forwardedHost === 'string' && forwardedHost.length > 0) {
+      return normalizeCookieDomain(forwardedHost.split(',')[0].trim());
+    }
   }
 
   const configuredDomain = env.cookieDomain?.trim();
@@ -29,11 +58,7 @@ const getCookieDomain = (): string | undefined => {
   try {
     const hostname = new URL(env.frontendUrl).hostname.toLowerCase();
 
-    if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
-      return undefined;
-    }
-
-    return hostname.startsWith('www.') ? `.${hostname.slice(4)}` : `.${hostname}`;
+    return normalizeCookieDomain(hostname);
   } catch {
     return undefined;
   }
@@ -274,10 +299,10 @@ export class AuthService {
    * Set authentication cookie in response
    * 🔒 SECURITY: httpOnly + secure + sameSite protection
    */
-  setAuthCookie(res: Response, token: string): void {
+  setAuthCookie(res: Response, token: string, req?: Request): void {
     const isProduction = env.isProduction;
     const maxAge = 15 * 60 * 1000; // 15 minutes
-    const cookieDomain = getCookieDomain();
+    const cookieDomain = getCookieDomain(req);
 
     res.cookie('auth_token', token, {
       httpOnly: true, // ✅ Prevents JavaScript access (XSS protection)
@@ -291,10 +316,10 @@ export class AuthService {
     logger.info(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${cookieDomain ?? 'host-only'})`);
   }
 
-  setRefreshCookie(res: Response, refreshToken: string): void {
+  setRefreshCookie(res: Response, refreshToken: string, req?: Request): void {
     const isProduction = env.isProduction;
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-    const cookieDomain = getCookieDomain();
+    const cookieDomain = getCookieDomain(req);
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -306,10 +331,10 @@ export class AuthService {
     });
   }
 
-  setCsrfCookie(res: Response, csrfToken: string): void {
+  setCsrfCookie(res: Response, csrfToken: string, req?: Request): void {
     const isProduction = env.isProduction;
     const maxAge = 7 * 24 * 60 * 60 * 1000;
-    const cookieDomain = getCookieDomain();
+    const cookieDomain = getCookieDomain(req);
 
     // The CSRF cookie stays httpOnly so browser JavaScript cannot read it.
     // The frontend receives the same token in the JSON response and keeps it in memory only.
@@ -323,18 +348,18 @@ export class AuthService {
     });
   }
 
-  rotateCsrfToken(res: Response): string {
+  rotateCsrfToken(res: Response, req?: Request): string {
     const csrfToken = this.generateCSRFToken();
-    this.setCsrfCookie(res, csrfToken);
+    this.setCsrfCookie(res, csrfToken, req);
     return csrfToken;
   }
 
   /**
    * Clear authentication cookie (logout)
    */
-  clearAuthCookie(res: Response): void {
+  clearAuthCookie(res: Response, req?: Request): void {
     const isProduction = env.isProduction;
-    const cookieDomain = getCookieDomain();
+    const cookieDomain = getCookieDomain(req);
     res.clearCookie('auth_token', {
       httpOnly: true,
       secure: isProduction,
