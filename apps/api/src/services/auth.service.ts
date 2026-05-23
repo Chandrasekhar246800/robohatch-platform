@@ -34,6 +34,14 @@ const getCookieDomain = (req?: Request): string | undefined => {
     return 'localhost';
   }
 
+  // In production, prefer host-only cookies so the browser binds the session
+  // to the actual public site origin served through the Vercel proxy.
+  // Only use an explicit COOKIE_DOMAIN override when it is intentionally set.
+  const configuredDomain = env.cookieDomain?.trim();
+  if (configuredDomain) {
+    return configuredDomain.startsWith('.') ? configuredDomain : `.${configuredDomain}`;
+  }
+
   if (req) {
     const origin = req.headers.origin || req.headers.referer;
     if (typeof origin === 'string' && origin.length > 0) {
@@ -58,19 +66,8 @@ const getCookieDomain = (req?: Request): string | undefined => {
   try {
     const hostname = new URL(env.frontendUrl).hostname.toLowerCase();
 
-    return normalizeCookieDomain(hostname);
-  } catch {
-    return undefined;
-  }
-};
 
-const durationToMs = (value: string): number => {
-  const normalized = value.trim().toLowerCase();
-  const match = normalized.match(/^(\d+)([smhd])$/);
-
-  if (!match) {
-    return 7 * 24 * 60 * 60 * 1000;
-  }
+  return undefined;
 
   const amount = parseInt(match[1], 10);
   const unit = match[2];
