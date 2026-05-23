@@ -16,6 +16,29 @@ const BCRYPT_ROUNDS = env.bcryptRounds;
 const hashToken = (token: string) =>
   crypto.createHash('sha256').update(token).digest('hex');
 
+const getCookieDomain = (): string | undefined => {
+  if (!env.isProduction) {
+    return 'localhost';
+  }
+
+  const configuredDomain = env.cookieDomain?.trim();
+  if (configuredDomain) {
+    return configuredDomain.startsWith('.') ? configuredDomain : `.${configuredDomain}`;
+  }
+
+  try {
+    const hostname = new URL(env.frontendUrl).hostname.toLowerCase();
+
+    if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+      return undefined;
+    }
+
+    return hostname.startsWith('www.') ? `.${hostname.slice(4)}` : `.${hostname}`;
+  } catch {
+    return undefined;
+  }
+};
+
 const durationToMs = (value: string): number => {
   const normalized = value.trim().toLowerCase();
   const match = normalized.match(/^(\d+)([smhd])$/);
@@ -254,6 +277,7 @@ export class AuthService {
   setAuthCookie(res: Response, token: string): void {
     const isProduction = env.isProduction;
     const maxAge = 15 * 60 * 1000; // 15 minutes
+    const cookieDomain = getCookieDomain();
 
     res.cookie('auth_token', token, {
       httpOnly: true, // ✅ Prevents JavaScript access (XSS protection)
@@ -261,15 +285,16 @@ export class AuthService {
       sameSite: isProduction ? 'none' : 'lax', // ✅ 'none' for cross-domain in prod, 'lax' for localhost
       maxAge: maxAge,
       path: '/',
-      domain: isProduction ? undefined : 'localhost', // ✅ Share cookie across localhost ports in dev
+      domain: cookieDomain, // ✅ Share cookie across the app domain in production
     });
 
-    logger.info(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${isProduction ? 'auto' : 'localhost'})`);
+    logger.info(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${cookieDomain ?? 'host-only'})`);
   }
 
   setRefreshCookie(res: Response, refreshToken: string): void {
     const isProduction = env.isProduction;
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    const cookieDomain = getCookieDomain();
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -277,13 +302,14 @@ export class AuthService {
       sameSite: isProduction ? 'none' : 'lax',
       maxAge,
       path: '/api/auth/refresh',
-      domain: isProduction ? undefined : 'localhost',
+      domain: cookieDomain,
     });
   }
 
   setCsrfCookie(res: Response, csrfToken: string): void {
     const isProduction = env.isProduction;
     const maxAge = 7 * 24 * 60 * 60 * 1000;
+    const cookieDomain = getCookieDomain();
 
     // The CSRF cookie stays httpOnly so browser JavaScript cannot read it.
     // The frontend receives the same token in the JSON response and keeps it in memory only.
@@ -293,7 +319,7 @@ export class AuthService {
       sameSite: isProduction ? 'none' : 'lax',
       maxAge,
       path: '/',
-      domain: isProduction ? undefined : 'localhost',
+      domain: cookieDomain,
     });
   }
 
@@ -308,12 +334,13 @@ export class AuthService {
    */
   clearAuthCookie(res: Response): void {
     const isProduction = env.isProduction;
+    const cookieDomain = getCookieDomain();
     res.clearCookie('auth_token', {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax', // ✅ Must match cookie settings
       path: '/',
-      domain: isProduction ? undefined : 'localhost', // ✅ Must match the domain used when setting
+      domain: cookieDomain, // ✅ Must match the domain used when setting
     });
 
     res.clearCookie('refresh_token', {
@@ -321,7 +348,7 @@ export class AuthService {
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       path: '/api/auth/refresh',
-      domain: isProduction ? undefined : 'localhost',
+      domain: cookieDomain,
     });
 
     res.clearCookie('csrf_token', {
@@ -329,7 +356,7 @@ export class AuthService {
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       path: '/',
-      domain: isProduction ? undefined : 'localhost',
+      domain: cookieDomain,
     });
 
     logger.info('✅ Auth cookie cleared');
