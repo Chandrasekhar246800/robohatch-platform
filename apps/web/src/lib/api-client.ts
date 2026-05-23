@@ -28,10 +28,18 @@ export class NetworkError extends Error {
 const getApiUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
 
-  // In production, prefer same-origin requests so cookies remain first-party
-  // and the app can be proxied through /api without cross-site session issues.
-  if (typeof window !== 'undefined' && (!envUrl || envUrl === '/api')) {
-    return '';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+
+    // In production, always use same-origin requests so auth cookies remain first-party.
+    // This avoids cross-site cookie issues when the public API URL points at Railway.
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      return '';
+    }
+
+    if (!envUrl || envUrl === '/api') {
+      return '';
+    }
   }
 
   // If no URL is set, use localhost for development
