@@ -58,16 +58,14 @@ const getCookieDomain = (req?: Request): string | undefined => {
     }
   }
 
-  const configuredDomain = env.cookieDomain?.trim();
-  if (configuredDomain) {
-    return configuredDomain.startsWith('.') ? configuredDomain : `.${configuredDomain}`;
-  }
-
-  try {
-    const hostname = new URL(env.frontendUrl).hostname.toLowerCase();
-
-
   return undefined;
+};
+
+const durationToMs = (duration: string): number => {
+  const match = duration.match(/^(\d+)([smhd])$/);
+  if (!match) {
+    return 7 * 24 * 60 * 60 * 1000;
+  }
 
   const amount = parseInt(match[1], 10);
   const unit = match[2];
