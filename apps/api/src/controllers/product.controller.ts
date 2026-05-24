@@ -16,10 +16,26 @@ export class ProductController {
     }
 
     const signedImages = await Promise.all(
-      product.images.map(async (image: any) => ({
-        ...image,
-        url: await getSignedS3UrlFromUrlOrKey(image.url, 3600),
-      }))
+      product.images.map(async (image: any) => {
+        try {
+          return {
+            ...image,
+            url: await getSignedS3UrlFromUrlOrKey(image.url, 3600),
+          };
+        } catch (error: any) {
+          logger.warn({
+            event: 'product_image_signing_failed',
+            imageUrl: image.url,
+            message: error?.message,
+          });
+
+          // Fall back to the stored URL so one bad S3 object does not break the whole catalog.
+          return {
+            ...image,
+            url: image.url,
+          };
+        }
+      })
     );
 
     return {
