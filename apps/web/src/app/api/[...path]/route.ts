@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const getBackendBaseUrl = (request: NextRequest): string => {
-  const backendUrl = process.env.API_BACKEND_URL?.trim() || process.env.NEXT_PUBLIC_API_URL?.trim();
+  const backendUrl = process.env.API_BACKEND_URL?.trim();
 
   if (!backendUrl) {
     throw new Error('API_BACKEND_URL is not configured');

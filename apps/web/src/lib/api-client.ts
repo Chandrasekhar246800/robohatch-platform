@@ -26,7 +26,8 @@ export class NetworkError extends Error {
 
 // Ensure API_URL is an absolute URL
 const getApiUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  const backendUrl = process.env.API_BACKEND_URL?.trim();
+  const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
   if (typeof window !== 'undefined') {
     const host = window.location.hostname.toLowerCase();
@@ -37,25 +38,29 @@ const getApiUrl = () => {
       return '';
     }
 
-    if (!envUrl || envUrl === '/api') {
+    if (!publicUrl || publicUrl === '/api') {
       return '';
     }
   }
 
+  if (backendUrl) {
+    return backendUrl.replace(/\/$/, '');
+  }
+
   // If no URL is set, use localhost for development
-  if (!envUrl) {
-    console.warn('⚠️  NEXT_PUBLIC_API_URL not set, using localhost:5000');
+  if (!publicUrl) {
+    console.warn('⚠️  API_BACKEND_URL/NEXT_PUBLIC_API_URL not set, using localhost:5000');
     return 'http://localhost:5000';
   }
   
   // If URL doesn't start with http:// or https://, add https://
-  if (!envUrl.startsWith('http://') && !envUrl.startsWith('https://')) {
+  if (!publicUrl.startsWith('http://') && !publicUrl.startsWith('https://')) {
     console.warn('⚠️  NEXT_PUBLIC_API_URL missing protocol, adding https://');
-    return `https://${envUrl}`;
+    return `https://${publicUrl}`;
   }
   
   // Remove trailing slash if present
-  return envUrl.replace(/\/$/, '');
+  return publicUrl.replace(/\/$/, '');
 };
 
 const API_URL = getApiUrl();

@@ -302,7 +302,7 @@ export class AuthService {
     res.cookie('auth_token', token, {
       httpOnly: true, // ✅ Prevents JavaScript access (XSS protection)
       secure: isProduction, // ✅ HTTPS only in production
-      sameSite: isProduction ? 'none' : 'lax', // ✅ 'none' for cross-domain in prod, 'lax' for localhost
+      sameSite: isProduction ? 'lax' : 'lax', // ✅ Same-origin proxy auth works with Lax in production
       maxAge: maxAge,
       path: '/',
       domain: cookieDomain, // ✅ Share cookie across the app domain in production
@@ -319,7 +319,7 @@ export class AuthService {
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: isProduction ? 'lax' : 'lax',
       maxAge,
       path: '/api/auth/refresh',
       domain: cookieDomain,
@@ -336,7 +336,7 @@ export class AuthService {
     res.cookie('csrf_token', csrfToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: isProduction ? 'lax' : 'lax',
       maxAge,
       path: '/',
       domain: cookieDomain,
@@ -358,7 +358,7 @@ export class AuthService {
     res.clearCookie('auth_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax', // ✅ Must match cookie settings
+      sameSite: isProduction ? 'lax' : 'lax', // ✅ Must match cookie settings
       path: '/',
       domain: cookieDomain, // ✅ Must match the domain used when setting
     });
@@ -366,7 +366,7 @@ export class AuthService {
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: isProduction ? 'lax' : 'lax',
       path: '/api/auth/refresh',
       domain: cookieDomain,
     });
@@ -374,7 +374,7 @@ export class AuthService {
     res.clearCookie('csrf_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: isProduction ? 'lax' : 'lax',
       path: '/',
       domain: cookieDomain,
     });

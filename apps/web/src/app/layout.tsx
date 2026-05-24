@@ -27,18 +27,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-  
   return (
     <html lang="en" className="scroll-smooth">
       <head>
-        {/* DNS prefetch and preconnect to reduce connection stalled time */}
-        {apiUrl && (
-          <>
-            <link rel="dns-prefetch" href={apiUrl} />
-            <link rel="preconnect" href={apiUrl} crossOrigin="anonymous" />
-          </>
-        )}
         {/* Razorpay Checkout Script */}
         <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
       </head>

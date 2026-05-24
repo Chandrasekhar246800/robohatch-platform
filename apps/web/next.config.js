@@ -2,20 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@robohatch/ui'],
-  async rewrites() {
-    const backendUrl = process.env.API_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
-
-    if (!backendUrl) {
-      return [];
-    }
-
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
-  },
+  // /api is served by the App Router route handler in src/app/api/[...path]/route.ts.
+  // Keeping the proxy in code instead of rewrites preserves Set-Cookie handling.
   // Note: 'output: standalone' removed - conflicts with Vercel deployment
   // Re-enable for Docker deployments only
   images: {
