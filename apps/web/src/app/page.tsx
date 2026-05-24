@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { ProductGrid } from '@/components/product';
 import { CategoryCard } from '@/components/product';
 import { AnimatedHero } from '@/components/hero/AnimatedHero';
+import TrustStrip from '@/components/home/TrustStrip';
 import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
 import { ProductGridSkeleton, CategoryGridSkeleton } from '@/components/ui';
@@ -103,6 +104,8 @@ export default function HomePage() {
 
         {/* 1. Animated Hero Section */}
         <AnimatedHero />
+        {/* Trust strip below hero */}
+        <TrustStrip />
 
         {/* 2. Top 3 Product Categories */}
         <section className="py-12 md:py-16 bg-gray-50">

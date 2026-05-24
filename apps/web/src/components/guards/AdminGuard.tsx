@@ -24,13 +24,9 @@ export const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
   }, [isAuthenticated, user, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Checking session...</p>
-        </div>
-      </div>
-    );
+    // While auth is being verified, don't block rendering of public pages
+    // to avoid flashing the "Checking session..." message for regular users.
+    return <>{children}</>;
   }
 
   // Don't render content if admin user

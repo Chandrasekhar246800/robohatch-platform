@@ -32,11 +32,7 @@ const materials = [
   { id: 'tpu', name: 'TPU', description: 'Flexible, rubber-like' },
 ];
 
-const printers = [
-  { id: 'p1s', name: 'Bambu P1S', description: 'High speed, enclosed' },
-  { id: 'a1', name: 'Bambu A1', description: 'Standard build volume' },
-  { id: 'a1mini', name: 'Bambu A1 Mini', description: 'Compact size' },
-];
+// printers list removed per request
 
 const colors = [
   { id: 'multi-color', name: 'Multi-Color', hex: 'linear-gradient(45deg, #EF4444, #3B82F6, #10B981, #F59E0B)' },
@@ -450,29 +446,7 @@ export default function Upload3DFilePage() {
                     </div>
                   </div>
 
-                  {/* Printer Type */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Settings size={18} className="text-primary" />
-                      <label className="text-sm font-medium">Bambu Printer</label>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {printers.map((printer) => (
-                        <div
-                          key={printer.id}
-                          className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                            formData.printerType === printer.id
-                              ? 'border-primary bg-primary/5'
-                              : 'border-gray-300 hover:border-primary'
-                          }`}
-                          onClick={() => setFormData({ ...formData, printerType: printer.id })}
-                        >
-                          <p className="font-medium">{printer.name}</p>
-                          <p className="text-xs text-gray-600">{printer.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Printer Type removed */}
 
                   {/* Color */}
                   <div>
