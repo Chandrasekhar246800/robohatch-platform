@@ -38,9 +38,7 @@ const getApiUrl = () => {
       return '';
     }
 
-    if (!publicUrl || publicUrl === '/api') {
-      return '';
-    }
+    return (backendUrl || publicUrl || 'http://localhost:5000').replace(/\/$/, '');
   }
 
   if (backendUrl) {

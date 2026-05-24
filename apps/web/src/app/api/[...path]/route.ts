@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const getBackendBaseUrl = (request: NextRequest): string => {
-  const backendUrl = process.env.API_BACKEND_URL?.trim();
-
-  if (!backendUrl) {
-    throw new Error('API_BACKEND_URL is not configured');
-  }
-
-  const backend = new URL(backendUrl.replace(/\/$/, ''));
   const publicHost = request.headers.get('host') || request.nextUrl.host;
 
-  if (backend.host === publicHost) {
-    throw new Error('API backend URL cannot point to the public site host');
+  const candidates = [
+    process.env.API_BACKEND_URL?.trim(),
+    process.env.NEXT_PUBLIC_API_URL?.trim(),
+  ].filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    try {
+      const backend = new URL(candidate.replace(/\/$/, ''));
+
+      if (backend.host === publicHost) {
+        continue;
+      }
+
+      return backend.toString().replace(/\/$/, '');
+    } catch {
+      continue;
+    }
   }
 
-  return backend.toString().replace(/\/$/, '');
+  throw new Error('No backend API URL configured. Set API_BACKEND_URL to your Railway service URL.');
 };
 
 const hopByHopHeaders = new Set([
