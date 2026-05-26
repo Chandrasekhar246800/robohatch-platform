@@ -1,6 +1,7 @@
+---
 name: E2E CI (deterministic)
 
-on:
+'on':
   workflow_dispatch:
   push:
     branches:
@@ -78,7 +79,9 @@ jobs:
         run: npm ci --workspaces --include-workspace-root
 
       - name: Install Playwright browsers
-        run: npm --workspace @robohatch/web exec -- playwright install --with-deps chromium
+        run: |
+          npm --workspace @robohatch/web exec -- playwright install \
+            --with-deps chromium
 
       - name: Build API
         run: npm --workspace @robohatch/api run build
@@ -86,7 +89,8 @@ jobs:
       - name: Wait for MySQL
         run: |
           for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -uroot -prootpassword > /dev/null 2>&1; then
+            if mysqladmin ping -h 127.0.0.1 -uroot -prootpassword \
+              > /dev/null 2>&1; then
               exit 0
             fi
             sleep 2
@@ -96,20 +100,24 @@ jobs:
 
       - name: Push Prisma schema and seed E2E product
         run: |
-          npm --workspace @robohatch/api exec -- prisma db push --schema=prisma/schema.prisma
+          npm --workspace @robohatch/api exec -- prisma db push \
+            --schema=prisma/schema.prisma
           npm --workspace @robohatch/api run seed:e2e
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Start API (background)
         run: |
-          PORT=5000 npm --workspace @robohatch/api run start > apps/api/api.log 2>&1 &
+          PORT=5000 npm --workspace @robohatch/api run start \
+            > apps/api/api.log 2>&1 &
           echo $! > api.pid
 
       - name: Wait for API health
         run: |
           for i in $(seq 1 60); do
-            if curl --connect-timeout 2 --max-time 5 -fsS http://localhost:5000/health > apps/api/api-health.json; then
+            if curl --connect-timeout 2 --max-time 5 -fsS \
+              http://localhost:5000/health \
+              > apps/api/api-health.json; then
               cat apps/api/api-health.json
               exit 0
             fi
@@ -124,13 +132,15 @@ jobs:
 
       - name: Start Web (background)
         run: |
-          PORT=3000 npm --workspace @robohatch/web run start > apps/web/web.log 2>&1 &
+          PORT=3000 npm --workspace @robohatch/web run start \
+            > apps/web/web.log 2>&1 &
           echo $! > web.pid
 
       - name: Wait for Web health
         run: |
           for i in $(seq 1 60); do
-            if curl --connect-timeout 2 --max-time 5 -fsS http://localhost:3000 > /dev/null; then
+            if curl --connect-timeout 2 --max-time 5 -fsS \
+              http://localhost:3000 > /dev/null; then
               exit 0
             fi
             sleep 2
@@ -141,7 +151,8 @@ jobs:
 
       - name: Run Playwright CRO subset
         run: |
-          npm --workspace @robohatch/web run test:e2e:cro -- --reporter=list --output=../test-results
+          npm --workspace @robohatch/web run test:e2e:cro -- \
+            --reporter=list --output=../test-results
         continue-on-error: true
 
       - name: Collect CI infra diagnostics
@@ -151,13 +162,22 @@ jobs:
             cat apps/web/test-results/ci-infra-diagnostics.json || true
           else
             mkdir -p apps/web/test-results
-            echo '{"status":"missing"}' > apps/web/test-results/ci-infra-diagnostics.json
+            echo '{"status":"missing"}' \
+              > apps/web/test-results/ci-infra-diagnostics.json
           fi
 
       - name: Create diagnostics summary
         if: always()
         run: |
-          jq '{status:.status, start:.start, end:.end, error:.error, diag:.diag}' apps/web/test-results/ci-infra-diagnostics.json > apps/web/test-results/ci-infra-summary.json || true
+          jq '{
+            status: .status,
+            start: .start,
+            end: .end,
+            error: .error,
+            diag: .diag
+          }' \
+            apps/web/test-results/ci-infra-diagnostics.json \
+            > apps/web/test-results/ci-infra-summary.json || true
 
       - name: Upload API and Web logs
         if: always()
