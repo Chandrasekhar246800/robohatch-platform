@@ -26,7 +26,7 @@ export default function ProductCardPremium({ product }: Props) {
 
   const [isAdding, setIsAdding] = React.useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = React.useState(false);
-  const wishlistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const wishlistTimeoutRef = React.useRef<number | null>(null);
 
   const inWishlist = isInWishlist(product.id);
   const cartQuantity = getItemQuantity(product.id);

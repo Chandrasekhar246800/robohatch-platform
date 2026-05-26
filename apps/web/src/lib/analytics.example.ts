@@ -176,7 +176,7 @@ export const trackAddToCart = (productId: string, productName: string, price: nu
 declare global {
   interface Window {
     gtag?: (
-      command: 'config' | 'event' | 'js',
+      command: 'config' | 'event' | 'js' | 'set',
       targetId: string | Date,
       config?: Record<string, any>
     ) => void;

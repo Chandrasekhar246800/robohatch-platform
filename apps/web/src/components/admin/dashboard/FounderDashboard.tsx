@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart3, Package, ShoppingCart, Upload, MessageSquareText, Gauge, BadgeIndianRupee, AlertCircle, Clock3, TrendingUp, LayoutList } from 'lucide-react';
 import { Button, Card, CardContent, useToast } from '@/components/ui';
+import { apiClient } from '@/lib/api-client';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { useAdminSummaryContext } from '../AdminSummaryProvider';
 import { AlertCard, MetricCard, QueueCard, QuickActionButton, StatusBadge, TrendCard } from './dashboard-primitives';
@@ -17,7 +18,7 @@ export default function FounderDashboard() {
     id: order.id,
     title: `Order #${order.id.slice(0, 8).toUpperCase()}`,
     detail: `${order.items?.length || 0} item(s) · ${formatDate(order.createdAt || new Date())}`,
-    tone: (order.status || '').toUpperCase() === 'PENDING' ? 'danger' : 'info',
+    tone: (order.status || '').toUpperCase() === 'PENDING' ? ('danger' as const) : ('info' as const),
     actions: [
       { label: 'Paid', aria: 'mark-paid', onClick: async () => {
         pushToast({ message: 'Marking paid...', kind: 'info', duration: 2000 });
@@ -46,7 +47,7 @@ export default function FounderDashboard() {
     id: product.id,
     title: product.name,
     detail: `Stock ${product.stock ?? 0} · ${product.category?.name || 'Uncategorized'}`,
-    tone: (product.stock ?? 0) <= 2 ? 'danger' : 'warning',
+    tone: (product.stock ?? 0) <= 2 ? ('danger' as const) : ('warning' as const),
   }));
 
   const supportItems = summary.pendingOrders > 0

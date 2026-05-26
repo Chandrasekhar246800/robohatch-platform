@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ArrowUpRight, AlertTriangle, Clock3, Gauge, Sparkles, ShoppingCart, Package, MessageSquareMore } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Badge, Button, Card, CardContent } from '@/components/ui';
 import { cn, formatPrice, formatDate } from '@/lib/utils';
 
@@ -28,7 +29,7 @@ export function MetricCard({
   title: string;
   value: string;
   helper: string;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
+  icon: LucideIcon;
   tone?: Tone;
 }) {
   const toneStyles: Record<Tone, string> = {
@@ -191,7 +192,7 @@ export function QuickActionButton({
 }: {
   label: string;
   helper: string;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
+  icon: LucideIcon;
   onClick?: () => void;
 }) {
   return (
