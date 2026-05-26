@@ -1,0 +1,143 @@
+name: E2E CI (deterministic)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: robohatch
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -prootpassword"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      # Deterministic URLs and ports
+      PLAYWRIGHT_BASE_URL: 'http://127.0.0.1:3000'
+      E2E_BASE_URL: 'http://127.0.0.1:3000'
+      E2E_API_BASE_URL: 'http://127.0.0.1:5000'
+      PLAYWRIGHT_WORKERS: '2'
+      # API required env (dummy safe values for CI)
+      NODE_ENV: development
+      PORT: '5000'
+      DATABASE_URL: 'mysql://root:rootpassword@127.0.0.1:3306/robohatch'
+      JWT_SECRET: '01234567890123456789012345678901'
+      JWT_REFRESH_SECRET: 'abcdefghijklmnopqrstuvwxzy0123456789'
+      SENDGRID_API_KEY: 'ci-sendgrid-key'
+      AWS_ACCESS_KEY_ID: 'ci-aws-key'
+      AWS_SECRET_ACCESS_KEY: 'ci-aws-secret'
+      AWS_REGION: 'us-east-1'
+      AWS_S3_BUCKET: 'ci-bucket'
+      RAZORPAY_KEY_ID: 'ci-razor-id'
+      RAZORPAY_KEY_SECRET: 'ci-razor-secret'
+      RAZORPAY_WEBHOOK_SECRET: 'ci-razor-webhook'
+      CORS_ORIGIN: 'http://127.0.0.1:3000'
+      FRONTEND_URL: 'http://127.0.0.1:3000'
+      COOKIE_DOMAIN: 'localhost'
+      E2E_STABLE_PRODUCT_ID: '9d39b839-441d-4e8a-b18e-8e49518ee839'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build API
+        run: |
+          cd apps/api
+          npm run build
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            mysqladmin ping -h 127.0.0.1 -uroot -prootpassword > /dev/null 2>&1 && break || sleep 2;
+          done
+
+      - name: Push Prisma schema and seed E2E product
+        run: |
+          cd apps/api
+          npx prisma db push --schema=prisma/schema.prisma
+          npm run seed:e2e
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Start API (background)
+        run: |
+          cd apps/api
+          PORT=5000 npm run start > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Build Web
+        run: |
+          cd apps/web
+          npm run build
+
+      - name: Start Web (background)
+        run: |
+          cd apps/web
+          PORT=3000 npm run start > web.log 2>&1 &
+          echo $! > web.pid
+
+      - name: Wait for API and Web health
+        run: |
+          npx wait-on --timeout 60000 http://127.0.0.1:5000/api/health || (cat apps/api/api.log || true; exit 1)
+          npx wait-on --timeout 60000 http://127.0.0.1:3000 || (cat apps/web/web.log || true; exit 1)
+
+      - name: Run Playwright CRO subset
+        working-directory: apps/web
+        run: |
+          npm run test:e2e:cro -- --reporter=list --output=../test-results
+        continue-on-error: true
+
+      - name: Collect CI infra diagnostics
+        run: |
+          if [ -f apps/web/test-results/ci-infra-diagnostics.json ]; then
+            cat apps/web/test-results/ci-infra-diagnostics.json || true
+          else
+            echo '{"status":"missing"}' > apps/web/test-results/ci-infra-diagnostics.json
+          fi
+
+      - name: Create diagnostics summary
+        run: |
+          jq '{status:.status, start:.start, end:.end, error:.error, diag:.diag}' apps/web/test-results/ci-infra-diagnostics.json > apps/web/test-results/ci-infra-summary.json || true
+        shell: bash
+
+      - name: Upload Playwright artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            apps/web/playwright-report/**
+            apps/web/test-results/**
+            apps/web/**/trace/**
+            apps/web/**/screenshots/**
+
+      - name: Upload CI infra diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-infra-diagnostics
+          path: apps/web/test-results/ci-infra-diagnostics.json
+
+      - name: Print brief verdict
+        run: |
+          cat apps/web/test-results/ci-infra-summary.json || true
