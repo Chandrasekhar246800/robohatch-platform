@@ -115,7 +115,7 @@ jobs:
       - name: Wait for API health
         run: |
           for i in $(seq 1 60); do
-            if curl --connect-timeout 2 --max-time 5 -fsS \
+            if curl --connect-timeout 2 --max-time 5 -sS \
               http://localhost:5000/health \
               > apps/api/api-health.json; then
               cat apps/api/api-health.json
