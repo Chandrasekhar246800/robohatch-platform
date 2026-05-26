@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, Shield, Bell, RefreshCw, LayoutDashboard, Package, ShoppingCart, Users, Upload, MessageSquare, BarChart3, Settings2, FolderTree } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
@@ -12,7 +13,7 @@ import { AlertCard, QueueSummaryBadge } from './dashboard/dashboard-primitives';
 type NavItem = {
   label: string;
   href: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   countKey?: 'pendingOrders' | 'lowStockCount';
 };
 
