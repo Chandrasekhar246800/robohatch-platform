@@ -8,9 +8,17 @@ on:
       - master
       - release/staging-validation
 
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       mysql:
         image: mysql:8.0
@@ -24,12 +32,15 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+    defaults:
+      run:
+        shell: bash
     env:
       CI: 'true'
       # Deterministic URLs and ports
-      PLAYWRIGHT_BASE_URL: 'http://127.0.0.1:3000'
-      E2E_BASE_URL: 'http://127.0.0.1:3000'
-      E2E_API_BASE_URL: 'http://127.0.0.1:5000'
+      PLAYWRIGHT_BASE_URL: 'http://localhost:3000'
+      E2E_BASE_URL: 'http://localhost:3000'
+      E2E_API_BASE_URL: 'http://localhost:5000'
       PLAYWRIGHT_WORKERS: '2'
       # API required env (dummy safe values for CI)
       NODE_ENV: development
@@ -45,8 +56,8 @@ jobs:
       RAZORPAY_KEY_ID: 'ci-razor-id'
       RAZORPAY_KEY_SECRET: 'ci-razor-secret'
       RAZORPAY_WEBHOOK_SECRET: 'ci-razor-webhook'
-      CORS_ORIGIN: 'http://127.0.0.1:3000'
-      FRONTEND_URL: 'http://127.0.0.1:3000'
+      CORS_ORIGIN: 'http://localhost:3000'
+      FRONTEND_URL: 'http://localhost:3000'
       COOKIE_DOMAIN: 'localhost'
       E2E_STABLE_PRODUCT_ID: '9d39b839-441d-4e8a-b18e-8e49518ee839'
 
@@ -58,89 +69,124 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --workspaces --include-workspace-root
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npm --workspace @robohatch/web exec -- playwright install --with-deps chromium
 
       - name: Build API
-        run: |
-          cd apps/api
-          npm run build
+        run: npm --workspace @robohatch/api run build
 
       - name: Wait for MySQL
         run: |
-          for i in {1..30}; do
-            mysqladmin ping -h 127.0.0.1 -uroot -prootpassword > /dev/null 2>&1 && break || sleep 2;
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -uroot -prootpassword > /dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
           done
+          echo "MySQL never became ready" >&2
+          exit 1
 
       - name: Push Prisma schema and seed E2E product
         run: |
-          cd apps/api
-          npx prisma db push --schema=prisma/schema.prisma
-          npm run seed:e2e
+          npm --workspace @robohatch/api exec -- prisma db push --schema=prisma/schema.prisma
+          npm --workspace @robohatch/api run seed:e2e
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Start API (background)
         run: |
-          cd apps/api
-          PORT=5000 npm run start > api.log 2>&1 &
+          PORT=5000 npm --workspace @robohatch/api run start > apps/api/api.log 2>&1 &
           echo $! > api.pid
 
-      - name: Build Web
+      - name: Wait for API health
         run: |
-          cd apps/web
-          npm run build
+          for i in $(seq 1 60); do
+            if curl --connect-timeout 2 --max-time 5 -fsS http://localhost:5000/api/health > apps/api/api-health.json; then
+              cat apps/api/api-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API health never became ready" >&2
+          cat apps/api/api.log || true
+          exit 1
+
+      - name: Build Web
+        run: npm --workspace @robohatch/web run build
 
       - name: Start Web (background)
         run: |
-          cd apps/web
-          PORT=3000 npm run start > web.log 2>&1 &
+          PORT=3000 npm --workspace @robohatch/web run start > apps/web/web.log 2>&1 &
           echo $! > web.pid
 
-      - name: Wait for API and Web health
+      - name: Wait for Web health
         run: |
-          npx wait-on --timeout 60000 http://127.0.0.1:5000/api/health || (cat apps/api/api.log || true; exit 1)
-          npx wait-on --timeout 60000 http://127.0.0.1:3000 || (cat apps/web/web.log || true; exit 1)
+          for i in $(seq 1 60); do
+            if curl --connect-timeout 2 --max-time 5 -fsS http://localhost:3000 > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Web app never became ready" >&2
+          cat apps/web/web.log || true
+          exit 1
 
       - name: Run Playwright CRO subset
-        working-directory: apps/web
         run: |
-          npm run test:e2e:cro -- --reporter=list --output=../test-results
+          npm --workspace @robohatch/web run test:e2e:cro -- --reporter=list --output=../test-results
         continue-on-error: true
 
       - name: Collect CI infra diagnostics
+        if: always()
         run: |
           if [ -f apps/web/test-results/ci-infra-diagnostics.json ]; then
             cat apps/web/test-results/ci-infra-diagnostics.json || true
           else
+            mkdir -p apps/web/test-results
             echo '{"status":"missing"}' > apps/web/test-results/ci-infra-diagnostics.json
           fi
 
       - name: Create diagnostics summary
+        if: always()
         run: |
           jq '{status:.status, start:.start, end:.end, error:.error, diag:.diag}' apps/web/test-results/ci-infra-diagnostics.json > apps/web/test-results/ci-infra-summary.json || true
-        shell: bash
+
+      - name: Upload API and Web logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-service-logs
+          path: |
+            apps/api/api.log
+            apps/api/api-health.json
+            apps/web/web.log
+          if-no-files-found: ignore
 
       - name: Upload Playwright artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-artifacts
           path: |
             apps/web/playwright-report/**
             apps/web/test-results/**
-            apps/web/**/trace/**
-            apps/web/**/screenshots/**
+          if-no-files-found: ignore
 
       - name: Upload CI infra diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-infra-diagnostics
           path: apps/web/test-results/ci-infra-diagnostics.json
+          if-no-files-found: ignore
 
       - name: Print brief verdict
+        if: always()
         run: |
           cat apps/web/test-results/ci-infra-summary.json || true
