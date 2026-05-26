@@ -46,7 +46,7 @@ jobs:
       API_BACKEND_URL: 'http://localhost:5000'
       PLAYWRIGHT_WORKERS: '2'
       # API required env (dummy safe values for CI)
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: '5000'
       DATABASE_URL: 'mysql://root:rootpassword@127.0.0.1:3306/robohatch'
       JWT_SECRET: '01234567890123456789012345678901'
