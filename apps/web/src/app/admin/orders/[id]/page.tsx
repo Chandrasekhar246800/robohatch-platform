@@ -15,7 +15,7 @@ export default function AdminOrderDetailPage() {
   const [saving, setSaving] = useState(false);
   const [order, setOrder] = useState<any | null>(null);
   const { push: pushToast } = useToast();
-  const [saving, setSavingLocal] = useState(false);
+  const [savingLocal, setSavingLocal] = useState(false);
 
   useEffect(() => {
     const load = async () => {
