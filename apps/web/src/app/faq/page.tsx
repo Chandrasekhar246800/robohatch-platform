@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, HelpCircle, Package, CreditCard, Truck, RefreshCw, Upload } from 'lucide-react';
+import JsonLd from '@/components/seo/JsonLd';
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -153,9 +154,25 @@ export default function FAQPage() {
     },
   ];
 
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.flatMap((category) =>
+      category.questions.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      }))
+    ),
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-6">
+        <JsonLd data={faqSchema} />
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-4">

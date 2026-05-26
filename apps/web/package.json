@@ -8,7 +8,18 @@
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next",
-    "test:auth-concurrency": "npx tsx --test tests/auth-concurrency.test.ts"
+    "test:auth-concurrency": "npx tsx --test tests/auth-concurrency.test.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:smoke": "playwright test e2e/smoke.spec.ts",
+    "test:e2e:customer": "playwright test e2e/customer-flow.spec.ts",
+    "test:e2e:payment": "playwright test e2e/payment.spec.ts",
+    "test:e2e:admin": "playwright test e2e/admin-cockpit.spec.ts",
+    "test:e2e:mobile": "playwright test e2e/mobile.spec.ts",
+    "test:e2e:recovery": "playwright test e2e/failure-recovery.spec.ts",
+    "test:e2e:production": "playwright test e2e/production-readiness.spec.ts",
+    "test:e2e:cro": "playwright test e2e/cro-validation.spec.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.17.0",
@@ -25,6 +36,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^20.10.5",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",

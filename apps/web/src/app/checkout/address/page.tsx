@@ -16,6 +16,7 @@ export default function AddressPage() {
   const { shippingAddress, setShippingAddress, setCurrentStep } = useCheckoutStore();
 
   const [mounted, setMounted] = useState(false);
+  const [guestMode, setGuestMode] = useState(false);
   const [formData, setFormData] = useState<ShippingAddress>({
     fullName: '',
     phone: '',
@@ -38,11 +39,7 @@ export default function AddressPage() {
     setCurrentStep('address');
   }, [setCurrentStep]);
 
-  useEffect(() => {
-    if (mounted && _hasHydrated && !isAuthenticated) {
-      router.push('/login?redirect=/checkout/address');
-    }
-  }, [isAuthenticated, mounted, _hasHydrated, router]);
+  // Removed automatic redirect to login to support Guest Checkout.
 
   useEffect(() => {
     if (mounted && items.length === 0) {
@@ -201,10 +198,39 @@ export default function AddressPage() {
     );
   }
 
-  if (!isAuthenticated || items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">Redirecting...</p>
+      </div>
+    );
+  }
+
+  // If user is not authenticated and hasn't chosen guest mode yet, offer choice
+  if (!isAuthenticated && !guestMode) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+        <div className="bg-white rounded-lg shadow-md max-w-md w-full p-6 text-center">
+          <h2 className="text-xl font-semibold mb-3">Checkout Options</h2>
+          <p className="text-sm text-gray-600 mb-4">You can login for saved addresses and faster checkout, or continue as a guest.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              data-testid="checkout-login-option"
+              onClick={() => router.push('/login?redirect=/checkout/address')}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium"
+            >
+              Login to Checkout
+            </button>
+            <button
+              data-testid="checkout-guest-option"
+              onClick={() => setGuestMode(true)}
+              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium"
+            >
+              Continue as Guest
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">You can create an account after your purchase.</p>
+        </div>
       </div>
     );
   }
@@ -445,6 +471,7 @@ export default function AddressPage() {
                 {/* Submit Button */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                   <button
+                    data-testid="checkout-back-to-cart"
                     type="button"
                     onClick={() => router.push('/cart')}
                     className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
@@ -452,6 +479,7 @@ export default function AddressPage() {
                     Back to Cart
                   </button>
                   <button
+                    data-testid="checkout-continue-to-payment"
                     type="submit"
                     disabled={isSubmitting}
                     className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-primary text-white rounded-lg font-semibold hover:bg-accent transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"

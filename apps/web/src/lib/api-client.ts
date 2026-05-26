@@ -32,12 +32,13 @@ const getApiUrl = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname.toLowerCase();
 
-    // In production, always use same-origin requests so auth cookies remain first-party.
-    // This avoids cross-site cookie issues when the public API URL points at Railway.
-    if (host !== 'localhost' && host !== '127.0.0.1') {
+    // In the browser, prefer same-origin requests on local/dev hosts so the Next.js API proxy
+    // handles auth cookies and avoids cross-origin fetch failures.
+    if (host === 'localhost' || host === '127.0.0.1') {
       return '';
     }
 
+    // In production, always use same-origin requests so auth cookies remain first-party.
     return (backendUrl || publicUrl || 'http://localhost:5000').replace(/\/$/, '');
   }
 

@@ -19,6 +19,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Button, Badge } from '@/components/ui';
+import StickyMobileCTA from '@/components/ui/StickyMobileCTA';
+import TrustRow from '@/components/ui/TrustRow';
+import JsonLd from '@/components/seo/JsonLd';
 import { ProductGrid } from '@/components/product';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { apiClient } from '@/lib/api-client';
@@ -28,6 +31,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { getProductById, getRelatedProducts } from '@/lib/mock-data';
 import toast from 'react-hot-toast';
+import { trackAddToCart } from '@/lib/analytics';
 
 interface ProductImage {
   id: string;
@@ -80,6 +84,40 @@ export default function ProductDetailPage() {
   const [customFile, setCustomFile] = useState<File | null>(null);
   const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
 
+  const isDefinitiveNotFound = (value: any): boolean => {
+    if (!value) return false;
+
+    const status = value.status;
+    if (status === 404) return true;
+
+    const payload = value.data ?? value.body ?? value.error ?? value.message ?? value;
+    const payloadText = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    return /not\s*found|no\s*product|product\s*does\s*not\s*exist/i.test(payloadText);
+  };
+
+  useEffect(() => {
+    (window as any).__E2E_PDP_READY__ = false;
+    // Lightweight console capture for E2E triage (only on PDP client)
+    try {
+      const w = window as any;
+      if (!w.__E2E_CONSOLE_LOGS__) w.__E2E_CONSOLE_LOGS__ = [];
+      if (!w.__E2E_CONSOLE_WRAPPED__) {
+        w.__E2E_CONSOLE_WRAPPED__ = true;
+        const origErr = console.error.bind(console);
+        console.error = (...args: any[]) => {
+          try { w.__E2E_CONSOLE_LOGS__.push({ ts: new Date().toISOString(), args }); } catch (e) {}
+          origErr(...args);
+        };
+      }
+    } catch (e) {}
+  }, [productId]);
+
+  useEffect(() => {
+    if (!isLoading && product && !error) {
+      (window as any).__E2E_PDP_READY__ = true;
+    }
+  }, [isLoading, product, error]);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -101,7 +139,11 @@ export default function ProductDetailPage() {
           // Fetch related products from the same category
           fetchRelatedProducts(productData.categoryId);
         } else {
-          // Fallback to mock data
+          if (!isDefinitiveNotFound(response)) {
+            console.warn('Product fetch returned an ambiguous failure; keeping PDP in loading state');
+            return;
+          }
+
           console.log('Product not found in API, trying mock data');
           const mockProduct = getProductById(productId);
           if (mockProduct) {
@@ -119,12 +161,27 @@ export default function ProductDetailPage() {
             const related = getRelatedProducts(productId, 4);
             setRelatedProducts(related);
           } else {
-            setError('Product not found');
-          }
+              // Expose failure context for E2E triage before rendering fallback
+              try {
+                (window as any).__E2E_PDP_RESPONSE__ = {
+                  apiStatus: response?.status ?? null,
+                  success: !!response?.success,
+                  bodySnippet: JSON.stringify(response).substring(0, 2000),
+                  errorPayload: null,
+                  fallbackTrigger: 'definitive-not-found',
+                };
+                console.error('[e2e][PDP] Fallback triggered: product not found (api empty) ', (window as any).__E2E_PDP_RESPONSE__);
+              } catch (e) {}
+              setError('Product not found');
+            }
         }
       } catch (err) {
+        if (!isDefinitiveNotFound(err)) {
+          console.error('Error fetching product, keeping PDP in loading state unless not-found is explicit:', err);
+          return;
+        }
+
         console.error('Error fetching product, trying mock data:', err);
-        // Fallback to mock data on error
         const mockProduct = getProductById(productId);
         if (mockProduct) {
           setProduct({
@@ -141,7 +198,18 @@ export default function ProductDetailPage() {
           const related = getRelatedProducts(productId, 4);
           setRelatedProducts(related);
         } else {
-          setError('Failed to load product');
+            // Expose error payload for E2E triage
+            try {
+              (window as any).__E2E_PDP_RESPONSE__ = {
+                apiStatus: null,
+                success: false,
+                bodySnippet: null,
+                errorPayload: (err as any)?.message || String(err),
+                fallbackTrigger: 'fetch-exception',
+              };
+              console.error('[e2e][PDP] Fallback triggered due to exception:', (window as any).__E2E_PDP_RESPONSE__);
+            } catch (e) {}
+            setError('Failed to load product');
         }
       } finally {
         setIsLoading(false);
@@ -283,6 +351,52 @@ export default function ProductDetailPage() {
     );
   }
 
+  if (!product && !error) {
+    return (
+      <div className="py-8">
+        <div className="container-custom">
+          {/* Breadcrumb Skeleton */}
+          <div className="mb-6">
+            <Skeleton className="h-6 w-32" />
+          </div>
+
+          {/* Product Details Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+            {/* Images Skeleton */}
+            <div>
+              <Skeleton className="w-full aspect-square rounded-lg mb-4" />
+              <div className="grid grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Skeleton className="h-4 w-24 mb-4" />
+              <Skeleton className="h-10 w-3/4 mb-4" />
+              <div className="flex items-center space-x-2 mb-6">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+              <div className="mb-6">
+                <Skeleton className="h-12 w-40 mb-2" />
+                <Skeleton className="h-5 w-48" />
+              </div>
+              <Skeleton className="h-6 w-24 mb-6" />
+              <div className="mb-6">
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !product) {
     return (
       <div className="container-custom px-4 py-16 md:py-20 text-center">
@@ -298,6 +412,7 @@ export default function ProductDetailPage() {
   const discount = product.originalPrice
     ? calculateDiscount(product.originalPrice, product.price)
     : 0;
+  const totalPrice = product.price * quantity;
 
   const handleAddToCart = async () => {
     // Validate custom fields for specific categories
@@ -343,6 +458,8 @@ export default function ProductDetailPage() {
         customText || undefined, 
         uploadedImageUrl
       );
+
+      trackAddToCart(product.id, product.name, product.price * quantity);
       
       // Transform product data for local cart store
       const cartProduct = {
@@ -416,9 +533,36 @@ export default function ProductDetailPage() {
     }
   };
 
+  const productSchema = product
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        image: product.images.map((image) => image.url),
+        sku: product.id,
+        brand: {
+          '@type': 'Brand',
+          name: 'RoboHatch',
+        },
+        offers: {
+          '@type': 'Offer',
+          url: `https://www.robohatch.in/product/${product.id}`,
+          priceCurrency: 'INR',
+          price: product.price,
+          availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+          seller: {
+            '@type': 'Organization',
+            name: 'RoboHatch',
+          },
+        },
+      }
+    : null;
+
   return (
-    <div className="py-6 md:py-8">
+    <div className="py-6 md:py-8 pb-28 lg:pb-8">
       <div className="container-custom px-4">
+        {productSchema && <JsonLd data={productSchema} />}
         {/* Breadcrumb */}
         <div className="mb-6">
           <Link
@@ -689,6 +833,11 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
+            {/* Trust row (shipping, returns, secure payments) */}
+            <div className="mb-6 lg:mb-8">
+              <TrustRow />
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-4 mb-8">
               <Button
@@ -746,6 +895,14 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+
+        <StickyMobileCTA
+          price={totalPrice}
+          label={product.inStock ? 'Add to cart' : 'Out of stock'}
+          onAction={handleAddToCart}
+          disabled={!product.inStock || isAdding}
+          helperText="Secure checkout · Insured delivery"
+        />
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

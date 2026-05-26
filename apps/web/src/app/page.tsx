@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, Upload, Sparkles, Package, Shield, Truck } from 'lucide-react';
+import { ArrowRight, Upload, Sparkles, Package, Truck } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ProductGrid } from '@/components/product';
-import { CategoryCard } from '@/components/product';
-import { AnimatedHero } from '@/components/hero/AnimatedHero';
+import HeroPremium from '@/components/home/HeroPremium';
 import TrustStrip from '@/components/home/TrustStrip';
+import Testimonials from '@/components/home/Testimonials';
+import FounderCred from '@/components/home/FounderCred';
+import JsonLd from '@/components/seo/JsonLd';
 import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
 import { ProductGridSkeleton, CategoryGridSkeleton } from '@/components/ui';
@@ -101,11 +103,27 @@ export default function HomePage() {
   return (
     <AdminGuard>
       <div>
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'RoboHatch',
+            url: 'https://www.robohatch.in',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://www.robohatch.in/products?search={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          }}
+        />
 
-        {/* 1. Animated Hero Section */}
-        <AnimatedHero />
+        {/* 1. Hero */}
+        <HeroPremium />
         {/* Trust strip below hero */}
         <TrustStrip />
+        {/* Social proof and founder credibility (move high for trust) */}
+        <Testimonials />
+        <FounderCred />
 
         {/* 2. Top 3 Product Categories */}
         <section className="py-12 md:py-16 bg-gray-50">
@@ -274,45 +292,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 7. Trust Badges */}
-        <section className="py-12 md:py-16 bg-gray-50">
-          <div className="container-custom px-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-              {[
-                {
-                  icon: Sparkles,
-                  title: 'Premium Quality',
-                  desc: 'High-quality materials and precision printing for exceptional results',
-                },
-                {
-                  icon: Truck,
-                  title: 'Fast Delivery',
-                  desc: 'Quick turnaround times with secure packaging and real-time tracking',
-                },
-                {
-                  icon: Shield,
-                  title: '100% Satisfaction',
-                  desc: 'Quality guarantee with easy returns and excellent customer support',
-                },
-              ].map(({ icon: Icon, title, desc }, index) => (
-                <motion.div
-                  key={title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icon className="text-white" size={32} />
-                  </div>
-                  <h3 className="text-lg md:text-xl font-bold mb-2">{title}</h3>
-                  <p className="text-sm md:text-base text-gray-600">{desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* legacy trust badges removed — replaced by TrustStrip + Testimonials + FounderCred for clearer hierarchy */}
 
       </div>
     </AdminGuard>

@@ -8,6 +8,7 @@ import { useCheckoutStore } from '@/store/checkout.store';
 import { useAuthStore } from '@/store/auth.store';
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps';
 import { apiClient } from '@/lib/api-client';
+import { trackCheckoutStart } from '@/lib/analytics';
 
 // Extend Window interface for Razorpay
 declare global {
@@ -47,12 +48,12 @@ export default function PaymentPage() {
     }
   }, [setCurrentStep, isAuthenticated, mergeLocalCartWithBackend]);
 
-  // Redirect if not authenticated (wait for hydration)
+  // Redirect to login only if unauthenticated and no shipping address (no guest flow started)
   useEffect(() => {
-    if (mounted && _hasHydrated && !isAuthenticated) {
+    if (mounted && _hasHydrated && !isAuthenticated && !shippingAddress) {
       router.push('/login?redirect=/checkout/payment');
     }
-  }, [isAuthenticated, mounted, _hasHydrated, router]);
+  }, [isAuthenticated, mounted, _hasHydrated, router, shippingAddress]);
 
   // Redirect if no items in cart
   useEffect(() => {
@@ -101,6 +102,7 @@ export default function PaymentPage() {
       const newOrderId = response.data.id;
       setLocalOrderId(newOrderId);
       setOrderId(newOrderId);
+      trackCheckoutStart(grandTotal, items.length);
       
       console.log('✓ Order created:', newOrderId);
       
@@ -336,6 +338,16 @@ export default function PaymentPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-900">Checkout reassurance</p>
+                <ul className="mt-2 space-y-1.5 text-sm leading-6">
+                  <li>• Secure checkout powered by Razorpay</li>
+                  <li>• Refunds credited to the original payment method</li>
+                  <li>• Insured shipping with tracking updates</li>
+                  <li>• Support via email and WhatsApp before and after purchase</li>
+                </ul>
               </div>
 
               {orderId && (

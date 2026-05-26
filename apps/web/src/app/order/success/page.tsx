@@ -8,6 +8,8 @@ import { useCheckoutStore } from '@/store/checkout.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps';
+import { trackPurchase } from '@/lib/analytics';
+import { useRef } from 'react';
 
 export default function OrderSuccessPage() {
   const router = useRouter();
@@ -16,6 +18,11 @@ export default function OrderSuccessPage() {
   const { clearCart } = useCartStore();
 
   const [mounted, setMounted] = useState(false);
+  const hasTrackedPurchaseRef = useRef(false);
+
+  const orderTotal = useCartStore((state) =>
+    state.items.reduce((total, item) => total + ((item.product?.price || item.customDesign?.estimatedPrice || 0) * item.quantity), 0)
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -26,8 +33,12 @@ export default function OrderSuccessPage() {
   useEffect(() => {
     if (mounted && orderId) {
       clearCart();
+      if (paymentId && !hasTrackedPurchaseRef.current) {
+        hasTrackedPurchaseRef.current = true;
+        trackPurchase(orderId, orderTotal);
+      }
     }
-  }, [mounted, orderId, clearCart]);
+  }, [mounted, orderId, paymentId, orderTotal, clearCart]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -76,6 +87,9 @@ export default function OrderSuccessPage() {
           <p className="text-lg text-gray-600">
             Thank you for your purchase. Your order has been successfully placed.
           </p>
+          <div className="mt-4 inline-flex items-center rounded-full bg-green-50 px-4 py-2 text-sm font-medium text-green-800">
+            Secure payment received · Order will move to production soon
+          </div>
         </div>
 
         {/* Progress Steps */}
@@ -173,7 +187,7 @@ export default function OrderSuccessPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">Shipping Updates</p>
-                  <p className="text-sm text-gray-600">Track your order status and get shipping updates via email</p>
+                  <p className="text-sm text-gray-600">Track your order status and get shipping updates via email and WhatsApp</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -182,10 +196,17 @@ export default function OrderSuccessPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">Delivery</p>
-                  <p className="text-sm text-gray-600">Your order will be delivered to your address within 5-7 business days</p>
+                  <p className="text-sm text-gray-600">Your order will be delivered to your address within 5-7 business days, with insured tracking</p>
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="mb-8 rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Trust & support</h2>
+            <p className="text-sm text-gray-700 leading-6">
+              Need help with your order, a delivery update, or a refund question? Contact us at founder@robohatch.in or WhatsApp +91 95055 51727. Refunds are processed to the original payment method as per policy.
+            </p>
           </div>
 
           {/* Action Buttons */}

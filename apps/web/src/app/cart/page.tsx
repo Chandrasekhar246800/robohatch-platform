@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Package, ShieldCheck, Truck } from 'lucide-react';
 import { Button } from '@/components/ui';
+import StickyMobileCTA from '@/components/ui/StickyMobileCTA';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
 import { formatPrice } from '@/lib/utils';
@@ -23,19 +24,13 @@ export default function CartPage() {
   const total = subtotal + shipping;
 
   const handleCheckout = () => {
-    if (!isAuthenticated) {
-      // Redirect to login with return URL
-      router.push('/login?redirect=/checkout');
-      return;
-    }
-
     if (items.length === 0) {
       return;
     }
 
     setIsProcessing(true);
-    // Navigate to checkout
-    router.push('/checkout');
+    // Navigate to checkout; guest users start at shipping details
+    router.push('/checkout/address');
   };
 
   if (items.length === 0) {
@@ -265,6 +260,7 @@ export default function CartPage() {
                 {/* Place Order Button - Mobile Only */}
                 <div className="p-4 border-t border-gray-200 lg:hidden">
                   <Button 
+                    data-testid="cart-place-order-desktop"
                     onClick={handleCheckout}
                     disabled={isProcessing || items.length === 0}
                     className="w-full bg-primary hover:bg-accent text-white font-medium py-3"
@@ -332,6 +328,7 @@ export default function CartPage() {
                 {/* Place Order Button - Desktop */}
                 <div className="p-4 border-t border-gray-200 hidden lg:block">
                   <Button 
+                    data-testid="cart-place-order-mobile"
                     onClick={handleCheckout}
                     disabled={isProcessing || items.length === 0}
                     className="w-full bg-primary hover:bg-accent text-white font-medium py-3"
@@ -342,7 +339,7 @@ export default function CartPage() {
                   
                   {!isAuthenticated && (
                     <p className="text-xs text-center text-gray-600 mt-3">
-                      Please login to complete your purchase
+                      Guest checkout available. You can create an account after purchase.
                     </p>
                   )}
                 </div>
@@ -353,9 +350,13 @@ export default function CartPage() {
                     <ShieldCheck size={16} className="text-primary" />
                     <span className="font-medium">Safe and Secure Payments</span>
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-600 mb-2">
                     100% Payment Protection. Easy Return Policy
                   </p>
+                  <div className="flex items-center gap-2">
+                    <img src="/razorpay-badge.svg" alt="Razorpay" className="h-6" />
+                    <span className="text-xs text-gray-700">Payments powered by Razorpay</span>
+                  </div>
                 </div>
               </div>
 
@@ -367,6 +368,14 @@ export default function CartPage() {
                   </button>
                 </div>
               </Link>
+              {/* Mobile Sticky CTA */}
+              <StickyMobileCTA
+                price={total}
+                label={items.length === 0 ? 'Place Order' : 'Place Order'}
+                onAction={handleCheckout}
+                disabled={isProcessing || items.length === 0}
+                helperText={isAuthenticated ? 'Secure payments · Insured delivery' : 'Guest checkout available'}
+              />
             </div>
           </div>
         </div>

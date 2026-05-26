@@ -10,13 +10,20 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
 
 export const ProductCardSkeleton: React.FC = () => {
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <Skeleton className="w-full h-64" />
-      <div className="p-4 space-y-3">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <Skeleton className="w-full aspect-[4/3]" />
+      <div className="p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-3 w-24 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
         <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-1/2" />
-        <Skeleton className="h-6 w-1/4" />
-        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-10 w-full rounded-xl" />
       </div>
     </div>
   );
@@ -24,7 +31,7 @@ export const ProductCardSkeleton: React.FC = () => {
 
 export const ProductGridSkeleton: React.FC<{ count?: number }> = ({ count = 8 }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-6">
       {Array.from({ length: count }).map((_, i) => (
         <ProductCardSkeleton key={i} />
       ))}
