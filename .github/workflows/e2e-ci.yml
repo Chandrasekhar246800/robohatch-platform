@@ -3,7 +3,10 @@ name: E2E CI (deterministic)
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - release/staging-validation
 
 jobs:
   e2e:
