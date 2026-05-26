@@ -57,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
-    ...categories.map((url) => ({
+    ...categories.map((url: string) => ({
       url: `${siteUrl}${url}`,
       lastModified: new Date(),
       changeFrequency: 'weekly' as const,
