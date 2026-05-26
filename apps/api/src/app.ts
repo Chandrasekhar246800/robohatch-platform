@@ -105,6 +105,14 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
+// Webhooks must see the exact raw body before any JSON middleware runs.
+app.use(
+  "/api/webhook",
+  webhookRateLimiter,
+  express.raw({ type: "application/json", limit: "1mb" }),
+  webhookRoutes
+);
+
 // Body parsing middleware
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -197,9 +205,6 @@ app.use("/api/orders", sensitiveOperationLimiter, orderRoutes);
 app.use("/api/payment", sensitiveOperationLimiter, paymentRoutes);
 app.use("/api/custom-designs", customDesignRoutes);
 app.use("/api/custom-photos", customPhotoRoutes);
-
-// Webhook routes are unauthenticated but signature-verified and rate-limited.
-app.use("/api/webhook", webhookRateLimiter, webhookRoutes);
 
 // Admin routes (already protected by auth middleware in routes)
 app.use("/api/admin", adminRoutes);

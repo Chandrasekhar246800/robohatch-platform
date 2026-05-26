@@ -1,6 +1,8 @@
 // Trigger Railway Dockerfile rebuild - March 8, 2026
 import app from "./app";
 import { env } from "./config/env";
+import orderExpirationWorker from './workers/order-expiration.worker';
+import paymentReconciliationWorker from './workers/payment-reconciliation.worker';
 
 import { logger } from './utils/logger';
 
@@ -31,6 +33,9 @@ const server = app.listen(PORT, () => {
     logger.info(`\n🔒 Production mode - Security features enabled`);
     logger.info(`🛡️  Rate limits: 100 requests per 15 minutes`);
   }
+
+  orderExpirationWorker.start();
+  paymentReconciliationWorker.start();
   
   logger.info('\n✅ Server is ready to accept connections\n');
 });

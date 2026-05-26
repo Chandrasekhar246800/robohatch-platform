@@ -5,15 +5,36 @@ import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
 
-const processedWebhookEvents = new Map<string, number>();
-const WEBHOOK_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+type WebhookPayload = {
+  event?: string;
+  [key: string]: any;
+};
 
-const pruneProcessedWebhookEvents = () => {
-  const now = Date.now();
-  for (const [eventId, timestamp] of processedWebhookEvents.entries()) {
-    if (now - timestamp > WEBHOOK_EVENT_TTL_MS) {
-      processedWebhookEvents.delete(eventId);
-    }
+const rawBodyToString = (body: unknown) => {
+  if (Buffer.isBuffer(body)) {
+    return body.toString('utf8');
+  }
+
+  if (typeof body === 'string') {
+    return body;
+  }
+
+  return '';
+};
+
+const deriveDedupeKey = (eventId: string | undefined, rawBody: string, signature: string) => {
+  if (eventId && eventId.trim().length > 0) {
+    return `razorpay:${eventId.trim()}`;
+  }
+
+  return `razorpay:${crypto.createHash('sha256').update(rawBody).update(signature).digest('hex')}`;
+};
+
+const parseWebhookPayload = (rawBody: string): WebhookPayload => {
+  try {
+    return JSON.parse(rawBody) as WebhookPayload;
+  } catch {
+    return {};
   }
 };
 
@@ -33,11 +54,18 @@ export class WebhookController {
    */
   async handleRazorpayWebhook(req: Request, res: Response) {
     try {
-      // 🔒 SECURITY: Verify webhook signature
+      const rawBody = rawBodyToString(req.body);
+      if (!rawBody) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing raw webhook body',
+        });
+      }
+
       const webhookSecret = env.razorpayWebhookSecret;
 
       const signature = req.headers['x-razorpay-signature'] as string;
-      const eventId = (req.headers['x-razorpay-event-id'] as string) || '';
+      const eventId = (req.headers['x-razorpay-event-id'] as string | undefined) || undefined;
       
       if (!signature) {
         logger.error('🚨 SECURITY ALERT: Webhook request without signature');
@@ -47,26 +75,20 @@ export class WebhookController {
         });
       }
 
-      pruneProcessedWebhookEvents();
-      if (eventId && processedWebhookEvents.has(eventId)) {
-        return res.status(200).json({
-          success: true,
-          message: 'Webhook already processed',
-        });
-      }
+      const dedupeKey = deriveDedupeKey(eventId, rawBody, signature);
 
-      // Generate expected signature
+      // Generate expected signature from the exact raw payload bytes.
       const expectedSignature = crypto
         .createHmac('sha256', webhookSecret)
-        .update(JSON.stringify(req.body))
+        .update(rawBody)
         .digest('hex');
 
       // 🔒 TIMING-SAFE COMPARISON: Prevent timing attacks
       const isValid =
         signature.length === expectedSignature.length &&
         crypto.timingSafeEqual(
-          Buffer.from(signature),
-          Buffer.from(expectedSignature)
+          Buffer.from(signature, 'hex'),
+          Buffer.from(expectedSignature, 'hex')
         );
 
       if (!isValid) {
@@ -82,35 +104,77 @@ export class WebhookController {
       }
 
       // ✅ Signature verified - process webhook event
-      const { event, payload } = req.body;
+      const payload = parseWebhookPayload(rawBody);
+      const event = payload.event;
+
+      if (!event) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing webhook event type',
+        });
+      }
+
+      const correlationId = (req as any).requestId || dedupeKey;
+
+      try {
+        await prisma.webhookEvent.create({
+          data: {
+            dedupeKey,
+            razorpayEventId: eventId ?? null,
+            provider: 'RAZORPAY',
+            eventType: event,
+            signature,
+            rawBody: Buffer.from(rawBody, 'utf8'),
+            payload,
+            status: 'RECEIVED',
+            sourceIp: req.ip,
+            userAgent: req.headers['user-agent'] || null,
+            correlationId,
+          },
+        });
+      } catch (createError: any) {
+        if (createError?.code === 'P2002') {
+          return res.status(200).json({
+            success: true,
+            message: 'Webhook already processed',
+          });
+        }
+
+        throw createError;
+      }
 
       logger.info(`📨 Webhook received: ${event}`, {
         orderId: payload?.payment?.entity?.order_id,
         paymentId: payload?.payment?.entity?.id,
       });
 
+      await prisma.webhookEvent.update({
+        where: { dedupeKey },
+        data: { status: 'PROCESSING' },
+      });
+
       // Handle different Razorpay events
       switch (event) {
         case 'payment.captured':
-          await this.handlePaymentCaptured(payload);
+          await this.handlePaymentCaptured(payload, dedupeKey, correlationId);
           break;
 
         case 'payment.failed':
-          await this.handlePaymentFailed(payload);
+          await this.handlePaymentFailed(payload, dedupeKey, correlationId);
           break;
 
         case 'order.paid':
-          await this.handleOrderPaid(payload);
+          await this.handleOrderPaid(payload, dedupeKey, correlationId);
           break;
 
         default:
           logger.info(`ℹ️ Unhandled webhook event: ${event}`);
       }
 
-      // Always return 200 to acknowledge receipt
-      if (eventId) {
-        processedWebhookEvents.set(eventId, Date.now());
-      }
+      await prisma.webhookEvent.update({
+        where: { dedupeKey },
+        data: { status: 'PROCESSED', processedAt: new Date() },
+      });
 
       return res.status(200).json({
         success: true,
@@ -118,6 +182,20 @@ export class WebhookController {
       });
     } catch (error: any) {
       logger.error('❌ Webhook processing error:', error);
+
+      const rawBody = rawBodyToString(req.body);
+      const signature = req.headers['x-razorpay-signature'] as string | undefined;
+      const eventId = (req.headers['x-razorpay-event-id'] as string | undefined) || undefined;
+      if (rawBody && signature) {
+        const dedupeKey = deriveDedupeKey(eventId, rawBody, signature);
+        await prisma.webhookEvent.updateMany({
+          where: { dedupeKey },
+          data: {
+            status: 'FAILED',
+            errorMessage: error?.message || 'Error processing webhook',
+          },
+        }).catch(() => undefined);
+      }
       
       // Still return 200 to prevent Razorpay retries on server errors
       return res.status(200).json({
@@ -131,7 +209,7 @@ export class WebhookController {
    * Handle payment.captured event
    * This is the most important event - confirms money received
    */
-  private async handlePaymentCaptured(payload: any) {
+  private async handlePaymentCaptured(payload: WebhookPayload, dedupeKey: string, correlationId: string) {
     try {
       const paymentEntity = payload.payment.entity;
       const razorpayOrderId = paymentEntity.order_id;
@@ -172,6 +250,22 @@ export class WebhookController {
           },
         });
 
+        await tx.paymentEventLog.create({
+          data: {
+            paymentId: payment.id,
+            orderId: payment.orderId,
+            source: 'WEBHOOK',
+            eventType: 'payment.captured',
+            fromStatus: payment.status,
+            toStatus: 'CAPTURED',
+            gatewayOrderId: razorpayOrderId,
+            gatewayPaymentId: razorpayPaymentId,
+            webhookEventKey: dedupeKey,
+            correlationId,
+            payload,
+          },
+        });
+
         // Update order status
         await tx.order.update({
           where: { id: payment.orderId },
@@ -206,7 +300,7 @@ export class WebhookController {
    * Handle payment.failed event
    * ✅ CRITICAL FIX: Restore stock when payment fails
    */
-  private async handlePaymentFailed(payload: any) {
+  private async handlePaymentFailed(payload: WebhookPayload, dedupeKey: string, correlationId: string) {
     try {
       const paymentEntity = payload.payment.entity;
       const razorpayOrderId = paymentEntity.order_id;
@@ -254,6 +348,23 @@ export class WebhookController {
           },
         });
 
+
+        await tx.paymentEventLog.create({
+          data: {
+            paymentId: payment.id,
+            orderId: payment.orderId,
+            source: 'WEBHOOK',
+            eventType: 'payment.failed',
+            fromStatus: payment.status,
+            toStatus: 'FAILED',
+            gatewayOrderId: razorpayOrderId,
+            gatewayPaymentId: paymentEntity.id || null,
+            webhookEventKey: dedupeKey,
+            correlationId,
+            payload,
+            reason: errorReason,
+          },
+        });
         // ✅ RESTORE STOCK: Add items back to inventory (only products)
         for (const item of payment.order.items) {
           if (!item.productId || !item.product) continue; // Skip custom designs
@@ -282,7 +393,7 @@ export class WebhookController {
    * Handle order.paid event
    * This is sent when an order is fully paid
    */
-  private async handleOrderPaid(payload: any) {
+  private async handleOrderPaid(payload: WebhookPayload, dedupeKey: string, correlationId: string) {
     try {
       const orderEntity = payload.order.entity;
       const razorpayOrderId = orderEntity.id;

@@ -1,0 +1,129 @@
+name: E2E Validation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Optional Playwright suite to run'
+        required: false
+        default: 'test:e2e'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Playwright Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL }}
+      PLAYWRIGHT_WEB_SERVER_COMMAND: npm run start
+      E2E_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL }}
+      E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
+      E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+      E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_RAZORPAY_KEY_SECRET: ${{ secrets.E2E_RAZORPAY_KEY_SECRET }}
+      E2E_RAZORPAY_WEBHOOK_SECRET: ${{ secrets.E2E_RAZORPAY_WEBHOOK_SECRET }}
+      E2E_PAYMENT_MODE: mock
+      E2E_ALLOW_SIGNUP: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npm --workspace @robohatch/web exec playwright install --with-deps chromium
+
+      - name: Run smoke suite
+        run: npm --workspace @robohatch/web run test:e2e:smoke
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore
+
+  validation:
+    name: Playwright Validation Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: smoke
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - customer
+          - cro
+          - payment
+          - admin
+          - mobile
+          - recovery
+          - production
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL }}
+      PLAYWRIGHT_WEB_SERVER_COMMAND: npm run start
+      E2E_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL }}
+      E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
+      E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+      E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_RAZORPAY_KEY_SECRET: ${{ secrets.E2E_RAZORPAY_KEY_SECRET }}
+      E2E_RAZORPAY_WEBHOOK_SECRET: ${{ secrets.E2E_RAZORPAY_WEBHOOK_SECRET }}
+      E2E_PAYMENT_MODE: mock
+      E2E_ALLOW_SIGNUP: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npm --workspace @robohatch/web exec playwright install --with-deps chromium
+
+      - name: Run suite
+        run: npm --workspace @robohatch/web run test:e2e:${{ matrix.suite }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.suite }}-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore

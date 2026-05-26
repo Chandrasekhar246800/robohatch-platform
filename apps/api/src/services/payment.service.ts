@@ -26,6 +26,38 @@ export class PaymentService {
     logger.info('✅ Razorpay initialized successfully');
   }
 
+  private async recordPaymentEvent(input: {
+    paymentId?: string;
+    orderId: string;
+    source: 'CLIENT' | 'WEBHOOK' | 'RECONCILIATION' | 'SYSTEM';
+    eventType: string;
+    fromStatus?: string | null;
+    toStatus: string;
+    gatewayOrderId?: string | null;
+    gatewayPaymentId?: string | null;
+    webhookEventKey?: string | null;
+    correlationId?: string | null;
+    payload?: any;
+    reason?: string | null;
+  }) {
+    return prisma.paymentEventLog.create({
+      data: {
+        paymentId: input.paymentId ?? null,
+        orderId: input.orderId,
+        source: input.source,
+        eventType: input.eventType,
+        fromStatus: input.fromStatus ?? null,
+        toStatus: input.toStatus,
+        gatewayOrderId: input.gatewayOrderId ?? null,
+        gatewayPaymentId: input.gatewayPaymentId ?? null,
+        webhookEventKey: input.webhookEventKey ?? null,
+        correlationId: input.correlationId ?? input.orderId,
+        payload: input.payload ?? undefined,
+        reason: input.reason ?? null,
+      },
+    });
+  }
+
   /**
    * Create order from cart WITH shipping address
    * ✅ CRITICAL FIX: Stores shipping address atomically
@@ -255,6 +287,22 @@ export class PaymentService {
       },
     });
 
+    await this.recordPaymentEvent({
+      paymentId: payment.id,
+      orderId,
+      source: 'SYSTEM',
+      eventType: 'razorpay.order.created',
+      fromStatus: 'PENDING',
+      toStatus: 'CREATED',
+      gatewayOrderId: razorpayOrder.id,
+      correlationId: orderId,
+      payload: {
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        receipt: razorpayOrder.receipt,
+      },
+    });
+
     logger.info(`✅ Razorpay order created: ${razorpayOrder.id}`);
 
     return {
@@ -358,6 +406,24 @@ export class PaymentService {
           gatewayPaymentId: razorpay_payment_id,
           signature: razorpay_signature,
           status: 'CAPTURED',
+        },
+      });
+
+      await tx.paymentEventLog.create({
+        data: {
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          source: 'CLIENT',
+          eventType: 'payment.verified',
+          fromStatus: payment.status,
+          toStatus: 'CAPTURED',
+          gatewayOrderId: razorpay_order_id,
+          gatewayPaymentId: razorpay_payment_id,
+          correlationId: payment.orderId,
+          payload: {
+            razorpay_order_id,
+            razorpay_payment_id,
+          },
         },
       });
 
@@ -562,11 +628,169 @@ export class PaymentService {
           );
         }
       }
+
+      await tx.paymentEventLog.create({
+        data: {
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          source: 'SYSTEM',
+          eventType: 'payment.failed',
+          fromStatus: payment.status,
+          toStatus: 'FAILED',
+          gatewayOrderId: payment.gatewayOrderId,
+          gatewayPaymentId: payment.gatewayPaymentId,
+          correlationId: payment.orderId,
+          reason: reason || 'Payment failed',
+        },
+      });
     });
 
     logger.info(`✅ Payment marked as failed and stock restored: ${payment.id}`);
 
     return { success: true, message: 'Payment marked as failed' };
+  }
+
+  /**
+   * Reconcile a single order against Razorpay's current gateway state.
+   * This is used by the background worker and manual recovery paths.
+   */
+  async reconcileOrderPayment(orderId: string, correlationId?: string) {
+    const payment = await prisma.payment.findFirst({
+      where: { orderId },
+      include: {
+        order: {
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return { success: false, status: 'NOT_FOUND' as const };
+    }
+
+    if (['CAPTURED', 'REFUNDED', 'PARTIALLY_REFUNDED'].includes(payment.status)) {
+      return { success: true, status: payment.status };
+    }
+
+    if (!payment.gatewayPaymentId) {
+      return { success: true, status: 'AWAITING_GATEWAY_CONFIRMATION' as const };
+    }
+
+    const gatewayPayment: any = await this.razorpay.payments.fetch(payment.gatewayPaymentId);
+    const sourceCorrelationId = correlationId || payment.orderId;
+
+    if (gatewayPayment?.status === 'captured') {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const currentPayment = await tx.payment.findUnique({
+          where: { id: payment.id },
+        });
+
+        if (!currentPayment || currentPayment.status === 'CAPTURED') {
+          return;
+        }
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'CAPTURED',
+            gatewayPaymentId: gatewayPayment.id || payment.gatewayPaymentId,
+            signature: payment.signature,
+          },
+        });
+
+        await tx.order.update({
+          where: { id: payment.orderId },
+          data: { status: 'PAID' },
+        });
+
+        const cart = await tx.cart.findUnique({
+          where: { userId: payment.userId },
+        });
+
+        if (cart) {
+          await tx.cartItem.deleteMany({
+            where: { cartId: cart.id },
+          });
+        }
+
+        await tx.paymentEventLog.create({
+          data: {
+            paymentId: payment.id,
+            orderId: payment.orderId,
+            source: 'RECONCILIATION',
+            eventType: 'payment.reconciled.captured',
+            fromStatus: currentPayment.status,
+            toStatus: 'CAPTURED',
+            gatewayOrderId: payment.gatewayOrderId,
+            gatewayPaymentId: gatewayPayment.id || payment.gatewayPaymentId,
+            correlationId: sourceCorrelationId,
+            payload: {
+              gatewayStatus: gatewayPayment?.status,
+            },
+          },
+        });
+      });
+
+      logger.info(`✅ Reconciled captured payment: ${payment.id}`);
+      return { success: true, status: 'CAPTURED' as const };
+    }
+
+    if (gatewayPayment?.status === 'failed' || gatewayPayment?.status === 'cancelled') {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: 'FAILED' },
+        });
+
+        for (const item of payment.order.items) {
+          if (!item.productId || !item.product) continue;
+
+          const restorationResult = await StockManager.restoreStock(
+            tx,
+            item.productId,
+            item.quantity
+          );
+
+          if (!restorationResult.success) {
+            logger.warn(
+              `⚠️ Failed to restore stock for product ${item.productId}: ${restorationResult.error}`
+            );
+          }
+        }
+
+        await tx.paymentEventLog.create({
+          data: {
+            paymentId: payment.id,
+            orderId: payment.orderId,
+            source: 'RECONCILIATION',
+            eventType: 'payment.reconciled.failed',
+            fromStatus: payment.status,
+            toStatus: 'FAILED',
+            gatewayOrderId: payment.gatewayOrderId,
+            gatewayPaymentId: gatewayPayment.id || payment.gatewayPaymentId,
+            correlationId: sourceCorrelationId,
+            payload: {
+              gatewayStatus: gatewayPayment?.status,
+            },
+            reason: gatewayPayment?.error_description || 'Gateway reported failure',
+          },
+        });
+      });
+
+      logger.info(`✅ Reconciled failed payment: ${payment.id}`);
+      return { success: true, status: 'FAILED' as const };
+    }
+
+    return {
+      success: true,
+      status: gatewayPayment?.status || 'PENDING',
+    };
   }
 
   /**
