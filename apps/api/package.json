@@ -14,6 +14,7 @@
     "lint": "eslint src/",
     "clean": "rm -rf dist",
     "seed": "tsx prisma/seed.ts",
+    "seed:e2e": "tsx prisma/seed-e2e-product.ts",
     "update-categories": "tsx prisma/update-categories.ts",
     "test:auth-concurrency": "npx tsx --test tests/auth-concurrency.test.ts"
   },
