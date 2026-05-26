@@ -38,6 +38,7 @@ jobs:
         shell: bash
     env:
       CI: 'true'
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       # Deterministic URLs and ports
       PLAYWRIGHT_BASE_URL: 'http://localhost:3000'
       E2E_BASE_URL: 'http://localhost:3000'
