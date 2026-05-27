@@ -114,9 +114,10 @@ jobs:
 
       - name: Wait for API health
         run: |
-          for i in $(seq 1 60); do
+          # Use the lightweight /api/health endpoint which does not require DB or external services
+          for i in $(seq 1 90); do
             if curl --connect-timeout 2 --max-time 5 -sS \
-              http://localhost:5000/health \
+              http://localhost:5000/api/health \
               > apps/api/api-health.json; then
               cat apps/api/api-health.json
               exit 0
@@ -124,7 +125,9 @@ jobs:
             sleep 2
           done
           echo "API health never became ready" >&2
-          cat apps/api/api.log || true
+          echo "--- last 200 lines of api.log ---"
+          tail -n 200 apps/api/api.log || true
+          cat apps/api/api-health.json || true
           exit 1
 
       - name: Build Web
