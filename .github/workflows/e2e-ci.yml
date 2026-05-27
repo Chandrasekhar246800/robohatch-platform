@@ -108,7 +108,7 @@ jobs:
 
       - name: Start API (background)
         run: |
-          PORT=5000 npm --workspace @robohatch/api run start \
+          PORT=5000 npm --workspace @robohatch/api run start:ci \
             > apps/api/api.log 2>&1 &
           echo $! > api.pid
 

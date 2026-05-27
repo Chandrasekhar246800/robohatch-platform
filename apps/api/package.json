@@ -9,6 +9,7 @@
     "dev": "ts-node-dev src/server.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
+    "start:ci": "node dist/index.js",
     "postinstall": "prisma generate",
     "deploy": "prisma db push && npm run seed",
     "lint": "eslint src/",
