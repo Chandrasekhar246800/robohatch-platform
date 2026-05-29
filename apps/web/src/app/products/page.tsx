@@ -51,29 +51,36 @@ function ProductsContent() {
         let categoriesData = [];
 
         if (productsResponse.success && productsResponse.data) {
-          productsData = productsResponse.data.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            price: Number(p.price),
-            stock: p.stock || 0,
-            images: p.images?.map((img: any) => img.url) || [],
-            category: {
-              id: p.category?.id || '',
-              name: p.category?.name || 'Uncategorized',
-              slug: p.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized',
-              image: '',
-              description: '',
-            },
-            rating: 4.5,
-            reviews: 0,
-            inStock: (p.stock || 0) > 0,
-            featured: false,
-            customizable: false,
-            tags: [],
-            isActive: p.isActive,
-            createdAt: p.createdAt,
-          }));
+          productsData = productsResponse.data.map((p: any) => {
+            const regularPrice = Number(p.price);
+            const hasSalePrice = p.salePrice !== null && p.salePrice !== undefined && String(p.salePrice).trim() !== '';
+            const effectiveSalePrice = hasSalePrice ? Number(p.salePrice) : undefined;
+
+            return {
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              price: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? effectiveSalePrice : regularPrice,
+              originalPrice: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? regularPrice : undefined,
+              stock: p.stock || 0,
+              images: p.images?.map((img: any) => img.url) || [],
+              category: {
+                id: p.category?.id || '',
+                name: p.category?.name || 'Uncategorized',
+                slug: p.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized',
+                image: '',
+                description: '',
+              },
+              rating: 4.5,
+              reviews: 0,
+              inStock: (p.stock || 0) > 0,
+              featured: false,
+              customizable: false,
+              tags: [],
+              isActive: p.isActive,
+              createdAt: p.createdAt,
+            };
+          });
           // Filter to only show active products
           const activeProducts = productsData.filter((p: any) => p.isActive);
           productsData = activeProducts;

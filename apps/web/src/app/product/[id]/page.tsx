@@ -126,12 +126,17 @@ export default function ProductDetailPage() {
 
         if (response.success && response.data) {
           const productData = response.data;
+          const regularPrice = Number(productData.price);
+          const hasSalePrice = productData.salePrice !== null && productData.salePrice !== undefined && String(productData.salePrice).trim() !== '';
+          const effectiveSalePrice = hasSalePrice ? Number(productData.salePrice) : undefined;
+
           setProduct({
             ...productData,
+            price: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? effectiveSalePrice : regularPrice,
             rating: 4.5,
             reviews: 0,
             inStock: productData.isActive !== false,
-            originalPrice: undefined,
+            originalPrice: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? regularPrice : undefined,
           });
           fetchRelatedProducts(productData.categoryId);
           return;

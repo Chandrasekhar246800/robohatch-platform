@@ -6,6 +6,7 @@ import { Loader2, Upload, X } from 'lucide-react';
 import { Button, Card, CardContent, Input } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
 import { apiClient } from '@/lib/api-client';
+import { calculateDiscount, formatPrice } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -44,6 +45,17 @@ export default function EditProductPage() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const parsedPrice = Number(formData.price);
+  const parsedSalePrice = Number(formData.salePrice);
+  const hasSalePreview =
+    Number.isFinite(parsedPrice) &&
+    parsedPrice > 0 &&
+    formData.salePrice.trim() !== '' &&
+    Number.isFinite(parsedSalePrice) &&
+    parsedSalePrice > 0 &&
+    parsedSalePrice < parsedPrice;
+  const saleDiscountPercent = hasSalePreview ? calculateDiscount(parsedPrice, parsedSalePrice) : 0;
 
   useEffect(() => {
     setMounted(true);
@@ -315,6 +327,17 @@ export default function EditProductPage() {
                   />
                 </div>
               </div>
+
+              {hasSalePreview && (
+                <div className="rounded-lg border border-green-600/40 bg-green-500/10 p-4 text-sm">
+                  <p className="text-green-300 font-semibold">Sale preview</p>
+                  <p className="mt-1 text-gray-200">
+                    <span className="line-through text-gray-400 mr-2">{formatPrice(parsedPrice)}</span>
+                    <span className="text-white font-semibold mr-2">{formatPrice(parsedSalePrice)}</span>
+                    <span className="text-green-300 font-semibold">{saleDiscountPercent}% OFF</span>
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
