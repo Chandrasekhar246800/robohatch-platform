@@ -137,6 +137,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return false;
     } catch (error) {
+      if (error instanceof NetworkError) {
+        console.log('[AuthHydration] refreshSession:rate-limited', {
+          message: error.message,
+        });
+        return isAuthenticated;
+      }
+
       logoutStore();
       console.log('[AuthHydration] refreshSession:error', {
         message: error instanceof Error ? error.message : String(error),

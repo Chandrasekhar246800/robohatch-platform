@@ -558,6 +558,11 @@ class ApiClient {
     }
 
     // Handle other HTTP error responses (400, 403, 500, etc.)
+    if (response.status === 429) {
+      const errorMsg = data.error || data.message || 'Too many requests from this IP, please try again later.';
+      throw new NetworkError(errorMsg);
+    }
+
     if (!response.ok) {
       const errorMsg = data.error || data.message || data.success === false && data.message || `HTTP ${response.status}`;
       console.error(`❌ Server returned error: ${errorMsg}`);
