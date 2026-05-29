@@ -73,6 +73,11 @@ export const metadata: Metadata = {
     description: 'Engineer-reviewed custom 3D printing for creators and businesses.',
     images: ['/images/hero-3d-bench.svg'],
   },
+  icons: {
+    icon: '/logo.jpeg',
+    apple: '/logo.jpeg',
+    shortcut: '/logo.jpeg',
+  },
   robots: {
     index: true,
     follow: true,
