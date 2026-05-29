@@ -18,7 +18,7 @@ export default function AdminProductsPage() {
     try {
       setLoading(true);
       const response = await apiClient.getProducts();
-      setProducts(response?.data || []);
+      setProducts((response?.data || []).filter((product: any) => product.isActive !== false));
     } finally {
       setLoading(false);
     }
