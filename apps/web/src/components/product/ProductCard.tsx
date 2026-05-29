@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Star, Heart, Plus, Minus, ArrowDown, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Plus, Minus, ArrowDown, ShieldCheck, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Product } from '@/types';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
