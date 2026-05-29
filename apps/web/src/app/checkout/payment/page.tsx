@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { CreditCard, Lock, MapPin } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
 import { useCheckoutStore } from '@/store/checkout.store';
@@ -37,6 +38,28 @@ export default function PaymentPage() {
   const [error, setError] = useState('');
   const [orderId, setLocalOrderId] = useState('');
   const razorpayScriptPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const getItemThumbnailSrc = (item: (typeof items)[number]) => {
+    const productImage = item.product?.images?.[0];
+
+    if (typeof productImage === 'string' && productImage.trim()) {
+      return productImage;
+    }
+
+    if (productImage && typeof productImage === 'object' && 'url' in productImage && productImage.url) {
+      return productImage.url;
+    }
+
+    if (item.customImageUrl) {
+      return item.customImageUrl;
+    }
+
+    if (item.customDesign?.fileUrl) {
+      return item.customDesign.fileUrl;
+    }
+
+    return '/placeholder-product.jpg';
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -463,7 +486,15 @@ export default function PaymentPage() {
               <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4 max-h-64 overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.id} className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded flex-shrink-0" />
+                    <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded bg-gray-100 sm:h-12 sm:w-12">
+                      <Image
+                        src={getItemThumbnailSrc(item)}
+                        alt={item.product?.name || item.customDesign?.name || 'Order item'}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.product?.name || item.customDesign?.name || 'Custom Item'}</p>
                       <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
