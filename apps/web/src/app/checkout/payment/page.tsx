@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreditCard, Lock, MapPin } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
@@ -33,8 +33,10 @@ export default function PaymentPage() {
   const [mounted, setMounted] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const [error, setError] = useState('');
   const [orderId, setLocalOrderId] = useState('');
+  const razorpayScriptPromiseRef = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -47,6 +49,52 @@ export default function PaymentPage() {
       });
     }
   }, [setCurrentStep, isAuthenticated, mergeLocalCartWithBackend]);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    const loadRazorpayScript = async () => {
+      if (typeof window === 'undefined') {
+        return false;
+      }
+
+      if (typeof window.Razorpay !== 'undefined') {
+        setIsRazorpayLoaded(true);
+        return true;
+      }
+
+      if (!razorpayScriptPromiseRef.current) {
+        razorpayScriptPromiseRef.current = new Promise<boolean>((resolve) => {
+          const existingScript = document.querySelector<HTMLScriptElement>(
+            'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+          );
+
+          if (existingScript) {
+            existingScript.addEventListener('load', () => resolve(true), { once: true });
+            existingScript.addEventListener('error', () => resolve(false), { once: true });
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.async = true;
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+      }
+
+      const loaded = await razorpayScriptPromiseRef.current;
+      setIsRazorpayLoaded(loaded);
+      return loaded;
+    };
+
+    loadRazorpayScript().catch(() => {
+      setIsRazorpayLoaded(false);
+    });
+  }, [mounted]);
 
   // Redirect to login only if unauthenticated and no shipping address (no guest flow started)
   useEffect(() => {
@@ -124,6 +172,34 @@ export default function PaymentPage() {
     setError('');
 
     try {
+      const razorpayLoaded = await (async () => {
+        if (typeof window !== 'undefined' && typeof window.Razorpay !== 'undefined') {
+          return true;
+        }
+
+        if (!razorpayScriptPromiseRef.current) {
+          razorpayScriptPromiseRef.current = new Promise<boolean>((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.async = true;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+          });
+        }
+
+        return razorpayScriptPromiseRef.current;
+      })();
+
+      setIsRazorpayLoaded(razorpayLoaded);
+
+      if (!razorpayLoaded || typeof window.Razorpay === 'undefined') {
+        setError('Payment gateway not loaded. Please refresh the page and try again.');
+        setIsProcessingPayment(false);
+        setIsCreatingOrder(false);
+        return;
+      }
+
       // Create Razorpay order
       const response = await apiClient.createRazorpayOrder(orderIdParam);
       
@@ -140,14 +216,6 @@ export default function PaymentPage() {
       setRazorpayOrderId(razorpayOrderId);
       
       console.log('✓ Razorpay order created:', razorpayOrderId);
-
-      // Check if Razorpay script is loaded
-      if (typeof window.Razorpay === 'undefined') {
-        setError('Payment gateway not loaded. Please refresh the page.');
-        setIsProcessingPayment(false);
-        setIsCreatingOrder(false);
-        return;
-      }
 
       // Configure Razorpay checkout options
       const options = {
@@ -362,16 +430,18 @@ export default function PaymentPage() {
                   type="button"
                   onClick={() => router.push('/checkout/address')}
                   className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                  disabled={isCreatingOrder || isProcessingPayment}
+                  disabled={isCreatingOrder || isProcessingPayment || !isRazorpayLoaded}
                 >
                   Back
                 </button>
                 <button
                   onClick={handleCreateOrder}
-                  disabled={isCreatingOrder || isProcessingPayment}
+                  disabled={isCreatingOrder || isProcessingPayment || !isRazorpayLoaded}
                   className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-primary text-white rounded-lg font-semibold hover:bg-accent transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {isCreatingOrder 
+                  {!isRazorpayLoaded
+                    ? 'Loading Payment Gateway...'
+                    : isCreatingOrder 
                     ? 'Creating Order...' 
                     : isProcessingPayment 
                     ? 'Opening Payment...' 
