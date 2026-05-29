@@ -75,9 +75,8 @@ async function main() {
   }
 
   const adminCookies = [] as any[];
-  const cookieNames = Object.keys(dumped.cookies);
-  for (const name of cookieNames) {
-    const value = dumped.cookies[name];
+  const cookieEntries = Object.entries(dumped.cookies as Record<string, string>);
+  for (const [name, value] of cookieEntries) {
     adminCookies.push({
       name,
       value,
