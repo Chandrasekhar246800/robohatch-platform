@@ -208,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authStatus,
       });
     };
-  }, [authStatus, bootstrapCsrf, isAuthenticated, pathname, setAuthStatus, setHasHydrated, shouldBootstrapAuth, validateSession]);
+  }, [bootstrapCsrf, isAuthenticated, pathname, setAuthStatus, setHasHydrated, shouldBootstrapAuth, validateSession]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
