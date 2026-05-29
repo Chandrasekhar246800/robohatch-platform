@@ -73,19 +73,7 @@ export default function CategoriesManagementPage() {
     setSuccess('');
 
     try {
-      const response = await fetch(
-        `/api/admin/categories`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Send httpOnly cookies
-          body: JSON.stringify({ name: newCategoryName.trim() }),
-        }
-      );
-
-      const data = await response.json();
+      const data = await apiClient.createCategory(newCategoryName.trim());
 
       if (data.success) {
         setSuccess('Category created successfully!');
