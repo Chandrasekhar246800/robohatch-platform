@@ -161,17 +161,17 @@ export default function ProductCardPremium({ product }: Props) {
 
             <p className="mb-2 text-sm text-slate-600 line-clamp-1">{product.description || ''}</p>
 
-            <div className="mb-1 flex items-center gap-3">
+            <div className="mb-1 flex items-center gap-3 flex-wrap min-w-0">
               {discount > 0 && (
-                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[12px] font-semibold">
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[12px] font-semibold flex-shrink-0">
                   <ArrowDown size={14} className="text-emerald-600" />
                   <span>{discount}%</span>
                 </div>
               )}
               {product.originalPrice && (
-                <span className="text-sm text-slate-400 line-through">{formatPrice(product.originalPrice)}</span>
+                <span className="text-sm text-slate-400 line-through flex-shrink-0">{formatPrice(product.originalPrice)}</span>
               )}
-              <span className="text-lg font-bold text-primary">{formatPrice(product.price)}</span>
+              <span className="text-lg font-bold text-primary min-w-0 truncate">{formatPrice(product.price)}</span>
             </div>
 
             <div className="mb-2">
