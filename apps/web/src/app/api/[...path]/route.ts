@@ -5,7 +5,6 @@ const getBackendBaseUrl = (request: NextRequest): string => {
 
   const candidates = [
     process.env.API_BACKEND_URL?.trim(),
-    'http://127.0.0.1:5000',
     process.env.NEXT_PUBLIC_API_URL?.trim(),
   ].filter((value): value is string => Boolean(value));
 
@@ -21,6 +20,11 @@ const getBackendBaseUrl = (request: NextRequest): string => {
     } catch {
       continue;
     }
+  }
+
+  const host = publicHost.toLowerCase();
+  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+    return 'http://127.0.0.1:5000';
   }
 
   throw new Error('No backend API URL configured. Set API_BACKEND_URL to your Railway service URL.');

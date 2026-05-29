@@ -30,16 +30,9 @@ const getApiUrl = () => {
   const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname.toLowerCase();
-
-    // In the browser, prefer same-origin requests on local/dev hosts so the Next.js API proxy
-    // handles auth cookies and avoids cross-origin fetch failures.
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return '';
-    }
-
-    // In production, always use same-origin requests so auth cookies remain first-party.
-    return (backendUrl || publicUrl || 'http://localhost:5000').replace(/\/$/, '');
+    // Always use same-origin API routes in the browser.
+    // This keeps auth cookies first-party and lets the Next.js proxy own cross-origin backend calls.
+    return '';
   }
 
   if (backendUrl) {
