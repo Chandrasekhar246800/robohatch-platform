@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button, Input, Card, CardContent } from '@/components/ui';
+import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth.store';
 
 interface Category {
@@ -181,16 +182,7 @@ export default function AddProductPage() {
         formDataToSend.append('images', image);
       });
 
-      const response = await fetch(
-        `/api/admin/products`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          body: formDataToSend,
-        }
-      );
-
-      const data = await response.json();
+      const data = await apiClient.createProduct(formDataToSend);
 
       if (data.success) {
         setSuccess('Product created successfully!');
