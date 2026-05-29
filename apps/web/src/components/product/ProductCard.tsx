@@ -173,33 +173,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </p>
 
             {/* Title */}
-            <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 flex-1">
-              {product.name}
-            </h3>
+            <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 flex-1">{product.name}</h3>
 
-            {/* Rating */}
-            {product.reviews > 0 && (
-              <div className="flex items-center space-x-1 mb-3">
-                <Star size={16} className="fill-emerald-500 text-emerald-500" />
-                <span className="text-sm font-medium text-gray-900">
-                  {product.rating}
-                </span>
-                <span className="text-sm text-gray-500">({product.reviews})</span>
-              </div>
-            )}
+            <p className="mb-2 text-sm text-gray-600 line-clamp-1">{product.description || ''}</p>
 
-            {/* Price */}
-            <div className="mb-3">
-              <div className="flex items-center space-x-2">
-                <span className="text-xl font-bold text-primary">
-                  {formatPrice(product.price)}
-                </span>
-                {product.originalPrice && (
-                  <span className="text-sm text-gray-400 line-through">
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
-              </div>
+            <div className="mb-2 flex items-center gap-3">
+              {discount > 0 && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[12px] font-semibold">
+                  <ArrowDown size={14} className="text-emerald-600" />
+                  <span>{discount}%</span>
+                </div>
+              )}
+              {product.originalPrice && (
+                <span className="text-sm text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>
+              )}
+              <span className="text-lg font-bold text-primary">{formatPrice(product.price)}</span>
+            </div>
+
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-semibold text-slate-700 border border-slate-100">
+                <ShieldCheck className="text-emerald-600" size={14} />
+                Assured
+              </span>
+            </div>
+
+            <div className="mb-3 text-sm text-slate-600 inline-flex items-center gap-2">
+              <Truck size={14} className="text-slate-600" />
+              <span>Delivered in 5-7 days</span>
             </div>
 
             {/* Add to Cart Button or Quantity Controls */}

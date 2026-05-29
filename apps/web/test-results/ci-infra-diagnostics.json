@@ -1,0 +1,6 @@
+{
+  "start": "2026-05-28T17:27:41.373Z",
+  "status": "failed",
+  "error": "CI-INFRA: Seed verification failed: Seeded product not available (status 404)",
+  "end": "2026-05-28T17:27:42.514Z"
+}

@@ -153,52 +153,37 @@ export default function ProductCardPremium({ product }: Props) {
           </div>
 
           <div className="flex flex-1 flex-col p-4 sm:p-5">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 line-clamp-1">
-                {product.category.name}
-              </p>
-              <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600">
-                <Truck size={12} className="text-primary" /> Ships in 2-4 days
-              </div>
+            <div className="mb-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 line-clamp-1">{product.category.name}</p>
             </div>
 
-            <h3 className="mb-2 line-clamp-2 text-[15px] font-semibold leading-snug text-slate-900 sm:text-base">
-              {product.name}
-            </h3>
+            <h3 className="mb-1 text-[15px] font-semibold leading-snug text-slate-900 sm:text-base">{product.name}</h3>
 
-            {product.reviews > 0 && (
-              <div className="mb-3 flex items-center gap-2 text-sm">
-                <Star size={16} className="fill-emerald-500 text-emerald-500" />
-                <span className="font-semibold text-slate-900">{product.rating}</span>
-                <span className="text-slate-500">({product.reviews})</span>
-              </div>
-            )}
+            <p className="mb-2 text-sm text-slate-600 line-clamp-1">{product.description || ''}</p>
 
-            <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="mb-1 flex items-center gap-3">
               {discount > 0 && (
-                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[12px] font-semibold">
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[12px] font-semibold">
                   <ArrowDown size={14} className="text-emerald-600" />
                   <span>{discount}%</span>
                 </div>
               )}
-              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-100">
-                <ShieldCheck className="mr-1 inline-block text-emerald-600" size={12} /> Assured
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 border border-slate-100">
-                <Truck size={12} className="mr-1 inline-block text-primary" /> Express
+              {product.originalPrice && (
+                <span className="text-sm text-slate-400 line-through">{formatPrice(product.originalPrice)}</span>
+              )}
+              <span className="text-lg font-bold text-primary">{formatPrice(product.price)}</span>
+            </div>
+
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-semibold text-slate-700 border border-slate-100">
+                <ShieldCheck className="text-emerald-600" size={14} />
+                Assured
               </span>
             </div>
 
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold text-primary sm:text-2xl">{formatPrice(product.price)}</span>
-                  {product.originalPrice && (
-                    <span className="text-sm text-slate-400 line-through">{formatPrice(product.originalPrice)}</span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-slate-500">Razorpay secure checkout · Insured shipping</p>
-              </div>
+            <div className="mb-3 text-sm text-slate-600 inline-flex items-center gap-2">
+              <Truck size={14} className="text-slate-600" />
+              <span>Delivered in 5-7 days</span>
             </div>
 
             <div className="mt-auto">
