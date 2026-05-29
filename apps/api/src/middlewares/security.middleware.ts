@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import { env } from '../config/env';
 
 import { logger } from '../utils/logger';
+import type { AuthRequest } from './auth.middleware';
 
 /**
  * Helmet.js configuration for security headers
@@ -43,8 +44,7 @@ export const generalRateLimiter = rateLimit({
   statusCode: 429, // Explicitly set status code
   // Skip rate limiting for OPTIONS requests (CORS preflight)
   skip: (req: Request) => {
-    if (req.method === 'OPTIONS') return true;
-    return env.isDevelopment && req.ip === '::1'; // Skip for localhost in dev
+    return req.method === 'OPTIONS';
   },
   handler: (req: Request, res: Response) => {
     res.status(429).json({
@@ -69,6 +69,13 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false,
   statusCode: 429,
   skipSuccessfulRequests: true, // Don't count successful requests
+  keyGenerator: (req: Request) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const clientIp = req.ip ?? req.socket?.remoteAddress;
+    const clientKey = email || (clientIp ? ipKeyGenerator(clientIp) : 'ip:unknown');
+
+    return `auth:${req.path}:${clientKey}`;
+  },
   skip: (req: Request) => req.method === 'OPTIONS', // Skip OPTIONS
   handler: (req: Request, res: Response) => {
     logger.warn(`⚠️  Rate limit exceeded for auth: ${req.method} ${req.path} from ${req.ip}`);
@@ -119,6 +126,23 @@ export const webhookRateLimiter = rateLimit({
   },
 });
 
+const getClientRateLimitKey = (req: Request): string => {
+  const authRequest = req as AuthRequest;
+  const userId = authRequest.user?.userId;
+
+  if (userId) {
+    return `user:${userId}`;
+  }
+
+  const clientIp = req.ip ?? req.socket?.remoteAddress;
+
+  if (!clientIp) {
+    return 'ip:unknown';
+  }
+
+  return ipKeyGenerator(clientIp);
+};
+
 /**
  * Upload rate limiter (per user if authenticated, else per IP).
  */
@@ -128,11 +152,7 @@ export const uploadRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   statusCode: 429,
-  keyGenerator: (req: Request) => {
-    const authReq = req as any;
-    const userId = authReq?.user?.userId;
-    return userId ? `user:${userId}` : `ip:${req.ip}`;
-  },
+  keyGenerator: getClientRateLimitKey,
   skip: (req: Request) => req.method === 'OPTIONS',
   handler: (req: Request, res: Response) => {
     res.status(429).json({

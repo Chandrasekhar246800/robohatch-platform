@@ -1,7 +1,23 @@
+import dotenv from 'dotenv';
+import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
-const shouldStartWebServer = !process.env.PLAYWRIGHT_BASE_URL && !process.env.E2E_BASE_URL;
+// Load deterministic E2E env from the same directory as this config file.
+// Do not override variables already provided by the CI environment.
+dotenv.config({ path: path.resolve(__dirname, '.env.e2e'), override: false });
+
+// mark that env was loaded for downstream processes/workers
+process.env.E2E_ENV_LOADED = process.env.E2E_ENV_LOADED ?? '1';
+
+const resolveEnv = (name: string) => {
+  const v = process.env[name];
+  if (!v) return undefined;
+  const t = v.trim();
+  return t === '' ? undefined : t;
+};
+
+const baseURL = resolveEnv('PLAYWRIGHT_BASE_URL') ?? resolveEnv('E2E_BASE_URL') ?? 'http://127.0.0.1:3000';
+const shouldStartWebServer = !resolveEnv('PLAYWRIGHT_BASE_URL') && !resolveEnv('E2E_BASE_URL');
 
 export default defineConfig({
   globalSetup: require.resolve('./e2e/global-setup'),

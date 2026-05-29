@@ -16,7 +16,7 @@ import {
   Settings
 } from 'lucide-react';
 import { Button, Input, Card, CardContent } from '@/components/ui';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuth } from '@/context/auth-context';
 import { useCartStore } from '@/store/cart.store';
 import { Product } from '@/types';
 import { apiClient } from '@/lib/api-client';
@@ -47,7 +47,7 @@ const colors = [
 
 export default function Upload3DFilePage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuth();
   const { addItem } = useCartStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -75,10 +75,13 @@ export default function Upload3DFilePage() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    console.log('[AuthHydration][upload] auth gate snapshot', { loading: isLoading, isAuthenticated });
+
+    if (!isLoading && !isAuthenticated) {
+      console.log('[AuthHydration][upload] redirecting to login', { pathname: '/upload-3d-file' });
       router.push('/login?redirect=/upload-3d-file');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
 
   const validateFile = (file: File): boolean => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -230,15 +233,31 @@ export default function Upload3DFilePage() {
     }
   };
 
-  if (!isAuthenticated) {
-    return null;
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container-custom max-w-4xl">
+          <div className="mb-8">
+            <h1 data-testid="upload-3d-heading" className="text-4xl font-bold mb-2">Upload 3D File</h1>
+            <p className="text-gray-600">
+              Have your own 3D design? Upload your STL or 3MF file and we'll print it for you!
+            </p>
+          </div>
+          <Card>
+            <CardContent className="p-6 text-center text-gray-600">
+              Loading...
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container-custom max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Upload 3D File</h1>
+          <h1 data-testid="upload-3d-heading" className="text-4xl font-bold mb-2">Upload 3D File</h1>
           <p className="text-gray-600">
             Have your own 3D design? Upload your STL or 3MF file and we'll print it for you!
           </p>
@@ -286,6 +305,7 @@ export default function Upload3DFilePage() {
                     <Button 
                       type="button" 
                       onClick={() => fileInputRef.current?.click()}
+                      data-testid="upload-3d-browse"
                     >
                       Browse Files
                     </Button>
@@ -294,6 +314,8 @@ export default function Upload3DFilePage() {
                       type="file"
                       onChange={handleFileChange}
                       accept={ALLOWED_FILE_TYPES.join(',')}
+                      data-testid="upload-3d-file-input"
+                      aria-label="Upload 3D file"
                       className="hidden"
                     />
                     <p className="text-xs text-gray-500 mt-4">
@@ -559,6 +581,7 @@ export default function Upload3DFilePage() {
                     onClick={handleSubmit}
                     disabled={!file || isUploading}
                     className="w-full"
+                    data-testid="upload-3d-submit"
                   >
                     {isUploading ? 'Uploading...' : 'Analyze & Get Price'}
                   </Button>
@@ -587,6 +610,7 @@ export default function Upload3DFilePage() {
                       }}
                       className="w-full"
                       disabled={!customDesignId}
+                      data-testid="upload-3d-add-to-cart"
                     >
                       Add to Cart
                     </Button>

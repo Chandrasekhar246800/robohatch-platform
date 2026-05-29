@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { apiClient, AuthenticationError, NetworkError } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
@@ -29,6 +30,7 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authStatus = useAuthStore((state) => state.authStatus);
@@ -50,20 +52,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const validateSession = useCallback(async () => {
     setAuthStatus('checking');
+    console.log('[AuthHydration] validateSession:start', {
+      pathname,
+      isAuthenticated,
+      status: useAuthStore.getState().authStatus,
+      hydrated: useAuthStore.getState()._hasHydrated,
+    });
 
     try {
       const response = await apiClient.getProfile();
+      console.log('[AuthHydration] validateSession:profile response', {
+        success: response.success,
+        hasUser: !!response.data?.user,
+      });
 
       if (response.success && response.data?.user) {
         setAuth(response.data.user);
         runPostAuthSync();
+        console.log('[AuthHydration] validateSession:authenticated', {
+          userId: response.data.user.id,
+        });
         return true;
       }
 
       logoutStore();
       resetWishlist();
+      console.log('[AuthHydration] validateSession:unauthenticated', {
+        reason: 'profile response missing user',
+      });
       return false;
     } catch (error: any) {
+      console.log('[AuthHydration] validateSession:error', {
+        name: error?.name,
+        message: error?.message,
+      });
       if (error instanceof AuthenticationError) {
         logoutStore();
         resetWishlist();
@@ -81,10 +103,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setHasHydrated(true);
       setAuthStatus(useAuthStore.getState().isAuthenticated ? 'authenticated' : 'unauthenticated');
+      console.log('[AuthHydration] validateSession:final', {
+        pathname,
+        isAuthenticated: useAuthStore.getState().isAuthenticated,
+        status: useAuthStore.getState().authStatus,
+        hydrated: useAuthStore.getState()._hasHydrated,
+      });
     }
   }, [isAuthenticated, logoutStore, resetWishlist, runPostAuthSync, setAuth, setAuthStatus, setHasHydrated]);
 
   const refreshSession = useCallback(async () => {
+    console.log('[AuthHydration] refreshSession:start', {
+      pathname,
+      isAuthenticated: useAuthStore.getState().isAuthenticated,
+      status: useAuthStore.getState().authStatus,
+    });
     try {
       const refreshed = await apiClient.refreshSession();
 
@@ -92,16 +125,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuth(refreshed.data.user);
         runPostAuthSync();
         setAuthStatus('authenticated');
+        console.log('[AuthHydration] refreshSession:authenticated', {
+          userId: refreshed.data.user.id,
+        });
         return true;
       }
 
       logoutStore();
+      console.log('[AuthHydration] refreshSession:failed', {
+        message: refreshed.message,
+      });
       return false;
     } catch (error) {
       logoutStore();
+      console.log('[AuthHydration] refreshSession:error', {
+        message: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
-  }, [runPostAuthSync, setAuth, setAuthStatus]);
+  }, [pathname, runPostAuthSync, setAuth, setAuthStatus]);
 
   const bootstrapCsrf = useCallback(async () => {
     await apiClient.ensureCsrfToken();
@@ -114,15 +156,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthStatus('unauthenticated');
   }, [logoutStore, resetWishlist, setAuthStatus]);
 
+  const shouldBootstrapAuth = useMemo(() => {
+    if (!pathname) {
+      return false;
+    }
+
+    return (
+      pathname.startsWith('/account') ||
+      pathname.startsWith('/orders') ||
+      pathname.startsWith('/wishlist') ||
+      pathname.startsWith('/checkout') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/upload-3d-file')
+    );
+  }, [pathname]);
+
   useEffect(() => {
+    if (!shouldBootstrapAuth) {
+      setHasHydrated(true);
+      setAuthStatus(isAuthenticated ? 'authenticated' : 'unauthenticated');
+      return;
+    }
+
+    setHasHydrated(false);
+    setAuthStatus('checking');
+    console.log('[AuthHydration] bootstrap start', {
+      pathname,
+      isAuthenticated,
+      authStatus,
+      shouldBootstrapAuth,
+    });
+
     const timer = setTimeout(() => {
       void bootstrapCsrf().finally(() => {
         void validateSession();
       });
     }, 150);
 
-    return () => clearTimeout(timer);
-  }, [bootstrapCsrf, validateSession]);
+    return () => {
+      clearTimeout(timer);
+      console.log('[AuthHydration] bootstrap cancelled', {
+        pathname,
+        isAuthenticated,
+        authStatus,
+      });
+    };
+  }, [authStatus, bootstrapCsrf, isAuthenticated, pathname, setAuthStatus, setHasHydrated, shouldBootstrapAuth, validateSession]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
@@ -133,6 +212,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     validateSession,
   }), [authStatus, isAuthenticated, logout, refreshSession, user, validateSession]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    (window as any).__E2E_AUTH_STATE__ = {
+      status: authStatus,
+      hydrated: authStatus !== 'checking',
+      isAuthenticated,
+      pathname,
+    };
+  }, [authStatus, isAuthenticated, pathname]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -4,11 +4,12 @@ import { E2E_STABLE_PRODUCT_ID, E2E_STABLE_PRODUCT_NAME } from './helpers/stable
 test.describe('customer flows', () => {
   test('login, browse, filter, and open an account page', async ({ page, session }) => {
     await session.loginCustomerUi();
-    await page.goto('/account');
+    await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await session.waitForHydratedAccount();
+    await expect(page.getByTestId('account-page-ready')).toBeVisible();
     await expect(page.getByRole('heading', { name: /my account/i })).toBeVisible();
 
-    await page.goto('/products');
+    await page.goto('/products', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /all products/i })).toBeVisible();
     await expect(page.getByText(/discover our complete collection/i)).toBeVisible();
   });
@@ -18,16 +19,18 @@ test.describe('customer flows', () => {
     await expect(page.getByRole('heading', { name: /search results/i })).toBeVisible();
     await expect(page.getByText(E2E_STABLE_PRODUCT_NAME)).toBeVisible();
 
-    await page.goto(`/product/${E2E_STABLE_PRODUCT_ID}`);
-    await expect(page.getByRole('button', { name: /add to cart/i })).toBeVisible();
+    await page.goto(`/product/${E2E_STABLE_PRODUCT_ID}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('product-detail-ready')).toBeVisible();
+    await expect(page.getByTestId('product-add-to-cart')).toBeVisible();
   });
 
   test('add to cart, checkout, and address capture', async ({ page, session }) => {
     await session.loginCustomerApi();
-    await page.goto(`/product/${E2E_STABLE_PRODUCT_ID}`);
-    await page.getByRole('button', { name: /add to cart/i }).click();
+    await page.goto(`/product/${E2E_STABLE_PRODUCT_ID}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('product-detail-ready')).toBeVisible();
+    await page.getByTestId('product-add-to-cart').click();
     await expect(page).toHaveURL(/\/cart/);
-    await page.getByRole('button', { name: /checkout/i }).click();
+    await page.getByTestId('cart-place-order-desktop').click();
     await expect(page).toHaveURL(/\/checkout\/address/);
 
     await page.getByLabel(/full name/i).fill('Robo Hatch QA');
@@ -44,13 +47,10 @@ test.describe('customer flows', () => {
 
   test('upload-design validates the upload form and backend path', async ({ page, session }) => {
     await session.loginCustomerApi();
-    await page.goto('/upload-3d-file');
+    await page.goto('/upload-3d-file', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /upload/i })).toBeVisible();
 
-    const fileChooserPromise = page.waitForEvent('filechooser');
-    await page.getByText(/click to upload/i).click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles('e2e/fixtures/sample.stl');
+    await page.locator('[data-testid="upload-3d-file-input"]').setInputFiles('e2e/fixtures/sample.stl');
 
     await page.getByLabel(/design name/i).fill('QA Sample Part');
     await page.getByRole('button', { name: /upload|analyze/i }).click();

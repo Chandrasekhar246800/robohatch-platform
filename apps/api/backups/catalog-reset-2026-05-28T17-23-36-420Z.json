@@ -1,0 +1,1760 @@
+{
+  "generatedAt": "2026-05-28T17:23:41.818Z",
+  "database": {
+    "host": "robohatch-mysql.c344g8euk9qw.eu-north-1.rds.amazonaws.com",
+    "database": "robohatch_db"
+  },
+  "scope": {
+    "products": 26,
+    "categories": 15,
+    "productImages": 27,
+    "productCategories": 26,
+    "cartItemsWithProducts": 2,
+    "wishlistItems": 1,
+    "orderItemsWithProducts": 16
+  },
+  "data": {
+    "products": [
+      {
+        "id": "82b74c70-050d-4902-8121-377f33bc669a",
+        "name": "Lord Ganesh idol",
+        "description": "Beautifully detailed 3d-printed Lord Ganesha idol, symbolizing wisdom, prosperity, and new beginnings—perfect for home décor, temples, and meaningful gifting.",
+        "price": "649",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-02-12T19:28:41.319Z",
+        "updatedAt": "2026-02-13T04:17:28.715Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "54c9b462-1368-41a0-9a06-cc0fd6d7c433",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770924519245-ganesh.jpeg",
+            "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+            "alt": "Lord Ganesh idol - Image 1",
+            "createdAt": "2026-02-12T19:28:41.319Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "89e3bb7f-145c-49fa-95b1-216c5bff37b6",
+            "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-12T19:28:41.319Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "7f227463-a661-4ff4-bf6b-bf6b85ee71c7",
+        "name": "Lord Krishna idol",
+        "description": "Elegant matte black Baby Krishna statue playing the flute, beautifully crafted with intricate detailing for a divine and graceful home décor accent.",
+        "price": "599",
+        "stock": 47,
+        "isActive": true,
+        "createdAt": "2026-02-12T20:44:06.412Z",
+        "updatedAt": "2026-02-12T20:44:06.412Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "0fd6db32-b5c6-4997-904e-7f0fa2c98bca",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770929044338-krishna.jpeg",
+            "productId": "7f227463-a661-4ff4-bf6b-bf6b85ee71c7",
+            "alt": "Lord Krishna idol - Image 1",
+            "createdAt": "2026-02-12T20:44:06.412Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "3efdffff-b271-459b-8d86-a032a9ebbc44",
+            "productId": "7f227463-a661-4ff4-bf6b-bf6b85ee71c7",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-12T20:44:06.412Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ecb216d9-5781-41c7-b0c9-23632be11399",
+        "name": "Adiyogi Shiva Bust Statue",
+        "description": "A powerful and serene Adiyogi Shiva bust crafted in a premium black matte finish, symbolizing inner peace, meditation, and cosmic energy.",
+        "price": "499",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:10:50.217Z",
+        "updatedAt": "2026-02-13T10:10:50.217Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "a719e724-133c-448e-a6d1-2f83a3eec7b7",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977448367-adiyogi.jpeg",
+            "productId": "ecb216d9-5781-41c7-b0c9-23632be11399",
+            "alt": "Adiyogi Shiva Bust Statue - Image 1",
+            "createdAt": "2026-02-13T10:10:50.217Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "645b2a9e-165a-4388-b231-fc9ae22cd250",
+            "productId": "ecb216d9-5781-41c7-b0c9-23632be11399",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:10:50.217Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ecf4621d-b15a-4934-8df0-267b3c0e9ed1",
+        "name": "Goddess Saraswati Idol",
+        "description": "Elegant Goddess Saraswati statue seated on swan, symbolizing knowledge, wisdom, and creativity.",
+        "price": "499",
+        "stock": 42,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:12:17.873Z",
+        "updatedAt": "2026-02-13T10:12:17.873Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "3d7f1143-1fe2-424e-9363-9f901a6a75ac",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977535445-saraswathi.jpeg",
+            "productId": "ecf4621d-b15a-4934-8df0-267b3c0e9ed1",
+            "alt": "Goddess Saraswati Idol - Image 1",
+            "createdAt": "2026-02-13T10:12:17.873Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "89ce539b-553b-412a-80e1-51b5e079a94e",
+            "productId": "ecf4621d-b15a-4934-8df0-267b3c0e9ed1",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:12:17.873Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "a5d14d57-9824-41ca-af84-3cb75b82db54",
+        "name": "Meditating Buddha Statue",
+        "description": "A calming Buddha statue in meditative posture symbolizing peace, mindfulness, and spiritual awakening.",
+        "price": "499",
+        "stock": 20,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:13:39.643Z",
+        "updatedAt": "2026-02-13T10:13:39.643Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "0346ba63-12b1-4a17-8c08-e71a2bc4ed30",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977617420-budha.jpeg",
+            "productId": "a5d14d57-9824-41ca-af84-3cb75b82db54",
+            "alt": "Meditating Buddha Statue - Image 1",
+            "createdAt": "2026-02-13T10:13:39.643Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "3ef6cbc9-98fb-4b5f-a998-44c4985ca1b3",
+            "productId": "a5d14d57-9824-41ca-af84-3cb75b82db54",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:13:39.643Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "c9cd6e18-210a-4469-990f-74a44cd71969",
+        "name": "Lord Hanuman Idol",
+        "description": "A beautifully crafted Lord Hanuman statue in vibrant saffron finish, symbolizing devotion, strength, and protection.",
+        "price": "499",
+        "stock": 45,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:19:55.896Z",
+        "updatedAt": "2026-02-13T10:19:55.896Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "bb5676f2-a1c7-459e-8111-66cec6efbe5b",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977993552-WhatsApp-Image-2026-01-31-at-11.04.20-PM.jpeg",
+            "productId": "c9cd6e18-210a-4469-990f-74a44cd71969",
+            "alt": "Lord Hanuman Idol - Image 1",
+            "createdAt": "2026-02-13T10:19:55.896Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "64238291-1db7-4275-94bf-ddaa48b82715",
+            "productId": "c9cd6e18-210a-4469-990f-74a44cd71969",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:19:55.896Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+        "name": "Panchamukhi Hanuman Idol",
+        "description": "A majestic Panchamukhi Hanuman idol featuring five divine faces and multiple arms, symbolizing protection, power, and spiritual strength.",
+        "price": "599",
+        "stock": 48,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:24:13.631Z",
+        "updatedAt": "2026-02-13T10:24:13.631Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "80c71673-3ad9-4f0f-a967-65c03c0f0444",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770978252329-hanuma.webp",
+            "productId": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+            "alt": "Panchamukhi Hanuman Idol - Image 1",
+            "createdAt": "2026-02-13T10:24:13.631Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "020535ca-2472-4171-b3b4-caf280d73cc0",
+            "productId": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:24:13.631Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+        "name": "Lord Rama Idol",
+        "description": "A beautifully crafted Lord Rama idol in elegant black finish with golden bow and arrow, symbolizing righteousness, courage, and divine protection.",
+        "price": "599",
+        "stock": 39,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:28:53.295Z",
+        "updatedAt": "2026-02-19T18:44:46.915Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "1f7d765a-c651-4dbf-9b9d-222aca180785",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770978531107-rama.webp",
+            "productId": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+            "alt": "Lord Rama Idol - Image 1",
+            "createdAt": "2026-02-13T10:28:53.295Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "db8a6164-2b18-4d81-81b7-1928e36c324e",
+            "productId": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:28:53.295Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "52245b32-b872-43cf-a060-34933d8d75b7",
+        "name": "Lord Ayyappa Idol",
+        "description": "A beautifully crafted Lord Ayyappa idol in traditional yogic seated posture, symbolizing devotion, self-discipline, and spiritual balance.",
+        "price": "499",
+        "stock": 45,
+        "isActive": true,
+        "createdAt": "2026-02-13T10:31:09.163Z",
+        "updatedAt": "2026-02-13T10:31:09.163Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "f305cc1d-cc5b-4794-b647-416963d87f58",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770978667863-ayyappa.webp",
+            "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+            "alt": "Lord Ayyappa Idol - Image 1",
+            "createdAt": "2026-02-13T10:31:09.163Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "93495a43-d705-4a83-9037-ebb07c4b7067",
+            "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+            "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+            "createdAt": "2026-02-13T10:31:09.163Z",
+            "category": {
+              "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+              "name": "Idols",
+              "createdAt": "2026-02-12T16:02:55.176Z",
+              "description": "Religious and devotional 3D printed idols",
+              "slug": "idols",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "301e5974-afbe-4ad5-abf7-2f9b6c558b27",
+        "name": "Personalized 3D Printed Name Keychain",
+        "description": "Custom 3D printed name keychain designed with a stylish script font and dual-color finish. Perfect for keys, bags, and personalized gifts.",
+        "price": "37",
+        "stock": 49,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:13:47.577Z",
+        "updatedAt": "2026-03-04T16:13:47.577Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "94f62116-e8f5-4ed5-a5a6-d09cc4393cc4",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772640825539-custom-keychain-1.jpg",
+            "productId": "301e5974-afbe-4ad5-abf7-2f9b6c558b27",
+            "alt": "Personalized 3D Printed Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:13:47.577Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "93cd04e5-85a0-4767-b5bc-5206bddb6938",
+            "productId": "301e5974-afbe-4ad5-abf7-2f9b6c558b27",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:13:47.577Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "8ff40914-b940-4aaf-9fc2-69be561d3ded",
+        "name": "Custom Ribbon Name Keychain",
+        "description": "Cute ribbon-shaped personalized keychain with your name in stylish lettering. Perfect for bags, keys, and aesthetic gifts.",
+        "price": "59",
+        "stock": 47,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:24:23.117Z",
+        "updatedAt": "2026-03-04T16:24:23.117Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "aba33f9b-b13e-413f-bcf4-bd9e43a75615",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641461477-custom-name-keychain-2.jpg",
+            "productId": "8ff40914-b940-4aaf-9fc2-69be561d3ded",
+            "alt": "Custom Ribbon Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:24:23.117Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "77b3e1e4-1441-4575-b888-8acf421220ed",
+            "productId": "8ff40914-b940-4aaf-9fc2-69be561d3ded",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:24:23.117Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "34564da2-0edd-4273-952c-18ac8c255745",
+        "name": "Custom Tag Name Keychain",
+        "description": "Minimal tag-style personalized keychain with bold raised lettering. Perfect for keys, backpacks, and everyday accessories.",
+        "price": "29",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:28:30.542Z",
+        "updatedAt": "2026-03-04T16:28:30.542Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "9ce0cfaa-5881-4774-b2b4-6da02c2643ff",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641709280-cusstom-name-keychain-3.png",
+            "productId": "34564da2-0edd-4273-952c-18ac8c255745",
+            "alt": "Custom Tag Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:28:30.542Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "c087f3e2-d71f-410a-bff5-2c92a62655ab",
+            "productId": "34564da2-0edd-4273-952c-18ac8c255745",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:28:30.542Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "c5fdb806-c93f-425f-bee4-f1816089c303",
+        "name": "Custom Football Name Keychain",
+        "description": "Personalized keychain with a football design and custom name. Perfect for football lovers, bags, and sports-themed gifts.",
+        "price": "49",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:30:43.958Z",
+        "updatedAt": "2026-03-04T16:30:43.958Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "ab85eef8-111d-4fe1-967b-80f65b83ef0f",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641841866-custom-soccer-name-keychain.jpg",
+            "productId": "c5fdb806-c93f-425f-bee4-f1816089c303",
+            "alt": "Custom Football Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:30:43.958Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "e6c5ea4e-d243-4079-9850-963408157b93",
+            "productId": "c5fdb806-c93f-425f-bee4-f1816089c303",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:30:43.958Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "24d9f50e-5737-4cbb-8387-4a2161ae4282",
+        "name": "Barbie Style Custom Name Keychain",
+        "description": "Trendy Barbie-inspired personalized name keychain with a cute pink aesthetic. Perfect for bags, keys, and stylish gifts.",
+        "price": "69",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:32:32.579Z",
+        "updatedAt": "2026-03-04T16:32:32.579Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "63983506-3dff-4df6-9bc4-b320599e5e39",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641952118-custom-name-keychain-baarbie-edition.png",
+            "productId": "24d9f50e-5737-4cbb-8387-4a2161ae4282",
+            "alt": "Barbie Style Custom Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:32:32.579Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "d66cf526-e6a5-4478-8b92-48736a78ec0d",
+            "productId": "24d9f50e-5737-4cbb-8387-4a2161ae4282",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:32:32.579Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+        "name": "Articulated Curved Name Keychain",
+        "description": "Flexible curved name keychain with colorful 3D printed letters. Unique and fun accessory for keys, bags, and personalized gifts.",
+        "price": "79",
+        "stock": 51,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:36:21.355Z",
+        "updatedAt": "2026-03-04T16:36:21.355Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "f339ccb4-764a-4279-b8fd-7c9c0c8efa30",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772642179091-custom-name-keychain-articulated.jpg",
+            "productId": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+            "alt": "Articulated Curved Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:36:21.355Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "19c2bd87-01b4-40e2-857f-c1b941a6707b",
+            "productId": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:36:21.355Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ff7971b6-9b79-435f-a7ac-19e0a772f8ed",
+        "name": "I ❤️ Custom Name Keychain",
+        "description": "Cute personalized keychain with an “I ❤️ Name” design. Perfect for gifts, couples, and expressing love in a unique way.",
+        "price": "69",
+        "stock": 46,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:38:01.370Z",
+        "updatedAt": "2026-03-04T16:38:01.370Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "211702e2-8025-4bbc-8d76-c29b6a65ded3",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772642279564-custom-name-keychain-love.jpg",
+            "productId": "ff7971b6-9b79-435f-a7ac-19e0a772f8ed",
+            "alt": "I ❤️ Custom Name Keychain - Image 1",
+            "createdAt": "2026-03-04T16:38:01.370Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "b494ee5f-e63b-4a78-8922-3cd48b98dd27",
+            "productId": "ff7971b6-9b79-435f-a7ac-19e0a772f8ed",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:38:01.370Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "43b26e97-4cf6-449c-93b6-4fdd8b3f4ea4",
+        "name": "Custom Dog Name Tag Keychain",
+        "description": "Bone-shaped personalized keychain with your pet’s name. Perfect for dog collars, pet accessories, and pet lover gifts.",
+        "price": "59",
+        "stock": 48,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:39:51.773Z",
+        "updatedAt": "2026-03-04T16:39:51.773Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "6340e4a0-c57f-4a24-b5cb-fb7667fb4ffd",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772642389540-custom-dog-name-tag.jpg",
+            "productId": "43b26e97-4cf6-449c-93b6-4fdd8b3f4ea4",
+            "alt": "Custom Dog Name Tag Keychain - Image 1",
+            "createdAt": "2026-03-04T16:39:51.773Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "cd926ec4-91da-48cb-a986-f82a9acd7cd1",
+            "productId": "43b26e97-4cf6-449c-93b6-4fdd8b3f4ea4",
+            "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+            "createdAt": "2026-03-04T16:39:51.773Z",
+            "category": {
+              "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+              "name": "Name Keychains",
+              "createdAt": "2026-02-12T16:02:45.524Z",
+              "description": "Personalized keychains with custom names",
+              "slug": "name-keychains",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "4803dc79-d15c-4d75-ad19-48818145a49f",
+        "name": "Custom Photo Lithophane Lamp",
+        "description": "Personalized 3D printed lamp that displays your photos when illuminated. Perfect for memories, gifts, and unique home decor.",
+        "price": "849",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T16:59:54.199Z",
+        "updatedAt": "2026-03-04T16:59:54.199Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "b4277f03-b21b-4e61-9b5c-e716633d85cb",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772643592025-custom-photo-lamp-1.jpg",
+            "productId": "4803dc79-d15c-4d75-ad19-48818145a49f",
+            "alt": "Custom Photo Lithophane Lamp - Image 1",
+            "createdAt": "2026-03-04T16:59:54.199Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "3bf97a59-ef14-44fb-bb37-0147ad7b5b10",
+            "productId": "4803dc79-d15c-4d75-ad19-48818145a49f",
+            "categoryId": "d033286e-785d-4171-a607-07198d755229",
+            "createdAt": "2026-03-04T16:59:54.199Z",
+            "category": {
+              "id": "d033286e-785d-4171-a607-07198d755229",
+              "name": "Photo Lamps",
+              "createdAt": "2026-02-12T16:02:48.350Z",
+              "description": "Illuminated lamps with your favorite photos",
+              "slug": "photo-lamps",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "857451c4-0c8b-48df-a65b-1831b0f96b5e",
+        "name": "Custom Photo Lithophane Frame Lamp",
+        "description": "Personalized illuminated photo frame that reveals your image when lit. Perfect for memories, gifts, and elegant home decor.",
+        "price": "749",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T17:02:19.732Z",
+        "updatedAt": "2026-03-04T17:02:19.732Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "6c08461a-60b9-48ab-9261-2468c0b8e2c7",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772643738038-custom-photo-lamp-2.JPEG",
+            "productId": "857451c4-0c8b-48df-a65b-1831b0f96b5e",
+            "alt": "Custom Photo Lithophane Frame Lamp - Image 1",
+            "createdAt": "2026-03-04T17:02:19.732Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "54a33ab2-73d0-4b14-97e3-ca93b5427033",
+            "productId": "857451c4-0c8b-48df-a65b-1831b0f96b5e",
+            "categoryId": "d033286e-785d-4171-a607-07198d755229",
+            "createdAt": "2026-03-04T17:02:19.732Z",
+            "category": {
+              "id": "d033286e-785d-4171-a607-07198d755229",
+              "name": "Photo Lamps",
+              "createdAt": "2026-02-12T16:02:48.350Z",
+              "description": "Illuminated lamps with your favorite photos",
+              "slug": "photo-lamps",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "23df5a29-cfa2-4a35-8699-8e38e2cb567c",
+        "name": "Custom Photo Lithophane TV Lamp",
+        "description": "Retro TV-style personalized lamp that reveals your photo when illuminated. A unique decorative piece and perfect memory gift.",
+        "price": "949",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T17:03:38.945Z",
+        "updatedAt": "2026-03-04T17:03:38.945Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "de118e85-9855-4316-bbc4-121d36c3850f",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772643817888-custom-photo-lamp-3.jpg",
+            "productId": "23df5a29-cfa2-4a35-8699-8e38e2cb567c",
+            "alt": "Custom Photo Lithophane TV Lamp - Image 1",
+            "createdAt": "2026-03-04T17:03:38.945Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "573e41b8-cbaf-43c3-bc7b-8c0ee1249595",
+            "productId": "23df5a29-cfa2-4a35-8699-8e38e2cb567c",
+            "categoryId": "d033286e-785d-4171-a607-07198d755229",
+            "createdAt": "2026-03-04T17:03:38.945Z",
+            "category": {
+              "id": "d033286e-785d-4171-a607-07198d755229",
+              "name": "Photo Lamps",
+              "createdAt": "2026-02-12T16:02:48.350Z",
+              "description": "Illuminated lamps with your favorite photos",
+              "slug": "photo-lamps",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "78aa9763-4520-455c-8c7c-a1b676837273",
+        "name": "Custom Multi-Photo Lithophane Lamp",
+        "description": "Personalized lamp with multiple lithophane photo panels that glow when illuminated. Perfect for displaying memories and unique home decor gifts.",
+        "price": "989",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T17:09:12.019Z",
+        "updatedAt": "2026-03-04T17:09:12.019Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "2b5d866d-01f1-44dc-b45a-73dde6929432",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644149974-custom-photo-lamp-4.jpeg",
+            "productId": "78aa9763-4520-455c-8c7c-a1b676837273",
+            "alt": "Custom Multi-Photo Lithophane Lamp - Image 1",
+            "createdAt": "2026-03-04T17:09:12.019Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "b898052f-7c84-4572-9957-001393e725f5",
+            "productId": "78aa9763-4520-455c-8c7c-a1b676837273",
+            "categoryId": "d033286e-785d-4171-a607-07198d755229",
+            "createdAt": "2026-03-04T17:09:12.019Z",
+            "category": {
+              "id": "d033286e-785d-4171-a607-07198d755229",
+              "name": "Photo Lamps",
+              "createdAt": "2026-02-12T16:02:48.350Z",
+              "description": "Illuminated lamps with your favorite photos",
+              "slug": "photo-lamps",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "507f15d5-2b52-41fc-9d11-f30eff816039",
+        "name": "Custom Moon Photo Lithophane Lamp",
+        "description": "Moon-shaped personalized lamp that displays your photo when illuminated. A romantic and unique gift for memories and special moments.",
+        "price": "849",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T17:11:16.452Z",
+        "updatedAt": "2026-03-04T17:11:16.452Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "edd2e5b6-36b6-4a1c-b5cf-96ebe1785a9a",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644275809-custom-photo-lamp-5.webp",
+            "productId": "507f15d5-2b52-41fc-9d11-f30eff816039",
+            "alt": "Custom Moon Photo Lithophane Lamp - Image 1",
+            "createdAt": "2026-03-04T17:11:16.452Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "40411d1a-ac2f-4522-af35-765504088400",
+            "productId": "507f15d5-2b52-41fc-9d11-f30eff816039",
+            "categoryId": "d033286e-785d-4171-a607-07198d755229",
+            "createdAt": "2026-03-04T17:11:16.452Z",
+            "category": {
+              "id": "d033286e-785d-4171-a607-07198d755229",
+              "name": "Photo Lamps",
+              "createdAt": "2026-02-12T16:02:48.350Z",
+              "description": "Illuminated lamps with your favorite photos",
+              "slug": "photo-lamps",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+        "name": "Custom Mini Me Figurine",
+        "description": "Personalized 3D printed mini figurine created from your photo. A fun and unique collectible perfect for gifts, desks, and display.",
+        "price": "869",
+        "stock": 48,
+        "isActive": true,
+        "createdAt": "2026-03-04T17:19:23.681Z",
+        "updatedAt": "2026-03-04T17:19:23.681Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "b6b4af5a-6156-4b12-9265-eb0e8aea5c83",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644761920-mini-me-1.png",
+            "productId": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+            "alt": "Custom Mini Me Figurine - Image 1",
+            "createdAt": "2026-03-04T17:19:23.681Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "ace6c2c6-6fc5-43bd-801d-bfca4635bb43",
+            "productId": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+            "categoryId": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+            "createdAt": "2026-03-04T17:19:23.681Z",
+            "category": {
+              "id": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+              "name": "Self Miniatures",
+              "createdAt": "2026-02-12T16:02:50.574Z",
+              "description": "3D printed miniature figurines of yourself",
+              "slug": "self-miniatures",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "9ee1d35e-7f58-46a2-be7c-4adfceafbe10",
+        "name": "Custom Mini Me Figurine (Female)",
+        "description": "Personalized 3D printed female mini figurine created from your photo. A stylish and unique collectible for gifts, desks, and display.",
+        "price": "869",
+        "stock": 50,
+        "isActive": true,
+        "createdAt": "2026-03-04T17:20:55.118Z",
+        "updatedAt": "2026-03-04T17:20:55.118Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "e6af881b-4ff7-4368-90da-e630ae4900b1",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644853831-mini-me-2.png",
+            "productId": "9ee1d35e-7f58-46a2-be7c-4adfceafbe10",
+            "alt": "Custom Mini Me Figurine (Female) - Image 1",
+            "createdAt": "2026-03-04T17:20:55.118Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "d6ced2d6-5f73-47e5-a91a-dbb8d8ebbf95",
+            "productId": "9ee1d35e-7f58-46a2-be7c-4adfceafbe10",
+            "categoryId": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+            "createdAt": "2026-03-04T17:20:55.118Z",
+            "category": {
+              "id": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+              "name": "Self Miniatures",
+              "createdAt": "2026-02-12T16:02:50.574Z",
+              "description": "3D printed miniature figurines of yourself",
+              "slug": "self-miniatures",
+              "type": "CUSTOM"
+            }
+          }
+        ]
+      },
+      {
+        "id": "1fae807d-5131-40c8-84d9-9843a1705d93",
+        "name": "L (Death Note) Anime Keychain",
+        "description": "A stylish monochrome keychain featuring L, the iconic detective from the anime Death Note, captured in his signature crouched thinking pose. Perfect for anime fans who admire L’s mysterious personality and genius mind.",
+        "price": "59",
+        "stock": 49,
+        "isActive": false,
+        "createdAt": "2026-03-04T18:37:52.419Z",
+        "updatedAt": "2026-05-24T19:32:39.496Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": "34.99",
+        "images": [
+          {
+            "id": "2f546a66-2f8c-4ca8-a986-c6783518b700",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772649470913-L-key-chain.png",
+            "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+            "alt": "L (Death Note) Anime Keychain - Image 1",
+            "createdAt": "2026-03-04T18:37:52.419Z",
+            "order": 0
+          },
+          {
+            "id": "7cf851b3-01fc-4ce8-8f08-ccda09829aae",
+            "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1773680256212-L-key-chain.png",
+            "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+            "alt": "L (Death Note) Anime Keychain - Image 2",
+            "createdAt": "2026-03-16T16:57:37.967Z",
+            "order": 1
+          }
+        ],
+        "categories": [
+          {
+            "id": "cc9f9618-6e92-43b1-9269-4e1782503070",
+            "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+            "categoryId": "47fd8d5f-9db1-494f-a6a1-54def0f22acd",
+            "createdAt": "2026-03-16T17:36:26.480Z",
+            "category": {
+              "id": "47fd8d5f-9db1-494f-a6a1-54def0f22acd",
+              "name": "Anime Things",
+              "createdAt": "2026-02-12T16:02:57.570Z",
+              "description": "Anime-inspired accessories and collectibles",
+              "slug": "anime-things",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      },
+      {
+        "id": "9d39b839-441d-4e8a-b18e-8e49518ee839",
+        "name": "E2E Stable Product",
+        "description": "Deterministic product seeded for Playwright E2E tests.",
+        "price": "499",
+        "stock": 100,
+        "isActive": true,
+        "createdAt": "2026-05-26T05:46:58.131Z",
+        "updatedAt": "2026-05-27T19:08:27.440Z",
+        "dimensions": null,
+        "material": null,
+        "weight": null,
+        "salePrice": null,
+        "images": [
+          {
+            "id": "1005b107-f648-4bfe-86ab-7581c8020931",
+            "url": "https://placehold.co/600x600/png?text=E2E+Product",
+            "productId": "9d39b839-441d-4e8a-b18e-8e49518ee839",
+            "alt": "E2E stable product image",
+            "createdAt": "2026-05-27T19:08:30.036Z",
+            "order": 0
+          }
+        ],
+        "categories": [
+          {
+            "id": "6c6911a6-3039-4f9b-a153-6d3eca6ad60d",
+            "productId": "9d39b839-441d-4e8a-b18e-8e49518ee839",
+            "categoryId": "47a9f34a-dada-4ae4-a0d6-d39d677bd607",
+            "createdAt": "2026-05-26T05:47:00.503Z",
+            "category": {
+              "id": "47a9f34a-dada-4ae4-a0d6-d39d677bd607",
+              "name": "E2E Stable Products",
+              "createdAt": "2026-05-26T05:46:56.306Z",
+              "description": "Deterministic category for Playwright E2E stable product",
+              "slug": "e2e-stable-products",
+              "type": "DEFAULT"
+            }
+          }
+        ]
+      }
+    ],
+    "categories": [
+      {
+        "id": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "name": "Name Keychains",
+        "createdAt": "2026-02-12T16:02:45.524Z",
+        "description": "Personalized keychains with custom names",
+        "slug": "name-keychains",
+        "type": "CUSTOM"
+      },
+      {
+        "id": "65a49cdc-235e-42bd-a51a-49367916f0a8",
+        "name": "Logo Keychains",
+        "createdAt": "2026-02-12T16:02:47.279Z",
+        "description": "Custom keychains with your logo or design",
+        "slug": "logo-keychains",
+        "type": "CUSTOM"
+      },
+      {
+        "id": "d033286e-785d-4171-a607-07198d755229",
+        "name": "Photo Lamps",
+        "createdAt": "2026-02-12T16:02:48.350Z",
+        "description": "Illuminated lamps with your favorite photos",
+        "slug": "photo-lamps",
+        "type": "CUSTOM"
+      },
+      {
+        "id": "e9ff4aac-e629-4f46-91f8-b7b941985cfa",
+        "name": "Photo Frames",
+        "createdAt": "2026-02-12T16:02:49.463Z",
+        "description": "Customized 3D printed photo frames",
+        "slug": "photo-frames",
+        "type": "CUSTOM"
+      },
+      {
+        "id": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+        "name": "Self Miniatures",
+        "createdAt": "2026-02-12T16:02:50.574Z",
+        "description": "3D printed miniature figurines of yourself",
+        "slug": "self-miniatures",
+        "type": "CUSTOM"
+      },
+      {
+        "id": "7965ede6-c121-40ca-8806-64c89f5976c7",
+        "name": "Keychains",
+        "createdAt": "2026-02-12T16:02:51.706Z",
+        "description": "Unique and creative 3D printed keychains",
+        "slug": "keychains",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "2f24da12-732a-497d-ae19-354d2671a99c",
+        "name": "Lamps",
+        "createdAt": "2026-02-12T16:02:52.766Z",
+        "description": "Aesthetically designed 3D printed lamps",
+        "slug": "lamps",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "fde2f697-896c-445b-804a-d9dd5f11f37b",
+        "name": "Flower Vases",
+        "createdAt": "2026-02-12T16:02:53.964Z",
+        "description": "Elegant and modern 3D printed vases",
+        "slug": "flower-vases",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "name": "Idols",
+        "createdAt": "2026-02-12T16:02:55.176Z",
+        "description": "Religious and devotional 3D printed idols",
+        "slug": "idols",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "c613cfc9-a9df-46de-90cd-367fa8c6af24",
+        "name": "Temple Models",
+        "createdAt": "2026-02-12T16:02:56.391Z",
+        "description": "Miniature temple and mandir models",
+        "slug": "temple-models",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "47fd8d5f-9db1-494f-a6a1-54def0f22acd",
+        "name": "Anime Things",
+        "createdAt": "2026-02-12T16:02:57.570Z",
+        "description": "Anime-inspired accessories and collectibles",
+        "slug": "anime-things",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "490eec95-61bc-459f-897e-0bca2a4799c7",
+        "name": "Mobile Accessories",
+        "createdAt": "2026-02-12T16:02:58.613Z",
+        "description": "Phone stands, holders, and accessories",
+        "slug": "mobile-accessories",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "3641eb4b-a715-4726-b560-f8a70af2a648",
+        "name": "Desk Accessories",
+        "createdAt": "2026-02-12T16:02:59.686Z",
+        "description": "Organizers, pen holders, and desk decor",
+        "slug": "desk-accessories",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "ad08b92b-df0e-4dc0-a9bd-8bc7c838589d",
+        "name": "Fidget Toys",
+        "createdAt": "2026-02-12T16:03:00.990Z",
+        "description": "Stress relief and fidget toys",
+        "slug": "fidget-toys",
+        "type": "DEFAULT"
+      },
+      {
+        "id": "47a9f34a-dada-4ae4-a0d6-d39d677bd607",
+        "name": "E2E Stable Products",
+        "createdAt": "2026-05-26T05:46:56.306Z",
+        "description": "Deterministic category for Playwright E2E stable product",
+        "slug": "e2e-stable-products",
+        "type": "DEFAULT"
+      }
+    ],
+    "productImages": [
+      {
+        "id": "54c9b462-1368-41a0-9a06-cc0fd6d7c433",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770924519245-ganesh.jpeg",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "alt": "Lord Ganesh idol - Image 1",
+        "createdAt": "2026-02-12T19:28:41.319Z",
+        "order": 0
+      },
+      {
+        "id": "0fd6db32-b5c6-4997-904e-7f0fa2c98bca",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770929044338-krishna.jpeg",
+        "productId": "7f227463-a661-4ff4-bf6b-bf6b85ee71c7",
+        "alt": "Lord Krishna idol - Image 1",
+        "createdAt": "2026-02-12T20:44:06.412Z",
+        "order": 0
+      },
+      {
+        "id": "a719e724-133c-448e-a6d1-2f83a3eec7b7",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977448367-adiyogi.jpeg",
+        "productId": "ecb216d9-5781-41c7-b0c9-23632be11399",
+        "alt": "Adiyogi Shiva Bust Statue - Image 1",
+        "createdAt": "2026-02-13T10:10:50.217Z",
+        "order": 0
+      },
+      {
+        "id": "3d7f1143-1fe2-424e-9363-9f901a6a75ac",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977535445-saraswathi.jpeg",
+        "productId": "ecf4621d-b15a-4934-8df0-267b3c0e9ed1",
+        "alt": "Goddess Saraswati Idol - Image 1",
+        "createdAt": "2026-02-13T10:12:17.873Z",
+        "order": 0
+      },
+      {
+        "id": "0346ba63-12b1-4a17-8c08-e71a2bc4ed30",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977617420-budha.jpeg",
+        "productId": "a5d14d57-9824-41ca-af84-3cb75b82db54",
+        "alt": "Meditating Buddha Statue - Image 1",
+        "createdAt": "2026-02-13T10:13:39.643Z",
+        "order": 0
+      },
+      {
+        "id": "bb5676f2-a1c7-459e-8111-66cec6efbe5b",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770977993552-WhatsApp-Image-2026-01-31-at-11.04.20-PM.jpeg",
+        "productId": "c9cd6e18-210a-4469-990f-74a44cd71969",
+        "alt": "Lord Hanuman Idol - Image 1",
+        "createdAt": "2026-02-13T10:19:55.896Z",
+        "order": 0
+      },
+      {
+        "id": "80c71673-3ad9-4f0f-a967-65c03c0f0444",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770978252329-hanuma.webp",
+        "productId": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+        "alt": "Panchamukhi Hanuman Idol - Image 1",
+        "createdAt": "2026-02-13T10:24:13.631Z",
+        "order": 0
+      },
+      {
+        "id": "1f7d765a-c651-4dbf-9b9d-222aca180785",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770978531107-rama.webp",
+        "productId": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+        "alt": "Lord Rama Idol - Image 1",
+        "createdAt": "2026-02-13T10:28:53.295Z",
+        "order": 0
+      },
+      {
+        "id": "f305cc1d-cc5b-4794-b647-416963d87f58",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1770978667863-ayyappa.webp",
+        "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+        "alt": "Lord Ayyappa Idol - Image 1",
+        "createdAt": "2026-02-13T10:31:09.163Z",
+        "order": 0
+      },
+      {
+        "id": "94f62116-e8f5-4ed5-a5a6-d09cc4393cc4",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772640825539-custom-keychain-1.jpg",
+        "productId": "301e5974-afbe-4ad5-abf7-2f9b6c558b27",
+        "alt": "Personalized 3D Printed Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:13:47.577Z",
+        "order": 0
+      },
+      {
+        "id": "aba33f9b-b13e-413f-bcf4-bd9e43a75615",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641461477-custom-name-keychain-2.jpg",
+        "productId": "8ff40914-b940-4aaf-9fc2-69be561d3ded",
+        "alt": "Custom Ribbon Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:24:23.117Z",
+        "order": 0
+      },
+      {
+        "id": "9ce0cfaa-5881-4774-b2b4-6da02c2643ff",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641709280-cusstom-name-keychain-3.png",
+        "productId": "34564da2-0edd-4273-952c-18ac8c255745",
+        "alt": "Custom Tag Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:28:30.542Z",
+        "order": 0
+      },
+      {
+        "id": "ab85eef8-111d-4fe1-967b-80f65b83ef0f",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641841866-custom-soccer-name-keychain.jpg",
+        "productId": "c5fdb806-c93f-425f-bee4-f1816089c303",
+        "alt": "Custom Football Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:30:43.958Z",
+        "order": 0
+      },
+      {
+        "id": "63983506-3dff-4df6-9bc4-b320599e5e39",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772641952118-custom-name-keychain-baarbie-edition.png",
+        "productId": "24d9f50e-5737-4cbb-8387-4a2161ae4282",
+        "alt": "Barbie Style Custom Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:32:32.579Z",
+        "order": 0
+      },
+      {
+        "id": "f339ccb4-764a-4279-b8fd-7c9c0c8efa30",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772642179091-custom-name-keychain-articulated.jpg",
+        "productId": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+        "alt": "Articulated Curved Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:36:21.355Z",
+        "order": 0
+      },
+      {
+        "id": "211702e2-8025-4bbc-8d76-c29b6a65ded3",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772642279564-custom-name-keychain-love.jpg",
+        "productId": "ff7971b6-9b79-435f-a7ac-19e0a772f8ed",
+        "alt": "I ❤️ Custom Name Keychain - Image 1",
+        "createdAt": "2026-03-04T16:38:01.370Z",
+        "order": 0
+      },
+      {
+        "id": "6340e4a0-c57f-4a24-b5cb-fb7667fb4ffd",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772642389540-custom-dog-name-tag.jpg",
+        "productId": "43b26e97-4cf6-449c-93b6-4fdd8b3f4ea4",
+        "alt": "Custom Dog Name Tag Keychain - Image 1",
+        "createdAt": "2026-03-04T16:39:51.773Z",
+        "order": 0
+      },
+      {
+        "id": "b4277f03-b21b-4e61-9b5c-e716633d85cb",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772643592025-custom-photo-lamp-1.jpg",
+        "productId": "4803dc79-d15c-4d75-ad19-48818145a49f",
+        "alt": "Custom Photo Lithophane Lamp - Image 1",
+        "createdAt": "2026-03-04T16:59:54.199Z",
+        "order": 0
+      },
+      {
+        "id": "6c08461a-60b9-48ab-9261-2468c0b8e2c7",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772643738038-custom-photo-lamp-2.JPEG",
+        "productId": "857451c4-0c8b-48df-a65b-1831b0f96b5e",
+        "alt": "Custom Photo Lithophane Frame Lamp - Image 1",
+        "createdAt": "2026-03-04T17:02:19.732Z",
+        "order": 0
+      },
+      {
+        "id": "de118e85-9855-4316-bbc4-121d36c3850f",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772643817888-custom-photo-lamp-3.jpg",
+        "productId": "23df5a29-cfa2-4a35-8699-8e38e2cb567c",
+        "alt": "Custom Photo Lithophane TV Lamp - Image 1",
+        "createdAt": "2026-03-04T17:03:38.945Z",
+        "order": 0
+      },
+      {
+        "id": "2b5d866d-01f1-44dc-b45a-73dde6929432",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644149974-custom-photo-lamp-4.jpeg",
+        "productId": "78aa9763-4520-455c-8c7c-a1b676837273",
+        "alt": "Custom Multi-Photo Lithophane Lamp - Image 1",
+        "createdAt": "2026-03-04T17:09:12.019Z",
+        "order": 0
+      },
+      {
+        "id": "edd2e5b6-36b6-4a1c-b5cf-96ebe1785a9a",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644275809-custom-photo-lamp-5.webp",
+        "productId": "507f15d5-2b52-41fc-9d11-f30eff816039",
+        "alt": "Custom Moon Photo Lithophane Lamp - Image 1",
+        "createdAt": "2026-03-04T17:11:16.452Z",
+        "order": 0
+      },
+      {
+        "id": "b6b4af5a-6156-4b12-9265-eb0e8aea5c83",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644761920-mini-me-1.png",
+        "productId": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+        "alt": "Custom Mini Me Figurine - Image 1",
+        "createdAt": "2026-03-04T17:19:23.681Z",
+        "order": 0
+      },
+      {
+        "id": "e6af881b-4ff7-4368-90da-e630ae4900b1",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772644853831-mini-me-2.png",
+        "productId": "9ee1d35e-7f58-46a2-be7c-4adfceafbe10",
+        "alt": "Custom Mini Me Figurine (Female) - Image 1",
+        "createdAt": "2026-03-04T17:20:55.118Z",
+        "order": 0
+      },
+      {
+        "id": "2f546a66-2f8c-4ca8-a986-c6783518b700",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1772649470913-L-key-chain.png",
+        "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+        "alt": "L (Death Note) Anime Keychain - Image 1",
+        "createdAt": "2026-03-04T18:37:52.419Z",
+        "order": 0
+      },
+      {
+        "id": "7cf851b3-01fc-4ce8-8f08-ccda09829aae",
+        "url": "https://robohatch-product-images.s3.eu-north-1.amazonaws.com/products/1773680256212-L-key-chain.png",
+        "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+        "alt": "L (Death Note) Anime Keychain - Image 2",
+        "createdAt": "2026-03-16T16:57:37.967Z",
+        "order": 1
+      },
+      {
+        "id": "1005b107-f648-4bfe-86ab-7581c8020931",
+        "url": "https://placehold.co/600x600/png?text=E2E+Product",
+        "productId": "9d39b839-441d-4e8a-b18e-8e49518ee839",
+        "alt": "E2E stable product image",
+        "createdAt": "2026-05-27T19:08:30.036Z",
+        "order": 0
+      }
+    ],
+    "productCategories": [
+      {
+        "id": "89e3bb7f-145c-49fa-95b1-216c5bff37b6",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-12T19:28:41.319Z"
+      },
+      {
+        "id": "3efdffff-b271-459b-8d86-a032a9ebbc44",
+        "productId": "7f227463-a661-4ff4-bf6b-bf6b85ee71c7",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-12T20:44:06.412Z"
+      },
+      {
+        "id": "645b2a9e-165a-4388-b231-fc9ae22cd250",
+        "productId": "ecb216d9-5781-41c7-b0c9-23632be11399",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:10:50.217Z"
+      },
+      {
+        "id": "89ce539b-553b-412a-80e1-51b5e079a94e",
+        "productId": "ecf4621d-b15a-4934-8df0-267b3c0e9ed1",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:12:17.873Z"
+      },
+      {
+        "id": "3ef6cbc9-98fb-4b5f-a998-44c4985ca1b3",
+        "productId": "a5d14d57-9824-41ca-af84-3cb75b82db54",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:13:39.643Z"
+      },
+      {
+        "id": "64238291-1db7-4275-94bf-ddaa48b82715",
+        "productId": "c9cd6e18-210a-4469-990f-74a44cd71969",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:19:55.896Z"
+      },
+      {
+        "id": "020535ca-2472-4171-b3b4-caf280d73cc0",
+        "productId": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:24:13.631Z"
+      },
+      {
+        "id": "db8a6164-2b18-4d81-81b7-1928e36c324e",
+        "productId": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:28:53.295Z"
+      },
+      {
+        "id": "93495a43-d705-4a83-9037-ebb07c4b7067",
+        "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+        "categoryId": "bba5012b-e205-4ff2-93c4-13f3205cdaa0",
+        "createdAt": "2026-02-13T10:31:09.163Z"
+      },
+      {
+        "id": "93cd04e5-85a0-4767-b5bc-5206bddb6938",
+        "productId": "301e5974-afbe-4ad5-abf7-2f9b6c558b27",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:13:47.577Z"
+      },
+      {
+        "id": "77b3e1e4-1441-4575-b888-8acf421220ed",
+        "productId": "8ff40914-b940-4aaf-9fc2-69be561d3ded",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:24:23.117Z"
+      },
+      {
+        "id": "c087f3e2-d71f-410a-bff5-2c92a62655ab",
+        "productId": "34564da2-0edd-4273-952c-18ac8c255745",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:28:30.542Z"
+      },
+      {
+        "id": "e6c5ea4e-d243-4079-9850-963408157b93",
+        "productId": "c5fdb806-c93f-425f-bee4-f1816089c303",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:30:43.958Z"
+      },
+      {
+        "id": "d66cf526-e6a5-4478-8b92-48736a78ec0d",
+        "productId": "24d9f50e-5737-4cbb-8387-4a2161ae4282",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:32:32.579Z"
+      },
+      {
+        "id": "19c2bd87-01b4-40e2-857f-c1b941a6707b",
+        "productId": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:36:21.355Z"
+      },
+      {
+        "id": "b494ee5f-e63b-4a78-8922-3cd48b98dd27",
+        "productId": "ff7971b6-9b79-435f-a7ac-19e0a772f8ed",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:38:01.370Z"
+      },
+      {
+        "id": "cd926ec4-91da-48cb-a986-f82a9acd7cd1",
+        "productId": "43b26e97-4cf6-449c-93b6-4fdd8b3f4ea4",
+        "categoryId": "cd65c094-d867-4ac3-b93e-b249f7ecbe43",
+        "createdAt": "2026-03-04T16:39:51.773Z"
+      },
+      {
+        "id": "3bf97a59-ef14-44fb-bb37-0147ad7b5b10",
+        "productId": "4803dc79-d15c-4d75-ad19-48818145a49f",
+        "categoryId": "d033286e-785d-4171-a607-07198d755229",
+        "createdAt": "2026-03-04T16:59:54.199Z"
+      },
+      {
+        "id": "54a33ab2-73d0-4b14-97e3-ca93b5427033",
+        "productId": "857451c4-0c8b-48df-a65b-1831b0f96b5e",
+        "categoryId": "d033286e-785d-4171-a607-07198d755229",
+        "createdAt": "2026-03-04T17:02:19.732Z"
+      },
+      {
+        "id": "573e41b8-cbaf-43c3-bc7b-8c0ee1249595",
+        "productId": "23df5a29-cfa2-4a35-8699-8e38e2cb567c",
+        "categoryId": "d033286e-785d-4171-a607-07198d755229",
+        "createdAt": "2026-03-04T17:03:38.945Z"
+      },
+      {
+        "id": "b898052f-7c84-4572-9957-001393e725f5",
+        "productId": "78aa9763-4520-455c-8c7c-a1b676837273",
+        "categoryId": "d033286e-785d-4171-a607-07198d755229",
+        "createdAt": "2026-03-04T17:09:12.019Z"
+      },
+      {
+        "id": "40411d1a-ac2f-4522-af35-765504088400",
+        "productId": "507f15d5-2b52-41fc-9d11-f30eff816039",
+        "categoryId": "d033286e-785d-4171-a607-07198d755229",
+        "createdAt": "2026-03-04T17:11:16.452Z"
+      },
+      {
+        "id": "ace6c2c6-6fc5-43bd-801d-bfca4635bb43",
+        "productId": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+        "categoryId": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+        "createdAt": "2026-03-04T17:19:23.681Z"
+      },
+      {
+        "id": "d6ced2d6-5f73-47e5-a91a-dbb8d8ebbf95",
+        "productId": "9ee1d35e-7f58-46a2-be7c-4adfceafbe10",
+        "categoryId": "3e482bed-0694-4d16-81e5-7218633cbe9f",
+        "createdAt": "2026-03-04T17:20:55.118Z"
+      },
+      {
+        "id": "cc9f9618-6e92-43b1-9269-4e1782503070",
+        "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+        "categoryId": "47fd8d5f-9db1-494f-a6a1-54def0f22acd",
+        "createdAt": "2026-03-16T17:36:26.480Z"
+      },
+      {
+        "id": "6c6911a6-3039-4f9b-a153-6d3eca6ad60d",
+        "productId": "9d39b839-441d-4e8a-b18e-8e49518ee839",
+        "categoryId": "47a9f34a-dada-4ae4-a0d6-d39d677bd607",
+        "createdAt": "2026-05-26T05:47:00.503Z"
+      }
+    ],
+    "cartItems": [
+      {
+        "id": "368bda05-4022-4b53-a388-a49797191adb",
+        "cartId": "45563a1a-78b2-4ae6-ad91-b48b76649a6e",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "customDesignId": null,
+        "quantity": 1,
+        "createdAt": "2026-02-12T20:21:25.384Z",
+        "updatedAt": "2026-02-12T20:29:10.540Z",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "cbef20ba-19d8-44d8-bfc5-38048ec27461",
+        "cartId": "dfb31b93-31bd-414b-b588-b3587e835697",
+        "productId": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+        "customDesignId": null,
+        "quantity": 1,
+        "createdAt": "2026-03-19T08:24:14.774Z",
+        "updatedAt": "2026-03-19T08:29:07.767Z",
+        "customImageUrl": null,
+        "customText": null
+      }
+    ],
+    "wishlistItems": [
+      {
+        "id": "4c945f41-2d08-4e45-a172-3a8916fc361b",
+        "wishlistId": "0941e395-f4e8-41f1-986f-87a4d411e26e",
+        "productId": "507f15d5-2b52-41fc-9d11-f30eff816039",
+        "createdAt": "2026-05-05T05:17:29.053Z"
+      }
+    ],
+    "orderItems": [
+      {
+        "id": "06b629ce-0a13-41a1-920d-014a43123594",
+        "orderId": "7dc82621-0aa3-4d9e-8b75-964b27d74123",
+        "productId": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "79",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "1dc7c16c-7558-4950-badd-b50537c01dc9",
+        "orderId": "f5e0fb60-ac08-4c6b-9f21-d50cc6915a21",
+        "productId": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "599",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "1e81d0bd-2fd4-46ce-9fd5-6dfccafb9ec6",
+        "orderId": "ce2b4559-74f2-4b44-b3c5-497e6e480cbd",
+        "productId": "507f15d5-2b52-41fc-9d11-f30eff816039",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "849",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "251befff-6794-4497-bf2d-21d3db072310",
+        "orderId": "f5e0fb60-ac08-4c6b-9f21-d50cc6915a21",
+        "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+        "customDesignId": null,
+        "quantity": 2,
+        "price": "499",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "2a1ef80e-8f7d-4fc2-96fd-72541059b440",
+        "orderId": "7dc82621-0aa3-4d9e-8b75-964b27d74123",
+        "productId": "1fae807d-5131-40c8-84d9-9843a1705d93",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "59",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "2cdd9e3e-fa76-4a4a-a6ea-d4abe28d8867",
+        "orderId": "00cbb383-aa1e-4ecd-b224-ba973a4cf4ec",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "customDesignId": null,
+        "quantity": 2,
+        "price": "649",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "5e10cd93-9835-4a45-965a-ba34960c512f",
+        "orderId": "5dc99be0-86bf-45ca-be7e-0f24bc744a80",
+        "productId": "5e0b0ad8-dbed-4b1d-95d5-b3600188eaaa",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "599",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "71c348a3-c032-4b33-94a3-5d3fb589aaf3",
+        "orderId": "ad0e0976-9fc7-477a-b080-73902562c4a3",
+        "productId": "79e01365-1260-44d8-bfc4-17ec45d1d2d2",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "79",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "741077cf-4b6a-4385-bcd0-2e59eed00e8d",
+        "orderId": "ecfb2b9f-89c5-4f7b-bb31-500e2ab83e19",
+        "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "499",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "8429301f-a66a-4898-a8c3-85b3d07e6ac0",
+        "orderId": "b714cbaf-541b-4dff-aa2c-71a44c1ebf26",
+        "productId": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "599",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "9dd1b7e6-aa6f-4380-bd67-cc98e456824c",
+        "orderId": "e6757dac-7675-4aa6-8fc0-908b2adab948",
+        "productId": "beefd6ae-3aa1-4649-a5b8-50e3752ef4ad",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "869",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "a42bc915-1d29-41cb-b910-d4ada51e9be6",
+        "orderId": "5223a04c-0f18-419b-9b94-0ac47ae4b783",
+        "productId": "52245b32-b872-43cf-a060-34933d8d75b7",
+        "customDesignId": null,
+        "quantity": 2,
+        "price": "499",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "b0da1019-f3f8-40a4-ab6a-c817c61647b0",
+        "orderId": "ebe5253f-6964-4d1f-a3a2-6bcaf204da83",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "649",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "bab3a1b0-7155-45af-9bd3-317268ed0abc",
+        "orderId": "16e806a1-280e-4ae6-b7db-3fb8d841c9b5",
+        "productId": "9fbfde55-92b8-448b-b4ba-f443ffdf9879",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "599",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "c60b1bae-3825-4ef8-8934-dc34627a167b",
+        "orderId": "acd6ff53-70b7-4149-96ca-2f8e145ac5d5",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "649",
+        "customImageUrl": null,
+        "customText": null
+      },
+      {
+        "id": "d554abd8-73cd-4e90-9ad2-1d56598b9a98",
+        "orderId": "18eb1103-26e2-4409-82f6-898e94ae6fc7",
+        "productId": "82b74c70-050d-4902-8121-377f33bc669a",
+        "customDesignId": null,
+        "quantity": 1,
+        "price": "649",
+        "customImageUrl": null,
+        "customText": null
+      }
+    ]
+  }
+}

@@ -6,7 +6,6 @@ import { SlidersHorizontal } from 'lucide-react';
 import { ProductGrid } from '@/components/product';
 import { ProductGridSkeleton } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
 import { Product, Category } from '@/types';
 
@@ -393,10 +392,8 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <AdminGuard>
-      <Suspense fallback={<ProductGridSkeleton count={8} />}>
-        <ProductsContent />
-      </Suspense>
-    </AdminGuard>
+    <Suspense fallback={<ProductGridSkeleton count={8} />}>
+      <ProductsContent />
+    </Suspense>
   );
 }

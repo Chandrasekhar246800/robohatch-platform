@@ -142,7 +142,7 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900">Orders</h1>
+          <h1 data-testid="admin-orders-heading" className="text-3xl font-semibold text-slate-900">Orders</h1>
           <p className="mt-1 text-sm text-slate-500">Fulfillment queue and order visibility.</p>
         </div>
         <div className="flex gap-2">

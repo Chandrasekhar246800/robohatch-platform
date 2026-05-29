@@ -34,7 +34,7 @@ export default function BulkActionToolbar({ selectedIds, onBulkAction, onExport,
 
   return (
     <div className="fixed bottom-4 left-1/2 z-40 w-[min(96%,900px)] -translate-x-1/2 rounded-lg bg-white/95 p-3 shadow-lg sm:static sm:translate-x-0 sm:flex sm:items-center sm:gap-3">
-      <div className="flex-1 text-sm text-slate-700">{selectedIds.length} selected</div>
+      <div data-testid="bulk-selection-count" className="flex-1 text-sm text-slate-700">{selectedIds.length} selected</div>
       <div className="flex gap-2">
         <Button onClick={() => run('Mark Paid') } disabled={disabled}>Mark Paid</Button>
         <Button onClick={() => run('Mark Shipped') } disabled={disabled}>Mark Shipped</Button>

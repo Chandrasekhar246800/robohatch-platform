@@ -73,7 +73,16 @@ export class PaymentController {
         data: razorpayOrder,
       });
     } catch (error: any) {
-      logger.error('Create Razorpay order error:', error);
+      logger.error('Create Razorpay order error:', {
+        orderId: req.params.orderId,
+        userId: (req as AuthRequest).user?.userId,
+        message: error?.message,
+        name: error?.name,
+        statusCode: error?.statusCode,
+        code: error?.error?.code || error?.code,
+        description: error?.error?.description || error?.description,
+        stack: error?.stack,
+      });
 
       if (
         error.message === 'Order not found or unauthorized' ||

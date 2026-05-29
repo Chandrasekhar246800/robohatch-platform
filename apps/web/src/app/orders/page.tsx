@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Package, Clock, Truck, CheckCircle, XCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth.store';
-import { AdminGuard } from '@/components/guards/AdminGuard';
 import { OrderListSkeleton } from '@/components/ui';
 
 function OrdersContent() {
@@ -231,10 +230,8 @@ function OrdersContent() {
 
 export default function OrdersPage() {
   return (
-    <AdminGuard>
-      <Suspense fallback={<div className="container mx-auto px-4 py-8">Loading...</div>}>
-        <OrdersContent />
-      </Suspense>
-    </AdminGuard>
+    <Suspense fallback={<div className="container mx-auto px-4 py-8">Loading...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }

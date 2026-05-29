@@ -5,6 +5,7 @@ const getBackendBaseUrl = (request: NextRequest): string => {
 
   const candidates = [
     process.env.API_BACKEND_URL?.trim(),
+    'http://127.0.0.1:5000',
     process.env.NEXT_PUBLIC_API_URL?.trim(),
   ].filter((value): value is string => Boolean(value));
 

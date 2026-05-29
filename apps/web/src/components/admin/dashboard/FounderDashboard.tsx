@@ -65,7 +65,7 @@ export default function FounderDashboard() {
           <CardContent className="p-6 sm:p-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/60">Founder Execution Cockpit</p>
+                <p data-testid="admin-cockpit-heading" className="text-xs uppercase tracking-[0.2em] text-white/60">Founder Execution Cockpit</p>
                 <h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">What needs attention today?</h1>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
                   A queue-first operating view for orders, stock, support, and revenue so the founder can move faster with fewer clicks.
@@ -73,10 +73,10 @@ export default function FounderDashboard() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button className="bg-white text-slate-950 hover:bg-slate-100" onClick={() => router.push('/admin/orders')}>
+                <Button data-testid="admin-review-orders" className="bg-white text-slate-950 hover:bg-slate-100" onClick={() => router.push('/admin/orders')}>
                   Review orders
                 </Button>
-                <Button variant="secondary" className="border-white/20 bg-white/10 text-white hover:bg-white/15" onClick={() => router.push('/admin/products/add')}>
+                <Button data-testid="admin-add-product" variant="secondary" className="border-white/20 bg-white/10 text-white hover:bg-white/15" onClick={() => router.push('/admin/products/add')}>
                   Add product
                 </Button>
               </div>

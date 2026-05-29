@@ -30,8 +30,9 @@ import { apiClient } from '@/lib/api-client';
 
 export default function AccountPage() {
   const router = useRouter();
-  const { isAuthenticated, logout, setAuth } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, logout, setAuth } = useAuthStore();
   const { user, loading, error, refetch } = useUserProfile();
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'uploads' | 'addresses'>(
     'profile'
   );
@@ -63,12 +64,21 @@ export default function AccountPage() {
   const [addressFormLoading, setAddressFormLoading] = useState(false);
   const [addressFormError, setAddressFormError] = useState('');
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (mounted && _hasHydrated && !isAuthenticated) {
+      console.log('[AuthHydration][account] redirecting to login', {
+        mounted,
+        hydrated: _hasHydrated,
+        isAuthenticated,
+      });
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, mounted, _hasHydrated, router]);
 
   // Fetch user orders
   useEffect(() => {
@@ -278,6 +288,20 @@ export default function AccountPage() {
     }
   };
 
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="py-6 md:py-8">
+        <div className="container-custom px-4">
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-4xl font-bold mb-2">My Account</h1>
+            <p className="text-sm md:text-base text-gray-600">Manage your profile, orders, and uploads</p>
+          </div>
+          <AccountProfileSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return null;
   }
@@ -323,7 +347,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="py-6 md:py-8">
+    <div className="py-6 md:py-8" data-testid="account-page-ready">
       <div className="container-custom px-4">
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl md:text-4xl font-bold mb-2">My Account</h1>

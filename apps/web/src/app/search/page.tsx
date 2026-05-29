@@ -6,7 +6,6 @@ import { Search, Loader2, PackageX } from 'lucide-react';
 import { ProductGrid } from '@/components/product';
 import { ProductGridSkeleton } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
 import { Product } from '@/types';
 
@@ -71,9 +70,8 @@ function SearchContent() {
   }, [query]);
 
   return (
-    <AdminGuard>
-      <div className="py-8">
-        <div className="container-custom">
+    <div className="py-8">
+      <div className="container-custom">
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">
@@ -148,7 +146,7 @@ function SearchContent() {
           )}
         </div>
       </div>
-    </AdminGuard>
+    </div>
   );
 }
 

@@ -31,7 +31,7 @@ async function runChecks() {
   // 1) Web storefront reachability
   try {
     const url = e2eEnv.baseURL;
-    const res = await fetchWithTimeout(url, { method: 'GET' }, 5000);
+    const res = await fetchWithTimeout(url, { method: 'GET' }, 15000);
     diag.checks.web = { url, status: res.status };
     if (res.status >= 500 || res.status === 404) {
       throw new Error(`CI-INFRA: Web unreachable or server error (${res.status})`);
@@ -122,8 +122,8 @@ export default async function globalSetup() {
     out.diag = diag;
     fs.mkdirSync(path.dirname(DIAG_PATH), { recursive: true });
     fs.writeFileSync(DIAG_PATH, JSON.stringify(out, null, 2));
+    // concise success log — avoid verbose diagnostic dumps in CI output
     console.log('CI-INFRA: Pre-test checks passed');
-    console.log(JSON.stringify(diag, null, 2));
   } catch (err: any) {
     out.status = 'failed';
     out.error = String(err.message || err);

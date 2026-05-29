@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
+import { e2eEnv } from './env';
 
 type Credentials = {
   email: string;
@@ -7,7 +8,7 @@ type Credentials = {
 };
 
 export async function bootstrapCsrf(page: Page) {
-  const response = await page.request.get('/api/auth/csrf');
+  const response = await page.request.get(`${e2eEnv.apiBaseURL}/api/auth/csrf`);
   expect(response.ok()).toBeTruthy();
 
   const payload = await response.json();
@@ -19,7 +20,7 @@ export async function bootstrapCsrf(page: Page) {
 
 export async function authedPost(page: Page, path: string, data: unknown) {
   const csrfToken = await bootstrapCsrf(page);
-  return page.request.post(path, {
+  return page.request.post(`${e2eEnv.apiBaseURL}${path}`, {
     data,
     headers: {
       'x-csrf-token': csrfToken,
@@ -28,7 +29,7 @@ export async function authedPost(page: Page, path: string, data: unknown) {
 }
 
 export async function loginViaApi(page: Page, credentials: Credentials) {
-  const response = await page.request.post('/api/auth/login', {
+  const response = await page.request.post(`${e2eEnv.apiBaseURL}/api/auth/login`, {
     data: credentials,
   });
 
@@ -40,7 +41,7 @@ export async function loginViaApi(page: Page, credentials: Credentials) {
 }
 
 export async function registerViaApi(page: Page, credentials: Credentials & { name: string }) {
-  const response = await page.request.post('/api/auth/register', {
+  const response = await page.request.post(`${e2eEnv.apiBaseURL}/api/auth/register`, {
     data: credentials,
   });
 
@@ -48,14 +49,18 @@ export async function registerViaApi(page: Page, credentials: Credentials & { na
   return response.json();
 }
 
-export async function loginViaUi(page: Page, credentials: Credentials) {
-  await page.goto('/login');
-  await page.getByLabel('Email Address').fill(credentials.email);
-  await page.getByLabel('Password').fill(credentials.password);
-  await page.getByRole('button', { name: /login/i }).click();
+export async function loginViaUi(page: Page, credentials: Credentials, redirectPath = '/') {
+  console.log('[e2e][loginViaUi] start', { email: credentials.email, redirectPath });
+  await page.goto(`/login?redirect=${encodeURIComponent(redirectPath)}`, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('login-email').fill(credentials.email);
+  await page.getByTestId('login-password').fill(credentials.password);
+  await page.getByTestId('login-submit').click();
+  await page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/api/auth/login') && response.ok(), { timeout: 15_000 }).catch(() => undefined);
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+  console.log('[e2e][loginViaUi] login response received', { url: page.url() });
 }
 
 export async function logoutViaUi(page: Page) {
-  await page.goto('/account');
+  await page.goto('/account', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: /logout/i }).click().catch(() => undefined);
 }

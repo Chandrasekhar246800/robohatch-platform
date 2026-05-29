@@ -35,31 +35,52 @@ export const test = base.extend<{
     await use({
       env: e2eEnv,
       loginCustomerApi: async () => {
-        if (!e2eEnv.customerEmail || !e2eEnv.customerPassword) {
-          throw new Error('Set E2E_TEST_USER_EMAIL and E2E_TEST_USER_PASSWORD');
+        const email = e2eEnv.customerEmail || 'e2e.customer@robohatch.local';
+        const password = e2eEnv.customerPassword || 'E2E_test_pass_2026!';
+
+        // Ensure a customer account exists: attempt registration, ignore "already exists" errors.
+        try {
+          await registerViaApi(page, { name: 'E2E Customer', email, password });
+        } catch (err) {
+          // ignore registration errors (user may already exist)
         }
-        await loginViaApi(page, {
-          email: e2eEnv.customerEmail,
-          password: e2eEnv.customerPassword,
-        });
+
+        try {
+          await loginViaUi(page, { email, password }, '/account');
+        } catch {
+          await loginViaApi(page, { email, password });
+        }
+
+        await page.goto('/account', { waitUntil: 'domcontentloaded' });
+        await waitForHydratedAccount(page);
       },
       loginCustomerUi: async () => {
-        if (!e2eEnv.customerEmail || !e2eEnv.customerPassword) {
-          throw new Error('Set E2E_TEST_USER_EMAIL and E2E_TEST_USER_PASSWORD');
+        const email = e2eEnv.customerEmail || 'e2e.customer@robohatch.local';
+        const password = e2eEnv.customerPassword || 'E2E_test_pass_2026!';
+
+        // Ensure account exists via API before using UI login to avoid flaky signup flows
+        try {
+          await registerViaApi(page, { name: 'E2E Customer', email, password });
+        } catch (err) {
+          // ignore
         }
-        await loginViaUi(page, {
-          email: e2eEnv.customerEmail,
-          password: e2eEnv.customerPassword,
-        });
+
+        await loginViaUi(page, { email, password }, '/account');
+        await page.goto('/account', { waitUntil: 'domcontentloaded' });
+        await waitForHydratedAccount(page);
       },
       loginAdminApi: async () => {
-        if (!e2eEnv.adminEmail || !e2eEnv.adminPassword) {
-          throw new Error('Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD');
+        const email = e2eEnv.adminEmail || 'e2e.admin@robohatch.local';
+        const password = e2eEnv.adminPassword || 'E2E_admin_pass_2026!';
+
+        // Admin should be seeded via seed:e2e; if not, attempt login and let tests fail visibly.
+        try {
+          await loginViaApi(page, { email, password });
+        } catch {
+          await loginViaUi(page, { email, password }, '/admin');
         }
-        await loginViaApi(page, {
-          email: e2eEnv.adminEmail,
-          password: e2eEnv.adminPassword,
-        });
+
+        await page.goto('/admin', { waitUntil: 'domcontentloaded' });
       },
       registerCustomer: async (name: string, email: string, password: string) => {
         await registerViaApi(page, { name, email, password });

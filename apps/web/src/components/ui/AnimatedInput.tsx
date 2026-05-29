@@ -17,6 +17,7 @@ export const AnimatedInput = React.forwardRef<HTMLInputElement, AnimatedInputPro
     const [isFocused, setIsFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const inputType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
+    const inputId = typeof props.id === 'string' ? props.id : undefined;
 
     return (
       <motion.div
@@ -31,6 +32,7 @@ export const AnimatedInput = React.forwardRef<HTMLInputElement, AnimatedInputPro
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
             className="block text-sm font-medium text-gray-700 mb-2"
+            htmlFor={inputId}
           >
             {label}
           </motion.label>
@@ -43,6 +45,7 @@ export const AnimatedInput = React.forwardRef<HTMLInputElement, AnimatedInputPro
           )}
           <motion.input
             ref={ref}
+            id={inputId}
             type={inputType}
             className={cn(
               'w-full px-4 py-3 border rounded-lg focus:outline-none transition-all duration-200',

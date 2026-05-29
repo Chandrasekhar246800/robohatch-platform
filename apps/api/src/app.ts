@@ -34,7 +34,7 @@ import {
   rateLimitErrorHandler,
 } from "./middlewares/security.middleware";
 const app = express();
-app.set("trust proxy", 1);
+app.set("trust proxy", env.isProduction ? 1 : false);
 
 // ✅ PRODUCTION HARDENING: Initialize Sentry for error tracking
 initSentry(app);

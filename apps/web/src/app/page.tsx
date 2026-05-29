@@ -11,7 +11,6 @@ import TrustStrip from '@/components/home/TrustStrip';
 import Testimonials from '@/components/home/Testimonials';
 import FounderCred from '@/components/home/FounderCred';
 import JsonLd from '@/components/seo/JsonLd';
-import { AdminGuard } from '@/components/guards/AdminGuard';
 import { apiClient } from '@/lib/api-client';
 import { ProductGridSkeleton, CategoryGridSkeleton } from '@/components/ui';
 import { Product, Category } from '@/types';
@@ -101,21 +100,20 @@ export default function HomePage() {
   }, []);
 
   return (
-    <AdminGuard>
-      <div>
-        <JsonLd
-          data={{
-            '@context': 'https://schema.org',
-            '@type': 'WebSite',
-            name: 'RoboHatch',
-            url: 'https://www.robohatch.in',
-            potentialAction: {
-              '@type': 'SearchAction',
-              target: 'https://www.robohatch.in/products?search={search_term_string}',
-              'query-input': 'required name=search_term_string',
-            },
-          }}
-        />
+    <div>
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'RoboHatch',
+          url: 'https://www.robohatch.in',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: 'https://www.robohatch.in/products?search={search_term_string}',
+            'query-input': 'required name=search_term_string',
+          },
+        }}
+      />
 
         {/* 1. Hero */}
         <HeroPremium />
@@ -294,7 +292,6 @@ export default function HomePage() {
 
         {/* legacy trust badges removed — replaced by TrustStrip + Testimonials + FounderCred for clearer hierarchy */}
 
-      </div>
-    </AdminGuard>
+    </div>
   );
 }

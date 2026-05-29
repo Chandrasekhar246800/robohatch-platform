@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -76,6 +77,53 @@ async function main() {
   });
 
   console.log('E2E stable product id:', product.id);
+
+  // ------------------------
+  // Deterministic E2E accounts
+  // ------------------------
+  // Read credentials from env when provided; otherwise fall back to safe deterministic defaults.
+  const customerEmail = (process.env.E2E_TEST_USER_EMAIL || 'e2e.customer@robohatch.local').toLowerCase();
+  const customerPassword = process.env.E2E_TEST_USER_PASSWORD || 'E2E_test_pass_2026!';
+
+  const adminEmail = (process.env.E2E_ADMIN_EMAIL || 'e2e.admin@robohatch.local').toLowerCase();
+  const adminPassword = process.env.E2E_ADMIN_PASSWORD || 'E2E_admin_pass_2026!';
+
+  const rounds = process.env.BCRYPT_ROUNDS ? parseInt(process.env.BCRYPT_ROUNDS, 10) : 12;
+
+  // Upsert customer user
+  const hashedCustomer = await bcrypt.hash(customerPassword, rounds);
+  await prisma.user.upsert({
+    where: { email: customerEmail },
+    update: {
+      password: hashedCustomer,
+      name: 'E2E Customer',
+    },
+    create: {
+      email: customerEmail,
+      password: hashedCustomer,
+      name: 'E2E Customer',
+      role: 'USER',
+    },
+  });
+
+  // Upsert admin user
+  const hashedAdmin = await bcrypt.hash(adminPassword, rounds);
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      password: hashedAdmin,
+      name: 'E2E Admin',
+      role: 'ADMIN',
+    },
+    create: {
+      email: adminEmail,
+      password: hashedAdmin,
+      name: 'E2E Admin',
+      role: 'ADMIN',
+    },
+  });
+
+  console.log('Seeded E2E accounts:', { customerEmail, adminEmail });
 }
 
 main()

@@ -8,6 +8,7 @@ type Props = {
   onAction?: () => void;
   disabled?: boolean;
   helperText?: string;
+  buttonTestId?: string;
 };
 
 export default function StickyMobileCTA({
@@ -16,6 +17,7 @@ export default function StickyMobileCTA({
   onAction,
   disabled = false,
   helperText = "Secure checkout · Insured shipping",
+  buttonTestId,
 }: Props) {
   return (
     <div data-testid="sticky-mobile-cta" className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur lg:hidden">
@@ -26,6 +28,7 @@ export default function StickyMobileCTA({
           <div className="text-[11px] text-slate-500">{helperText}</div>
         </div>
         <button
+          data-testid={buttonTestId}
           onClick={onAction}
           disabled={disabled}
           className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"

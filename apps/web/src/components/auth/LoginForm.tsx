@@ -135,6 +135,8 @@ export const LoginForm: React.FC = () => {
         >
           <motion.div variants={itemVariants}>
             <AnimatedInput
+              id="login-email"
+              data-testid="login-email"
               label="Email Address"
               type="email"
               placeholder="your@email.com"
@@ -149,6 +151,8 @@ export const LoginForm: React.FC = () => {
 
           <motion.div variants={itemVariants}>
             <AnimatedInput
+              id="login-password"
+              data-testid="login-password"
               label="Password"
               type="password"
               placeholder="••••••••"
@@ -219,6 +223,7 @@ export const LoginForm: React.FC = () => {
               className="w-full"
               size="lg"
               isLoading={isLoading}
+              data-testid="login-submit"
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </AnimatedButton>

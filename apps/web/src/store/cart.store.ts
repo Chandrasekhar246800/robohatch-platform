@@ -17,7 +17,13 @@ interface CartStore {
   isLoading: boolean;
   total: number;
   lastSyncTime: number;
-  addItem: (product: Product, quantity?: number, isAuthenticated?: boolean) => Promise<void>;
+  addItem: (
+    product: Product,
+    quantity?: number,
+    isAuthenticated?: boolean,
+    customText?: string,
+    customImageUrl?: string
+  ) => Promise<void>;
   removeItem: (productId: string, isAuthenticated?: boolean) => Promise<void>;
   updateQuantity: (productId: string, quantity: number, isAuthenticated?: boolean) => Promise<void>;
   clearCart: (isAuthenticated?: boolean) => Promise<void>;
@@ -42,7 +48,7 @@ export const useCartStore = create<CartStore>()(
         }, 0);
       },
 
-      addItem: async (product, quantity = 1, isAuthenticated = false) => {
+      addItem: async (product, quantity = 1, isAuthenticated = false, customText, customImageUrl) => {
         if (isAuthenticated) {
           // Optimistic update - update UI immediately
           set((state) => {
@@ -59,7 +65,7 @@ export const useCartStore = create<CartStore>()(
               };
             }
             return {
-              items: [...state.items, { product, quantity }],
+              items: [...state.items, { product, quantity, customText, customImageUrl }],
             };
           });
 
@@ -96,7 +102,7 @@ export const useCartStore = create<CartStore>()(
               };
             }
             return {
-              items: [...state.items, { product, quantity }],
+              items: [...state.items, { product, quantity, customText, customImageUrl }],
             };
           });
         }

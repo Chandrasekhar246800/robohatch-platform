@@ -1,5 +1,6 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { inspect } from 'util';
 import { prisma, Prisma } from '../config/prisma';
 import { validateShippingAddress, validatePaymentVerification } from '../validators/order.validator';
 import { emailService } from './email.service';
@@ -10,6 +11,8 @@ import { logger } from '../utils/logger';
 const RAZORPAY_KEY_ID = env.razorpayKeyId;
 const RAZORPAY_KEY_SECRET = env.razorpayKeySecret;
 const RAZORPAY_WEBHOOK_SECRET = env.razorpayWebhookSecret;
+
+const maskSecret = (value: string) => (value.length <= 8 ? '***' : `${value.slice(0, 6)}***${value.slice(-4)}`);
 
 logger.info('✅ Razorpay credentials loaded successfully');
 logger.info('✅ Webhook secret configured');
@@ -262,18 +265,55 @@ export class PaymentService {
       orderId,
       amount: `₹${order.total}`,
       amountInPaise: `${amountInPaise} paise`,
+      razorpayKeyId: maskSecret(RAZORPAY_KEY_ID),
+      keySecretConfigured: Boolean(RAZORPAY_KEY_SECRET),
     });
-    
-    // ✅ IDEMPOTENCY: Use orderId as receipt for idempotency
-    const razorpayOrder = await this.razorpay.orders.create({
+
+    const razorpayRequestPayload = {
       amount: amountInPaise,
       currency: 'INR',
-      receipt: orderId, // This acts as idempotency key
+      receipt: orderId,
       notes: {
         orderId,
         userId,
       },
-    });
+    };
+
+    logger.info('📤 Razorpay outbound payload:', razorpayRequestPayload);
+    
+    // ✅ IDEMPOTENCY: Use orderId as receipt for idempotency
+    let razorpayOrder;
+    try {
+      razorpayOrder = await this.razorpay.orders.create(razorpayRequestPayload);
+      logger.info('📥 Razorpay inbound response:', razorpayOrder);
+    } catch (error: any) {
+      logger.error('❌ Razorpay SDK raw error object:', inspect(error, { depth: 10, breakLength: 120 }));
+      logger.error('❌ Razorpay order creation failed:', {
+        name: error?.name,
+        message: error?.message,
+        statusCode: error?.statusCode,
+        code: error?.error?.code || error?.code,
+        errorObject: error?.error,
+        description: error?.error?.description || error?.description,
+        source: error?.error?.source,
+        step: error?.error?.step,
+        reason: error?.error?.reason,
+        metadata: error?.error?.metadata,
+        stack: error?.stack,
+      });
+
+      if (error?.response) {
+        logger.error('❌ Razorpay HTTP response:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data,
+          body: error.response.body,
+        });
+      }
+
+      throw error;
+    }
 
     // Store payment record in database
     const payment = await prisma.payment.create({

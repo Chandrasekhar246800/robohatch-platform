@@ -31,7 +31,9 @@ const normalizeCookieDomain = (hostname: string): string | undefined => {
 
 const getCookieDomain = (req?: Request): string | undefined => {
   if (!env.isProduction) {
-    return 'localhost';
+    // Development cookies should stay host-only so localhost and 127.0.0.1
+    // both work without a Domain attribute mismatch.
+    return undefined;
   }
 
   // In production, prefer host-only cookies so the browser binds the session
@@ -308,7 +310,7 @@ export class AuthService {
       domain: cookieDomain, // ✅ Share cookie across the app domain in production
     });
 
-    logger.info(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: ${isProduction ? 'none' : 'lax'}, domain: ${cookieDomain ?? 'host-only'})`);
+    logger.info(`✅ Auth cookie set (httpOnly: true, secure: ${isProduction}, sameSite: lax, domain: ${cookieDomain ?? 'host-only'})`);
   }
 
   setRefreshCookie(res: Response, refreshToken: string, req?: Request): void {

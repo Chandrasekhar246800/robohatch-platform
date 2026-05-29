@@ -41,6 +41,10 @@ export async function fetchProductByName(request: APIRequestContext, query: stri
 }
 
 export async function waitForHydratedAccount(page: Page) {
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(250);
+  await page.waitForFunction(() => {
+    const state = (window as any).__E2E_AUTH_STATE__;
+    return Boolean(state && state.status === 'authenticated' && state.hydrated && state.isAuthenticated);
+  }, undefined, { timeout: 15_000 }).catch(() => undefined);
+
+  await page.getByTestId('account-page-ready').waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
 }
