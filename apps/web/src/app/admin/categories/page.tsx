@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Plus, Trash2, Loader2, Tag, Edit2, Check, X } from 'lucide-react';
 import { Button, Input, Card, CardContent } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { apiClient } from '@/lib/api-client';
 
 interface Category {
   id: string;
@@ -110,15 +111,7 @@ export default function CategoriesManagementPage() {
     setError('');
 
     try {
-      const response = await fetch(
-        `/api/admin/categories/${categoryId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        }
-      );
-
-      const data = await response.json();
+      const data = await apiClient.deleteCategory(categoryId);
 
       if (data.success) {
         setSuccess('Category deleted successfully!');

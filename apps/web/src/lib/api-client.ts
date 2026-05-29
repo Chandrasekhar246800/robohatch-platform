@@ -1482,6 +1482,26 @@ class ApiClient {
     }
   }
 
+  async deleteCategory(id: string) {
+    try {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/categories/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || 'Failed to delete category' };
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Delete category error:', error);
+      return { success: false, message: error.message || 'Network error' };
+    }
+  }
+
   /**
    * Submit contact form
    */
