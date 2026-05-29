@@ -143,17 +143,6 @@ export default function ProductCardPremium({ product }: Props) {
               />
             </button>
 
-            <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
-              {discount > 0 && (
-                <Badge variant="danger" className="rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide">
-                  {discount}% OFF
-                </Badge>
-              )}
-              <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                <ShieldCheck className="mr-1 inline-block" size={12} /> Engineer QA
-              </span>
-            </div>
-
             {!product.inStock && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
                 <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg">
@@ -184,6 +173,20 @@ export default function ProductCardPremium({ product }: Props) {
                 <span className="text-slate-500">({product.reviews})</span>
               </div>
             )}
+
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {discount > 0 && (
+                <Badge variant="danger" className="rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide">
+                  {discount}% OFF
+                </Badge>
+              )}
+              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                <ShieldCheck className="mr-1 inline-block" size={12} /> Engineer QA
+              </span>
+              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                <Truck size={12} className="mr-1 inline-block text-primary" /> Ships in 2-4 days
+              </span>
+            </div>
 
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
