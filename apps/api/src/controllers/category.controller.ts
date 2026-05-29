@@ -135,8 +135,12 @@ export class CategoryController {
       const existingCategory = await prisma.category.findUnique({
         where: { id },
         include: {
-          _count: {
-            select: { products: true },
+          products: {
+            include: {
+              product: {
+                select: { isActive: true },
+              },
+            },
           },
         },
       });
@@ -148,11 +152,14 @@ export class CategoryController {
         });
       }
 
-      // Check if category has products
-      if (existingCategory._count.products > 0) {
+      // Only block deletion when the category still has active products assigned.
+      // Inactive products are already hidden from the admin catalog and can be detached by deleting the category.
+      const activeProductCount = existingCategory.products.filter((relation) => relation.product?.isActive).length;
+
+      if (activeProductCount > 0) {
         return res.status(400).json({
           success: false,
-          message: `Cannot delete category. It has ${existingCategory._count.products} product(s) assigned.`,
+          message: `Cannot delete category. It has ${activeProductCount} active product(s) assigned.`,
         });
       }
 
