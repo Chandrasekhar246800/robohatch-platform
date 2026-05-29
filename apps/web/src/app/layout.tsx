@@ -95,6 +95,9 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         <meta name="theme-color" content="#F97316" />
+        <link rel="icon" href="/logo.jpeg" />
+        <link rel="apple-touch-icon" href="/logo.jpeg" />
+        <link rel="shortcut icon" href="/logo.jpeg" />
       </head>
       <body className={inter.className}>
         <Providers>
