@@ -177,13 +177,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </h3>
 
             {/* Rating */}
-            <div className="flex items-center space-x-1 mb-3">
-              <Star size={16} className="fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium text-gray-900">
-                {product.rating}
-              </span>
-              <span className="text-sm text-gray-500">({product.reviews})</span>
-            </div>
+            {product.reviews > 0 && (
+              <div className="flex items-center space-x-1 mb-3">
+                <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium text-gray-900">
+                  {product.rating}
+                </span>
+                <span className="text-sm text-gray-500">({product.reviews})</span>
+              </div>
+            )}
 
             {/* Price */}
             <div className="mb-3">

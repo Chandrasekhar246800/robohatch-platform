@@ -133,8 +133,8 @@ export default function ProductDetailPage() {
           setProduct({
             ...productData,
             price: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? effectiveSalePrice : regularPrice,
-            rating: 4.5,
-            reviews: 0,
+            rating: Number(productData.rating ?? 0),
+            reviews: Number(productData.reviews ?? 0),
             inStock: productData.isActive !== false,
             originalPrice: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? regularPrice : undefined,
           });
@@ -656,23 +656,25 @@ export default function ProductDetailPage() {
             <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
 
             {/* Rating */}
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    size={20}
-                    className={
-                      i < Math.floor(product.rating)
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
-                    }
-                  />
-                ))}
+            {product.reviews > 0 && (
+              <div className="flex items-center space-x-2 mb-6">
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      size={20}
+                      className={
+                        i < Math.floor(product.rating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }
+                    />
+                  ))}
+                </div>
+                <span className="font-medium">{product.rating}</span>
+                <span className="text-gray-500">({product.reviews} reviews)</span>
               </div>
-              <span className="font-medium">{product.rating}</span>
-              <span className="text-gray-500">({product.reviews} reviews)</span>
-            </div>
+            )}
 
             {/* Price */}
             <div className="mb-6">

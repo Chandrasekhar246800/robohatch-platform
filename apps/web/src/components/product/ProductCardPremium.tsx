@@ -177,11 +177,13 @@ export default function ProductCardPremium({ product }: Props) {
               {product.name}
             </h3>
 
-            <div className="mb-3 flex items-center gap-1.5 text-sm">
-              <Star size={15} className="fill-amber-400 text-amber-400" />
-              <span className="font-semibold text-slate-900">{product.rating}</span>
-              <span className="text-slate-500">({product.reviews})</span>
-            </div>
+            {product.reviews > 0 && (
+              <div className="mb-3 flex items-center gap-1.5 text-sm">
+                <Star size={15} className="fill-amber-400 text-amber-400" />
+                <span className="font-semibold text-slate-900">{product.rating}</span>
+                <span className="text-slate-500">({product.reviews})</span>
+              </div>
+            )}
 
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
