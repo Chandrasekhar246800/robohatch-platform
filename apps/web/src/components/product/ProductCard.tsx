@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Star, Heart, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Plus, Minus, ArrowDown, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Product } from '@/types';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
@@ -136,7 +136,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               onClick={handleWishlistToggle}
               onTouchEnd={handleWishlistToggle}
               disabled={isWishlistLoading}
-              className={`absolute top-3 left-3 p-2.5 rounded-full bg-white shadow-md hover:scale-110 active:scale-95 transition-all duration-200 touch-manipulation ${
+              className={`absolute top-3 right-3 p-2.5 rounded-full bg-white shadow-md hover:scale-110 active:scale-95 transition-all duration-200 touch-manipulation ${
                 isWishlistLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               style={{ WebkitTapHighlightColor: 'transparent' }}
@@ -153,9 +153,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </button>
 
             {discount > 0 && (
-              <Badge className="absolute top-3 right-3" variant="danger">
-                {discount}% OFF
-              </Badge>
+              <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[12px] font-semibold">
+                <ArrowDown size={14} className="text-emerald-600" />
+                <span>{discount}%</span>
+              </div>
             )}
             {!product.inStock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -179,7 +180,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {/* Rating */}
             {product.reviews > 0 && (
               <div className="flex items-center space-x-1 mb-3">
-                <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                <Star size={16} className="fill-emerald-500 text-emerald-500" />
                 <span className="text-sm font-medium text-gray-900">
                   {product.rating}
                 </span>

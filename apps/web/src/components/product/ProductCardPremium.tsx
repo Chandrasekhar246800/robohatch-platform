@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Heart, Minus, Plus, ShoppingCart, ShieldCheck, Truck, Star } from "lucide-react";
+import { Heart, Minus, Plus, ShoppingCart, ShieldCheck, Truck, Star, ArrowDown } from "lucide-react";
 import { Product } from "@/types";
 import { formatPrice, calculateDiscount } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
@@ -134,7 +134,7 @@ export default function ProductCardPremium({ product }: Props) {
               onClick={handleWishlistToggle}
               onTouchEnd={handleWishlistToggle}
               disabled={isWishlistLoading}
-              className={`absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-white/95 p-2.5 shadow-md transition-transform duration-200 active:scale-95 ${isWishlistLoading ? 'opacity-50' : 'hover:scale-110'}`}
+              className={`absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full bg-white/95 p-2.5 shadow-md transition-transform duration-200 active:scale-95 ${isWishlistLoading ? 'opacity-50' : 'hover:scale-110'}`}
               aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
             >
               <Heart
@@ -167,8 +167,8 @@ export default function ProductCardPremium({ product }: Props) {
             </h3>
 
             {product.reviews > 0 && (
-              <div className="mb-3 flex items-center gap-1.5 text-sm">
-                <Star size={15} className="fill-amber-400 text-amber-400" />
+              <div className="mb-3 flex items-center gap-2 text-sm">
+                <Star size={16} className="fill-emerald-500 text-emerald-500" />
                 <span className="font-semibold text-slate-900">{product.rating}</span>
                 <span className="text-slate-500">({product.reviews})</span>
               </div>
@@ -176,15 +176,16 @@ export default function ProductCardPremium({ product }: Props) {
 
             <div className="mb-3 flex flex-wrap items-center gap-2">
               {discount > 0 && (
-                <Badge variant="danger" className="rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide">
-                  {discount}% OFF
-                </Badge>
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[12px] font-semibold">
+                  <ArrowDown size={14} className="text-emerald-600" />
+                  <span>{discount}%</span>
+                </div>
               )}
-              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                <ShieldCheck className="mr-1 inline-block" size={12} /> Engineer QA
+              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-100">
+                <ShieldCheck className="mr-1 inline-block text-emerald-600" size={12} /> Assured
               </span>
-              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                <Truck size={12} className="mr-1 inline-block text-primary" /> Ships in 2-4 days
+              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 border border-slate-100">
+                <Truck size={12} className="mr-1 inline-block text-primary" /> Express
               </span>
             </div>
 
