@@ -654,7 +654,7 @@ class ApiClient {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/profile`, {
         method: 'GET',
         headers: this.getHeaders(), // No withAuth needed - cookies sent automatically
-      }, 15000, { retryOn401: false });
+      }, 15000, { retryOn401: true });
 
       return await this.handleResponse(response);
     } catch (error: any) {

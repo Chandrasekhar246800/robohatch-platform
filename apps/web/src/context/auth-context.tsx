@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authStatus = useAuthStore((state) => state.authStatus);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
   const setAuth = useAuthStore((state) => state.setAuth);
   const logoutStore = useAuthStore((state) => state.logout);
   const setHasHydrated = useAuthStore((state) => state.setHasHydrated);
@@ -163,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthStatus('unauthenticated');
   }, [logoutStore, resetWishlist, setAuthStatus]);
 
-  const shouldBootstrapAuth = useMemo(() => {
+  const isProtectedRoute = useMemo(() => {
     if (!pathname) {
       return false;
     }
@@ -177,6 +178,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       pathname.startsWith('/upload-3d-file')
     );
   }, [pathname]);
+
+  const shouldBootstrapAuth = useMemo(() => {
+    // Always validate once on initial app load so users stay signed in
+    // across refresh, browser close, and reopen while cookies are valid.
+    if (!hasHydrated) {
+      return true;
+    }
+
+    return isProtectedRoute;
+  }, [hasHydrated, isProtectedRoute]);
 
   useEffect(() => {
     if (!shouldBootstrapAuth) {
