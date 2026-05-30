@@ -323,7 +323,7 @@ export class AuthService {
       secure: isProduction,
       sameSite: isProduction ? 'lax' : 'lax',
       maxAge,
-      path: '/api/auth/refresh',
+      path: '/',
       domain: cookieDomain,
     });
   }
@@ -369,7 +369,7 @@ export class AuthService {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'lax' : 'lax',
-      path: '/api/auth/refresh',
+      path: '/',
       domain: cookieDomain,
     });
 
