@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Lock, ShieldCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui";
 import { trackHeroCta, trackUploadDesignCta } from "@/lib/analytics";
 
@@ -54,22 +53,6 @@ export default function HeroPremium() {
             </Link>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.18 }}
-            className="mt-6 flex flex-wrap gap-3 text-sm text-slate-600"
-          >
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2">
-              <Lock size={14} className="text-primary" /> Razorpay-backed payments
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2">
-              <ShieldCheck size={14} className="text-primary" /> Engineer QA
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2">
-              <Truck size={14} className="text-primary" /> Insured shipping
-            </span>
-          </motion.div>
         </div>
 
         <motion.div
