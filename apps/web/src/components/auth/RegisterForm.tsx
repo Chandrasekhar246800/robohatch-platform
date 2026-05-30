@@ -22,12 +22,27 @@ export const RegisterForm: React.FC = () => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  const passwordRequirements = [
-    '1 uppercase letter',
-    '1 lowercase letter',
-    '1 number',
-    '1 special character',
-    'minimum 8 characters',
+  const passwordChecks = [
+    {
+      label: '1 uppercase letter',
+      met: /[A-Z]/.test(formData.password),
+    },
+    {
+      label: '1 lowercase letter',
+      met: /[a-z]/.test(formData.password),
+    },
+    {
+      label: '1 number',
+      met: /\d/.test(formData.password),
+    },
+    {
+      label: '1 special character',
+      met: /[^a-zA-Z\d]/.test(formData.password),
+    },
+    {
+      label: 'minimum 8 characters',
+      met: formData.password.length >= 8,
+    },
   ];
 
   const getPasswordStrength = (password: string): number => {
@@ -237,9 +252,18 @@ export const RegisterForm: React.FC = () => {
                       {passwordStrength > 0 ? strengthLabels[passwordStrength - 1] : 'None'}
                     </span>
                   </p>
-                  <p className="mt-2 text-xs text-gray-500 leading-5">
-                    Password must include {passwordRequirements.join(', ')}.
-                  </p>
+                  <ul className="mt-2 space-y-2 text-xs text-gray-500">
+                    {passwordChecks.map(({ label, met }) => (
+                      <li key={label} className="flex items-center gap-2">
+                        {met ? (
+                          <CheckCircle size={14} className="text-green-500 shrink-0" />
+                        ) : (
+                          <span className="inline-block h-3.5 w-3.5 rounded-full border border-gray-300 shrink-0" />
+                        )}
+                        <span className={met ? 'text-gray-700' : ''}>{label}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </motion.div>
               )}
             </AnimatePresence>
