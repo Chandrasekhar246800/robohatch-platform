@@ -22,6 +22,14 @@ export const RegisterForm: React.FC = () => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [apiError, setApiError] = useState('');
 
+  const passwordRequirements = [
+    '1 uppercase letter',
+    '1 lowercase letter',
+    '1 number',
+    '1 special character',
+    'minimum 8 characters',
+  ];
+
   const getPasswordStrength = (password: string): number => {
     let strength = 0;
     if (password.length >= 8) strength++;
@@ -43,8 +51,16 @@ export const RegisterForm: React.FC = () => {
     if (!formData.fullName) newErrors.fullName = 'Full name is required';
     if (!formData.email) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 6)
-      newErrors.password = 'Password must be at least 6 characters';
+    if (formData.password.length < 8)
+      newErrors.password = 'Password must be at least 8 characters';
+    if (!formData.password.match(/[A-Z]/))
+      newErrors.password = 'Password must contain at least one uppercase letter';
+    if (!formData.password.match(/[a-z]/))
+      newErrors.password = 'Password must contain at least one lowercase letter';
+    if (!formData.password.match(/\d/))
+      newErrors.password = 'Password must contain at least one number';
+    if (!formData.password.match(/[^a-zA-Z\d]/))
+      newErrors.password = 'Password must contain at least one special character';
     if (formData.password !== formData.confirmPassword)
       newErrors.confirmPassword = 'Passwords do not match';
     if (!acceptTerms) newErrors.terms = 'You must accept the terms';
@@ -220,6 +236,9 @@ export const RegisterForm: React.FC = () => {
                     >
                       {passwordStrength > 0 ? strengthLabels[passwordStrength - 1] : 'None'}
                     </span>
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500 leading-5">
+                    Password must include {passwordRequirements.join(', ')}.
                   </p>
                 </motion.div>
               )}
