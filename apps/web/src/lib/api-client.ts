@@ -1538,6 +1538,7 @@ class ApiClient {
     file: File;
     name: string;
     description?: string;
+    phone?: string;
     material: string;
     color: string;
     isMultiColor?: boolean;
@@ -1554,6 +1555,9 @@ class ApiClient {
       formData.append('name', data.name);
       if (data.description) {
         formData.append('description', data.description);
+      }
+      if (data.phone) {
+        formData.append('phone', data.phone);
       }
       formData.append('material', data.material);
       formData.append('color', data.color);

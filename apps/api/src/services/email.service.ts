@@ -1246,6 +1246,7 @@ export class EmailService {
   async send3DDesignNotification(designData: {
     customerName: string;
     customerEmail: string;
+    customerPhone: string;
     designName: string;
     material: string;
     color: string;
@@ -1296,6 +1297,9 @@ export class EmailService {
                 
                 <div class="label">Email:</div>
                 <div class="value">${designData.customerEmail}</div>
+
+                <div class="label">Phone:</div>
+                <div class="value">${designData.customerPhone || 'N/A'}</div>
               </div>
 
               <div class="section">

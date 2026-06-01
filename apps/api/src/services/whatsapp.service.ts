@@ -136,6 +136,38 @@ class WhatsAppService {
   }
 
   /**
+   * Send new 3D design submission to orders WhatsApp group
+   */
+  async send3DDesignNotification(designData: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    designName: string;
+    material: string;
+    color: string;
+    quantity: number;
+    estimatedPrice: number;
+    fileName: string;
+    fileSize: string;
+    infillPercentage: number;
+    layerHeight: number;
+    fileUrl: string;
+  }) {
+    if (!this.enabled || !this.config) {
+      logger.info('📱 WhatsApp disabled - 3D design notification skipped');
+      return;
+    }
+
+    try {
+      const message = this.format3DDesignMessage(designData);
+      await this.sendMessage(this.config.ordersGroup, message);
+      logger.info('✅ 3D design notification sent to WhatsApp');
+    } catch (error: any) {
+      logger.error('❌ Failed to send WhatsApp 3D design notification:', error.message);
+    }
+  }
+
+  /**
    * Format order notification message
    */
   private formatOrderMessage(data: {
@@ -202,6 +234,44 @@ ${data.message}
 ⏰ Time: ${data.timestamp.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
 
 💡 Tip: Reply to customer at ${data.email}`;
+  }
+
+  private format3DDesignMessage(data: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    designName: string;
+    material: string;
+    color: string;
+    quantity: number;
+    estimatedPrice: number;
+    fileName: string;
+    fileSize: string;
+    infillPercentage: number;
+    layerHeight: number;
+    fileUrl: string;
+  }): string {
+    return `🎨 *NEW 3D DESIGN SUBMISSION*
+
+👤 *Customer Details:*
+Name: ${data.customerName}
+Phone: ${data.customerPhone}
+Email: ${data.customerEmail}
+
+🧩 *Design:* ${data.designName}
+Material: ${data.material.toUpperCase()}
+Color: ${data.color}
+Quantity: ${data.quantity}
+Infill: ${data.infillPercentage}%
+Layer Height: ${data.layerHeight}mm
+
+📁 File: ${data.fileName}
+Size: ${data.fileSize}
+Estimate: ₹${data.estimatedPrice.toLocaleString()}
+
+🔗 File URL: ${data.fileUrl}
+
+💡 Follow up on WhatsApp using the phone number above.`;
   }
 
   /**

@@ -73,8 +73,8 @@ export default function ContactPage() {
               <Mail className="w-6 h-6 text-primary mr-3 mt-1 flex-shrink-0" />
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
-                <a href="mailto:founder@robohatch.in" className="text-primary hover:underline">
-                  founder@robohatch.in
+                <a href="mailto:robohatchofficial@gmail.com" className="text-primary hover:underline">
+                  robohatchofficial@gmail.com
                 </a>
                 <p className="text-sm text-gray-600 mt-1">For general inquiries and support</p>
               </div>
@@ -243,7 +243,7 @@ export default function ContactPage() {
             <strong>Sunday:</strong> Closed
           </p>
           <p className="text-sm text-gray-600 mt-3">
-            For urgent matters, please email us at founder@robohatch.in
+            For urgent matters, please email us at robohatchofficial@gmail.com
           </p>
         </section>
       </div>

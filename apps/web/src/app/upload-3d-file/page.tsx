@@ -66,6 +66,7 @@ export default function Upload3DFilePage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    phone: '',
     material: 'pla',
     color: 'white',
     quantity: 1,
@@ -169,6 +170,11 @@ export default function Upload3DFilePage() {
       return;
     }
 
+    if (!formData.phone.trim()) {
+      setErrors({ phone: 'Phone number is required for WhatsApp updates' });
+      return;
+    }
+
     setIsUploading(true);
     setErrors({});
 
@@ -190,6 +196,7 @@ export default function Upload3DFilePage() {
         file,
         name: formData.name,
         description: formData.description,
+        phone: formData.phone,
         material: formData.material,
         color: formData.color,
         isMultiColor: formData.color === 'multi-color',
@@ -426,6 +433,20 @@ export default function Upload3DFilePage() {
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium mb-2">Phone Number *</label>
+                    <Input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="Enter your WhatsApp number"
+                      error={errors.phone}
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      We will contact you on WhatsApp after reviewing your design request.
+                    </p>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium mb-2">Quantity *</label>
                     <Input
                       type="number"
@@ -583,7 +604,7 @@ export default function Upload3DFilePage() {
                     className="w-full"
                     data-testid="upload-3d-submit"
                   >
-                    {isUploading ? 'Uploading...' : 'Analyze & Get Price'}
+                    {isUploading ? 'Submitting...' : 'Submit Request'}
                   </Button>
                 ) : (
                   <div className="space-y-3">
@@ -645,6 +666,10 @@ export default function Upload3DFilePage() {
                 {errors.submit && (
                   <p className="text-red-500 text-sm mt-3">{errors.submit}</p>
                 )}
+
+                <p className="mt-4 text-xs text-gray-500">
+                  By submitting, your design details will be emailed to robohatchorders@gmail.com and we will follow up on WhatsApp using the number you provide.
+                </p>
 
                 <div className="mt-6 space-y-2 text-xs text-gray-600">
                   <p className="flex items-center gap-2">

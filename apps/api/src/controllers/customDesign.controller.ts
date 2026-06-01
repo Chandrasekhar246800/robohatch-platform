@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares';
 import { prisma } from '../config/prisma';
 import { emailService } from '../services/email.service';
+import whatsappService from '../services/whatsapp.service';
 import { runPrusaSlicer } from '../services/prusaSlicer.service';
 import { s3 } from '../config/s3';
 import path from 'path';
@@ -31,6 +32,7 @@ const MAX_PAGINATION_LIMIT = 100;
 const customDesignInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional().nullable(),
+  phone: z.string().trim().min(10).max(20).optional().nullable(),
   material: z.enum(['pla', 'abs', 'petg', 'tpu']),
   color: z.string().trim().min(1).max(50),
   size: z.string().trim().max(50).optional().nullable(),
@@ -165,6 +167,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     const {
       name,
       description,
+      phone,
       material,
       color,
       size,
@@ -352,6 +355,7 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
     emailService.send3DDesignNotification({
       customerName: userEmail || 'Customer',
       customerEmail: userEmail || '',
+      customerPhone: phone || '',
       designName: name,
       material,
       color,
@@ -364,6 +368,24 @@ export const createCustomDesign = async (req: AuthRequest, res: Response) => {
       layerHeight: layerHeight || 0.2,
     }).catch(error => {
       logger.error('Failed to send 3D design notification email:', error);
+    });
+
+    whatsappService.send3DDesignNotification({
+      customerName: userEmail || 'Customer',
+      customerEmail: userEmail || '',
+      customerPhone: phone || '',
+      designName: name,
+      material,
+      color,
+      quantity: quantityInt,
+      estimatedPrice: finalEstimatedPrice,
+      fileName: file.originalname,
+      fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      infillPercentage: infillPercentage || 20,
+      layerHeight: layerHeight || 0.2,
+      fileUrl: file.location,
+    }).catch(error => {
+      logger.error('Failed to send 3D design WhatsApp notification:', error);
     });
 
     logger.debug({ event: 'custom_design_response_prepare' });
