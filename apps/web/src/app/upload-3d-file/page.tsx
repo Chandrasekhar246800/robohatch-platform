@@ -647,6 +647,7 @@ export default function Upload3DFilePage() {
                         setFormData({
                           name: '',
                           description: '',
+                          phone: '',
                           material: 'pla',
                           color: 'white',
                           quantity: 1,
