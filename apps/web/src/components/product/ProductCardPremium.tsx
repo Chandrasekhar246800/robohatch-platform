@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Heart, Minus, Plus, ShoppingCart, ShieldCheck, Truck, Star, ArrowDown } from "lucide-react";
 import { Product } from "@/types";
-import { formatPrice, calculateDiscount } from "@/lib/utils";
+import { formatPrice, calculateDiscount, getEffectiveProductPrice, getOriginalProductPrice } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import { useWishlistStore } from "@/store/wishlist.store";
@@ -30,7 +30,9 @@ export default function ProductCardPremium({ product }: Props) {
 
   const inWishlist = isInWishlist(product.id);
   const cartQuantity = getItemQuantity(product.id);
-  const discount = product.originalPrice ? calculateDiscount(product.originalPrice, product.price) : 0;
+  const salePrice = getEffectiveProductPrice(product);
+  const originalPrice = getOriginalProductPrice(product) ?? product.originalPrice;
+  const discount = originalPrice ? calculateDiscount(originalPrice, salePrice) : 0;
 
   React.useEffect(() => {
     return () => {
@@ -51,7 +53,7 @@ export default function ProductCardPremium({ product }: Props) {
     e.preventDefault();
     e.stopPropagation();
     setIsAdding(true);
-    trackAddToCart(product.id, product.name, product.price);
+    trackAddToCart(product.id, product.name, salePrice);
     addItem(product, 1, isAuthenticated);
     window.setTimeout(() => setIsAdding(false), 1000);
   };
@@ -162,16 +164,16 @@ export default function ProductCardPremium({ product }: Props) {
             <p className="mb-2 text-sm text-slate-600 line-clamp-1">{product.description || ''}</p>
 
             <div className="mb-1 flex items-center gap-3 flex-wrap min-w-0">
-              {discount > 0 && (
+              {discount > 0 && originalPrice && (
                 <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[12px] font-semibold flex-shrink-0">
                   <ArrowDown size={14} className="text-emerald-600" />
                   <span>{discount}%</span>
                 </div>
               )}
-              {product.originalPrice && (
-                <span className="text-sm text-slate-400 line-through flex-shrink-0">{formatPrice(product.originalPrice)}</span>
+              {originalPrice && (
+                <span className="text-sm text-slate-400 line-through flex-shrink-0">{formatPrice(originalPrice)}</span>
               )}
-              <span className="text-lg font-bold text-primary min-w-0 truncate">{formatPrice(product.price)}</span>
+              <span className="text-lg font-bold text-primary min-w-0 truncate">{formatPrice(salePrice)}</span>
             </div>
 
             <div className="mb-2">

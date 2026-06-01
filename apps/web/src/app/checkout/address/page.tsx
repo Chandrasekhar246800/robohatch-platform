@@ -8,6 +8,7 @@ import { useCheckoutStore, ShippingAddress } from '@/store/checkout.store';
 import { useAuthStore } from '@/store/auth.store';
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps';
 import { apiClient } from '@/lib/api-client';
+import { formatPrice, getEffectiveProductPrice, getOriginalProductPrice } from '@/lib/utils';
 
 export default function AddressPage() {
   const router = useRouter();
@@ -236,7 +237,18 @@ export default function AddressPage() {
   }
 
   const subtotal = getTotal();
-  const total = subtotal; // No GST - business doesn't have GST number
+  const originalSubtotal = items.reduce((total, item) => {
+    if (!item.product) {
+      return total + (item.customDesign?.estimatedPrice || 0) * item.quantity;
+    }
+
+    const originalPrice = getOriginalProductPrice(item.product);
+    const unitPrice = originalPrice ?? getEffectiveProductPrice(item.product);
+    return total + unitPrice * item.quantity;
+  }, 0);
+  const itemSavings = Math.max(originalSubtotal - subtotal, 0);
+  const shippingCost = subtotal > 999 ? 0 : 89;
+  const total = subtotal + shippingCost;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -514,12 +526,28 @@ export default function AddressPage() {
 
               <div className="border-t pt-3 sm:pt-4 space-y-1.5 sm:space-y-2">
                 <div className="flex justify-between text-xs sm:text-sm text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>Original total</span>
+                  <span className={itemSavings > 0 ? 'line-through text-gray-400' : 'text-gray-600'}>{formatPrice(originalSubtotal)}</span>
+                </div>
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600">
+                  <span>Sale subtotal</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                {itemSavings > 0 && (
+                  <div className="flex justify-between text-xs sm:text-sm text-green-700">
+                    <span>Item savings</span>
+                    <span>-{formatPrice(itemSavings)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600">
+                  <span>Shipping</span>
+                  <span className={shippingCost === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
+                    {shippingCost === 0 ? 'FREE' : formatPrice(shippingCost)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-lg sm:text-xl font-bold text-gray-900 pt-1.5 sm:pt-2 border-t">
                   <span>Total</span>
-                  <span className="text-primary">₹{total.toFixed(2)}</span>
+                  <span className="text-primary">{formatPrice(total)}</span>
                 </div>
               </div>
             </div>

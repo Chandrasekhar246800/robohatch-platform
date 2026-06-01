@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Product, CustomDesign } from '@/types';
 import { apiClient } from '@/lib/api-client';
+import { getEffectiveProductPrice } from '@/lib/utils';
 
 export interface CartItem {
   product?: Product;
@@ -43,7 +44,7 @@ export const useCartStore = create<CartStore>()(
       lastSyncTime: 0,
       get total() {
         return get().items.reduce((sum, item) => {
-          const price = item.product?.price || item.customDesign?.estimatedPrice || 0;
+          const price = item.product ? getEffectiveProductPrice(item.product) : item.customDesign?.estimatedPrice || 0;
           return sum + price * item.quantity;
         }, 0);
       },
@@ -224,6 +225,7 @@ export const useCartStore = create<CartStore>()(
                   name: item.product.name,
                   description: item.product.description,
                   price: Number(item.product.price),
+                  salePrice: item.product.salePrice !== null && item.product.salePrice !== undefined ? Number(item.product.salePrice) : undefined,
                   originalPrice: item.product.originalPrice ? Number(item.product.originalPrice) : undefined,
                   stock: item.product.stock || 0,
                   category: item.product.category || {
@@ -333,7 +335,7 @@ export const useCartStore = create<CartStore>()(
       getTotal: () => {
         return get().items.reduce(
           (total, item) => {
-            const price = item.product?.price || item.customDesign?.estimatedPrice || 0;
+            const price = item.product ? getEffectiveProductPrice(item.product) : item.customDesign?.estimatedPrice || 0;
             return total + price * item.quantity;
           },
           0

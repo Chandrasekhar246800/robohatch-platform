@@ -25,6 +25,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  salePrice?: number;
   originalPrice?: number;
   stock: number;
   images: string[] | ProductImage[];

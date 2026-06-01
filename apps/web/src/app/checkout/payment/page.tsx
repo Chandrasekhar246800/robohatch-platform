@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps';
 import { apiClient } from '@/lib/api-client';
 import { trackCheckoutStart } from '@/lib/analytics';
+import { calculateDiscount, formatPrice, getEffectiveProductPrice, getOriginalProductPrice } from '@/lib/utils';
 
 // Extend Window interface for Razorpay
 declare global {
@@ -141,8 +142,18 @@ export default function PaymentPage() {
   }, [shippingAddress, mounted, router]);
 
   const subtotal = getTotal();
+  const originalSubtotal = items.reduce((total, item) => {
+    if (!item.product) {
+      return total + (item.customDesign?.estimatedPrice || 0) * item.quantity;
+    }
+
+    const originalPrice = getOriginalProductPrice(item.product);
+    const unitPrice = originalPrice ?? getEffectiveProductPrice(item.product);
+    return total + unitPrice * item.quantity;
+  }, 0);
   const shippingCost = subtotal > 999 ? 0 : 89;
   const grandTotal = subtotal + shippingCost;
+  const itemSavings = Math.max(originalSubtotal - subtotal, 0);
 
   /**
    * Step 1: Create order from cart
@@ -499,16 +510,45 @@ export default function PaymentPage() {
                       <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.product?.name || item.customDesign?.name || 'Custom Item'}</p>
                       <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900">₹{((item.product?.price || item.customDesign?.estimatedPrice || 0) * item.quantity).toFixed(2)}</p>
+                    {item.product ? (
+                      (() => {
+                        const unitSalePrice = getEffectiveProductPrice(item.product);
+                        const unitOriginalPrice = getOriginalProductPrice(item.product);
+                        const discount = unitOriginalPrice ? calculateDiscount(unitOriginalPrice, unitSalePrice) : 0;
+
+                        return (
+                          <div className="text-right">
+                            <p className="text-xs sm:text-sm font-semibold text-gray-900">{formatPrice(unitSalePrice * item.quantity)}</p>
+                            {unitOriginalPrice ? (
+                              <p className="text-[10px] sm:text-xs text-gray-500">
+                                {formatPrice(unitOriginalPrice)} each{discount > 0 ? ` · ${discount}% off` : ''}
+                              </p>
+                            ) : null}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900">{formatPrice((item.customDesign?.estimatedPrice || 0) * item.quantity)}</p>
+                    )}
                   </div>
                 ))}
               </div>
 
               <div className="border-t pt-3 sm:pt-4 space-y-1.5 sm:space-y-2">
                 <div className="flex justify-between text-xs sm:text-sm text-gray-600">
-                  <span>Subtotal ({items.length} items)</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>Original total</span>
+                  <span className={itemSavings > 0 ? 'line-through text-gray-400' : 'text-gray-600'}>{formatPrice(originalSubtotal)}</span>
                 </div>
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600">
+                  <span>Sale subtotal ({items.length} items)</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                {itemSavings > 0 && (
+                  <div className="flex justify-between text-xs sm:text-sm text-green-700">
+                    <span>Item savings</span>
+                    <span>-{formatPrice(itemSavings)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs sm:text-sm text-gray-600">
                   <span>Shipping</span>
                   <span className={shippingCost === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
@@ -518,13 +558,13 @@ export default function PaymentPage() {
                         <span>FREE</span>
                       </span>
                     ) : (
-                      `₹${shippingCost.toFixed(2)}`
+                      formatPrice(shippingCost)
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between text-lg sm:text-xl font-bold text-gray-900 pt-2 sm:pt-3 border-t">
                   <span>Total</span>
-                  <span className="text-primary">₹{grandTotal.toFixed(2)}</span>
+                  <span className="text-primary">{formatPrice(grandTotal)}</span>
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { Product } from '@/types';
 
 /**
  * Merge Tailwind CSS classes with clsx
@@ -18,6 +19,27 @@ export function formatPrice(price: number, currency: string = 'INR'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+/**
+ * Check whether a sale price is valid and usable.
+ */
+export function hasSalePrice(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Resolve the effective display price for a product.
+ */
+export function getEffectiveProductPrice(product: Pick<Product, 'price' | 'salePrice'>): number {
+  return hasSalePrice(product.salePrice) ? product.salePrice : product.price;
+}
+
+/**
+ * Resolve the original/list price for a product when a sale exists.
+ */
+export function getOriginalProductPrice(product: Pick<Product, 'price' | 'salePrice'>): number | undefined {
+  return hasSalePrice(product.salePrice) ? product.price : undefined;
 }
 
 /**
@@ -57,6 +79,10 @@ export function debounce<T extends (...args: any[]) => any>(
  * Calculate discount percentage
  */
 export function calculateDiscount(originalPrice: number, salePrice: number): number {
+  if (originalPrice <= 0 || salePrice < 0) {
+    return 0;
+  }
+
   return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
 }
 

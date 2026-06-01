@@ -20,9 +20,7 @@ export default function OrderSuccessPage() {
   const [mounted, setMounted] = useState(false);
   const hasTrackedPurchaseRef = useRef(false);
 
-  const orderTotal = useCartStore((state) =>
-    state.items.reduce((total, item) => total + ((item.product?.price || item.customDesign?.estimatedPrice || 0) * item.quantity), 0)
-  );
+  const orderTotal = useCartStore((state) => state.getTotal());
 
   useEffect(() => {
     setMounted(true);

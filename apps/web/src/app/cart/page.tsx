@@ -8,7 +8,7 @@ import { Trash2, Plus, Minus, ShoppingBag, Package, ShieldCheck, Truck } from 'l
 import { Button } from '@/components/ui';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
-import { formatPrice } from '@/lib/utils';
+import { calculateDiscount, formatPrice, getEffectiveProductPrice, getOriginalProductPrice } from '@/lib/utils';
 
 export default function CartPage() {
   const router = useRouter();
@@ -73,7 +73,9 @@ export default function CartPage() {
                 const isCustomDesign = Boolean(item.customDesign);
                 const itemId = isCustomDesign ? item.customDesign!.id : item.product!.id;
                 const displayName = isCustomDesign ? item.customDesign!.name : item.product!.name;
-                const displayPrice = isCustomDesign ? (item.customDesign!.estimatedPrice || 0) : item.product!.price;
+                const displayPrice = isCustomDesign ? (item.customDesign!.estimatedPrice || 0) : getEffectiveProductPrice(item.product!);
+                const originalPrice = !isCustomDesign ? getOriginalProductPrice(item.product!) ?? item.product!.originalPrice : undefined;
+                const discount = originalPrice ? calculateDiscount(originalPrice, displayPrice) : 0;
 
                 return (
                   <div
@@ -123,15 +125,11 @@ export default function CartPage() {
                         <div className="mb-4 flex items-center gap-6">
                           <div className="flex items-center gap-2">
                             <span className="text-xl font-medium text-gray-900">{formatPrice(displayPrice)}</span>
-                            {!isCustomDesign && item.product!.originalPrice && (
+                            {!isCustomDesign && originalPrice && (
                               <>
-                                <span className="text-sm text-gray-400 line-through">{formatPrice(item.product!.originalPrice)}</span>
+                                <span className="text-sm text-gray-400 line-through">{formatPrice(originalPrice)}</span>
                                 <span className="text-sm font-medium text-green-600">
-                                  {Math.round(
-                                    ((parseFloat(String(item.product!.originalPrice)) - parseFloat(String(item.product!.price))) /
-                                      parseFloat(String(item.product!.originalPrice))) *
-                                      100
-                                  )}% off
+                                  {discount}% off
                                 </span>
                               </>
                             )}

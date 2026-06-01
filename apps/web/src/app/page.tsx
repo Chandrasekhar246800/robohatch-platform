@@ -34,29 +34,38 @@ export default function HomePage() {
         if (productsResponse.success && productsResponse.data) {
           const activeProducts = productsResponse.data
             .filter((p: any) => p.isActive)
-            .map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              description: p.description,
-              price: Number(p.price),
-              stock: p.stock || 0,
-              images: p.images?.map((img: any) => img.url) || [],
-              category: {
-                id: p.category?.id || '',
-                name: p.category?.name || 'Uncategorized',
-                slug: p.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized',
-                image: '',
-                description: '',
-              },
-              rating: 4.5,
-              reviews: 0,
-              inStock: (p.stock || 0) > 0,
-              featured: false,
-              customizable: false,
-              tags: [],
-              isActive: p.isActive,
-              createdAt: p.createdAt,
-            }));
+            .map((p: any) => {
+              const regularPrice = Number(p.price);
+              const hasSalePrice = p.salePrice !== null && p.salePrice !== undefined && String(p.salePrice).trim() !== '';
+              const effectiveSalePrice = hasSalePrice ? Number(p.salePrice) : undefined;
+              const displayPrice = effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? effectiveSalePrice : regularPrice;
+
+              return {
+                id: p.id,
+                name: p.name,
+                description: p.description,
+                price: displayPrice,
+                salePrice: displayPrice !== regularPrice ? displayPrice : undefined,
+                originalPrice: displayPrice !== regularPrice ? regularPrice : undefined,
+                stock: p.stock || 0,
+                images: p.images?.map((img: any) => img.url) || [],
+                category: {
+                  id: p.category?.id || '',
+                  name: p.category?.name || 'Uncategorized',
+                  slug: p.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized',
+                  image: '',
+                  description: '',
+                },
+                rating: 4.5,
+                reviews: 0,
+                inStock: (p.stock || 0) > 0,
+                featured: false,
+                customizable: false,
+                tags: [],
+                isActive: p.isActive,
+                createdAt: p.createdAt,
+              };
+            });
           // Pick one product per category, then fill up to 4 with remaining products
           const seenCategories = new Set<string>();
           const diverse: typeof activeProducts = [];
