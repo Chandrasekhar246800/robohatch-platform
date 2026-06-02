@@ -25,7 +25,12 @@ export default function ContactPage() {
     setIsSubmitting(true);
 
     try {
-      await apiClient.submitContactForm(formData);
+      const payload = {
+        ...formData,
+        phone: formData.phone.trim() ? formData.phone.trim() : undefined,
+      };
+
+      await apiClient.submitContactForm(payload);
       
       setSubmitted(true);
       toast.success('Message sent successfully! We\'ll get back to you within 24-48 hours.');
