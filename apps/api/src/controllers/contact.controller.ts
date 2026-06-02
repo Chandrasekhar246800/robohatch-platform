@@ -12,7 +12,10 @@ import { logger } from '../utils/logger';
 const contactFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address').max(255),
-  phone: z.string().regex(/^[+]?[\d\s()-]{10,20}$/, 'Invalid phone number').optional(),
+  phone: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().regex(/^[+]?[-\d\s()]{10,20}$/, 'Invalid phone number').optional()
+  ),
   subject: z.string().min(3, 'Subject must be at least 3 characters').max(200),
   message: z.string().min(10, 'Message must be at least 10 characters').max(2000),
 });
