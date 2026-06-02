@@ -385,20 +385,41 @@ class ApiClient {
         !this.shouldSkipCsrfForRequest(url) &&
         (await this.shouldRetryForInvalidCsrf(response))
       ) {
-        const refreshedCsrf = await this.ensureCsrfToken(true);
+        // Try to read a fresh CSRF token included in the 403 response body
+        try {
+          const clone = response.clone();
+          const json = await clone.json().catch(() => null);
+          const fresh = json?.data?.csrfToken || json?.csrfToken || null;
+          if (typeof fresh === 'string' && fresh.length > 0) {
+            setCsrfTokenMemory(fresh);
+          } else {
+            // No token in response; fall back to explicit bootstrap
+            const refreshedCsrf = await this.ensureCsrfToken(true);
+            if (!refreshedCsrf) {
+              return response;
+            }
+          }
 
-        if (!refreshedCsrf) {
-          // Bootstrap failed or produced no token; return the original failure
-          // so callers can surface the CSRF error without generating more traffic.
-          return response;
+          return this.fetchWithTimeout(url, options, timeoutMs, {
+            retryOn401,
+            retryAttempted,
+            retryOn403,
+            retryAttempted403: true,
+          });
+        } catch (err) {
+          // If anything goes wrong, fall back to existing bootstrap behavior
+          const refreshedCsrf = await this.ensureCsrfToken(true);
+          if (!refreshedCsrf) {
+            return response;
+          }
+
+          return this.fetchWithTimeout(url, options, timeoutMs, {
+            retryOn401,
+            retryAttempted,
+            retryOn403,
+            retryAttempted403: true,
+          });
         }
-
-        return this.fetchWithTimeout(url, options, timeoutMs, {
-          retryOn401,
-          retryAttempted,
-          retryOn403,
-          retryAttempted403: true,
-        });
       }
 
       return response;

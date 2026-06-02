@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { authService } from '../services/auth.service';
 
 const CSRF_EXEMPT_PATH_PREFIXES = ['/api/webhook'];
 const CSRF_EXEMPT_PATHS = new Set([
@@ -34,10 +35,21 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
   const headerToken = req.headers['x-csrf-token'];
 
   if (!cookieToken || typeof headerToken !== 'string' || cookieToken !== headerToken) {
-    return res.status(403).json({
-      success: false,
-      message: 'Invalid CSRF token',
-    });
+    // Rotate the CSRF cookie and include the fresh token in the response
+    // so clients can sync immediately without an extra round-trip to /api/auth/csrf.
+    try {
+      const fresh = authService.rotateCsrfToken(res, req);
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid CSRF token',
+        data: { csrfToken: fresh },
+      });
+    } catch (err) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid CSRF token',
+      });
+    }
   }
 
   return next();
