@@ -60,8 +60,8 @@ function ProductsContent() {
               id: p.id,
               name: p.name,
               description: p.description,
-              price: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? effectiveSalePrice : regularPrice,
-              originalPrice: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? regularPrice : undefined,
+              price: regularPrice,
+              salePrice: effectiveSalePrice !== undefined && effectiveSalePrice > 0 ? effectiveSalePrice : undefined,
               stock: p.stock || 0,
               images: p.images?.map((img: any) => img.url) || [],
               category: {

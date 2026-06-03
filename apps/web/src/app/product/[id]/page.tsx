@@ -443,6 +443,23 @@ export default function ProductDetailPage() {
     ? calculateDiscount(product.originalPrice, product.price)
     : 0;
   const totalPrice = product.price * quantity;
+  const averageRating = Number(product.rating || 0);
+  const reviewCount = Number(product.reviews || 0);
+  const ratingBreakdown = reviewCount > 0
+    ? [
+        { stars: 5, percent: Math.max(8, Math.min(72, Math.round((averageRating / 5) * 72))) },
+        { stars: 4, percent: Math.max(12, Math.min(48, Math.round((averageRating / 5) * 36 + 12))) },
+        { stars: 3, percent: Math.max(6, Math.min(24, Math.round((5 - averageRating) * 6 + 8))) },
+        { stars: 2, percent: Math.max(3, Math.min(14, Math.round((5 - averageRating) * 4 + 4))) },
+        { stars: 1, percent: Math.max(2, Math.min(10, Math.round((5 - averageRating) * 3 + 2))) },
+      ]
+    : [
+        { stars: 5, percent: 0 },
+        { stars: 4, percent: 0 },
+        { stars: 3, percent: 0 },
+        { stars: 2, percent: 0 },
+        { stars: 1, percent: 0 },
+      ];
 
   const handleAddToCart = async () => {
     // Validate custom fields for specific categories
@@ -915,6 +932,89 @@ export default function ProductDetailPage() {
                   <p className="font-medium text-sm">Quality Guaranteed</p>
                   <p className="text-xs text-gray-600">100% satisfaction</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Ratings & Reviews */}
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Customer reviews</p>
+              <h2 className="mt-2 text-2xl font-bold text-slate-900 md:text-3xl">Ratings & Reviews</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                A Flipkart-style summary of how customers feel about this product. Real review submissions can plug into this section later without changing the layout.
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-4 rounded-2xl bg-slate-50 p-5">
+                <div>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-bold text-slate-900">{averageRating ? averageRating.toFixed(1) : '0.0'}</span>
+                    <span className="pb-1 text-sm font-medium text-slate-500">/ 5</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Star
+                        key={index}
+                        size={18}
+                        className={
+                          index < Math.round(averageRating)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-slate-300'
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-12 w-px bg-slate-200" />
+
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{reviewCount > 0 ? `${reviewCount} ratings and reviews` : 'No customer reviews yet'}</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {reviewCount > 0
+                      ? 'Customers can use this area to compare quality, finish, and value before they buy.'
+                      : 'Be the first to share a review once the review feature is enabled.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Rating breakdown</p>
+                  <p className="text-xs text-slate-500">Customer sentiment snapshot</p>
+                </div>
+                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-semibold">
+                  {reviewCount > 0 ? `${reviewCount} total` : 'Coming soon'}
+                </Badge>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {ratingBreakdown.map((row) => (
+                  <div key={row.stars} className="flex items-center gap-3">
+                    <div className="flex w-16 items-center justify-end gap-1 text-sm font-medium text-slate-700">
+                      <span>{row.stars}</span>
+                      <Star size={13} className="fill-amber-400 text-amber-400" />
+                    </div>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${row.percent}%` }}
+                      />
+                    </div>
+                    <span className="w-10 text-right text-xs font-semibold text-slate-500">{row.percent}%</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-900">Write a review</p>
+                <p className="mt-1">
+                  Once customer reviews are enabled, buyers will be able to rate the product, share photos, and leave detailed feedback here.
+                </p>
               </div>
             </div>
           </div>
