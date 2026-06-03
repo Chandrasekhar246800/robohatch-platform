@@ -35,17 +35,11 @@ RUN npm run build
 FROM node:20-bullseye-slim
 
 # Runtime libraries required by PrusaSlicer and app runtime
+
+# Keep runtime minimal. PrusaSlicer and GTK libs removed to avoid large downloads in CI.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        wget \
-        bzip2 \
-        ca-certificates \
-        libgtk-3-0 \
-        libglu1-mesa \
-        libgomp1 \
-        libwebkit2gtk-4.0-37 \
-        libosmesa6 \
-        libgl1 \
-        && rm -rf /var/lib/apt/lists/*
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -55,24 +49,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
-# Download and symlink PrusaSlicer (best-effort; non-fatal)
-RUN set -eux; \
-        cd /tmp; \
-        PRUSA_URL="https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928.tar.bz2"; \
-        wget -O prusa.tar.bz2 "$PRUSA_URL" || echo "PrusaSlicer download failed, continuing"; \
-        if [ -f prusa.tar.bz2 ]; then \
-            mkdir -p /opt; \
-            tar -xjf prusa.tar.bz2 -C /opt/ || true; \
-            # find executable and symlink if present
-            if [ -d /opt ]; then \
-                PRUSA_DIR=$(ls -1d /opt/PrusaSlicer-* 2>/dev/null || true); \
-                if [ -n "$PRUSA_DIR" ]; then \
-                    ln -sf "$PRUSA_DIR/prusa-slicer" /usr/local/bin/prusa-slicer || true; \
-                    chmod +x "$PRUSA_DIR/prusa-slicer" || true; \
-                fi; \
-            fi; \
-            rm -f prusa.tar.bz2; \
-        fi
+# PrusaSlicer removed from image build to keep CI builds reliable. If you need PrusaSlicer,
+# build/run it in a dedicated image or install it at runtime on a machine that requires it.
 
 EXPOSE 8080
 
