@@ -245,6 +245,23 @@ export class ProductController {
           categoryId: product.categories[0]?.categoryId || null,
         };
         delete (transformed as any).categories;
+
+        // Aggregate approved reviews for rating and count
+        try {
+          const agg = await prisma.review.aggregate({
+            where: { productId: product.id, isApproved: true },
+            _avg: { rating: true },
+            _count: { id: true },
+          });
+
+          (transformed as any).rating = agg._avg.rating ? Number(Number(agg._avg.rating).toFixed(1)) : 0;
+          (transformed as any).reviews = agg._count.id || 0;
+        } catch (e) {
+          // ignore aggregation errors
+          (transformed as any).rating = 0;
+          (transformed as any).reviews = 0;
+        }
+
         return this.withSignedImages(transformed);
       }));
 
@@ -390,6 +407,21 @@ export class ProductController {
         categoryId: product.categories[0]?.categoryId || null,
       };
       delete (transformedProduct as any).categories;
+      // Aggregate approved reviews for rating and count
+      try {
+        const agg = await prisma.review.aggregate({
+          where: { productId: product.id, isApproved: true },
+          _avg: { rating: true },
+          _count: { id: true },
+        });
+
+        (transformedProduct as any).rating = agg._avg.rating ? Number(Number(agg._avg.rating).toFixed(1)) : 0;
+        (transformedProduct as any).reviews = agg._count.id || 0;
+      } catch (e) {
+        (transformedProduct as any).rating = 0;
+        (transformedProduct as any).reviews = 0;
+      }
+
       const signedProduct = await this.withSignedImages(transformedProduct);
 
       return res.status(200).json({

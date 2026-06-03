@@ -1443,6 +1443,45 @@ class ApiClient {
     }
   }
 
+  async getProductReviews(productId: string) {
+    try {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/products/${productId}/reviews`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        return { success: false, message: 'Failed to fetch reviews', data: [] };
+      }
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      console.error('Get reviews error:', error);
+      return { success: false, message: error.message || 'Network error', data: [] };
+    }
+  }
+
+  async postProductReview(productId: string, payload: { rating: number; title?: string; body?: string; }) {
+    try {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/products/${productId}/reviews`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      }, 15000, { retryOn401: true });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || 'Failed to submit review' };
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Post review error:', error);
+      return { success: false, message: error.message || 'Network error' };
+    }
+  }
+
   async createProduct(formData: FormData) {
     try {
       const response = await this.fetchWithTimeout(`${this.baseUrl}/api/admin/products`, {

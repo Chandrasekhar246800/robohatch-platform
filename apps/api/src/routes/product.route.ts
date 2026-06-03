@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { productController } from '../controllers/product.controller';
+import { reviewController } from '../controllers/review.controller';
 import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware';
 import { upload } from '../middlewares/upload.middleware';
 
@@ -57,6 +58,20 @@ router.get('/all', (req, res) => productController.getAllProducts(req, res));
  * @query   q - search query string
  */
 router.get('/search', (req, res) => productController.searchProducts(req, res));
+
+/**
+ * @route   GET /api/products/:id/reviews
+ * @desc    Get approved reviews for a product
+ * @access  Public
+ */
+router.get('/:id/reviews', (req, res) => reviewController.getReviewsByProduct(req, res));
+
+/**
+ * @route   POST /api/products/:id/reviews
+ * @desc    Create a new review for a product (authenticated users)
+ * @access  Private
+ */
+router.post('/:id/reviews', authMiddleware, (req, res) => reviewController.createReview(req, res));
 
 /**
  * @route   GET /api/products/:id

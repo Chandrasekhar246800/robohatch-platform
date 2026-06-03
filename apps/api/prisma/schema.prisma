@@ -43,6 +43,7 @@ model Product {
   categories    ProductCategory[]
   images        ProductImage[]
   wishlistItems WishlistItem[]
+  reviews       Review[]
 
   @@index([stock])
 }
@@ -368,6 +369,23 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@index([revokedAt])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  productId  String
+  userId     String?
+  rating     Int
+  title      String?
+  body       String?  @db.Text
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([userId])
 }
 
 enum Role {
