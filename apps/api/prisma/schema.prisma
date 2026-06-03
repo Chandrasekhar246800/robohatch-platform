@@ -23,6 +23,7 @@ model User {
   uploads       Upload[]
   wishlist      Wishlist?
   refreshTokens RefreshToken[]
+  reviews       Review[]
 }
 
 model Product {
