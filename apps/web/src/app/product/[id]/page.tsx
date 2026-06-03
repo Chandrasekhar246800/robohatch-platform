@@ -987,7 +987,7 @@ export default function ProductDetailPage() {
                   <p className="text-sm font-semibold text-slate-900">Rating breakdown</p>
                   <p className="text-xs text-slate-500">Customer sentiment snapshot</p>
                 </div>
-                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-semibold">
+                <Badge variant="info" className="rounded-full px-3 py-1 text-xs font-semibold">
                   {reviewCount > 0 ? `${reviewCount} total` : 'Coming soon'}
                 </Badge>
               </div>
